@@ -1,6 +1,6 @@
-# DarkHold 🗡️
+# Stranded 🏝️
 
-> Jogo 2D dungeon crawler desenvolvido em **Phaser 3** para a UC Tecnologias Multimédia 2025/2026.
+> Jogo 2D survival/exploration desenvolvido em **Phaser 3** para a UC Tecnologias Multimédia 2025/2026.
 
 ---
 
@@ -15,9 +15,9 @@
 
 ## Descrição
 
-**DarkHold** é um dungeon crawler top-down em que o jogador assume o papel de um guerreiro solitário que entra numa masmorra amaldiçoada para derrotar o **DarkLord**, uma entidade sombria que despertou e está a corromper as terras.
+**Stranded** é um jogo de sobrevivência e exploração top-down em que o jogador acorda numa ilha misteriosa após um naufrágio, sem memória do que aconteceu. Para escapar, tem de explorar diferentes zonas da ilha, recolher recursos, encontrar sobreviventes e reconstruir um transmissor de rádio para pedir socorro.
 
-O jogador desce 3 andares repletos de inimigos, cada um com um boss no final. O jogo termina com **Vitória** ao matar o DarkLord, ou com **Game Over** ao perder todos os corações.
+O foco do jogo é na **atmosfera** e na **progressão gradual** — a ilha vai revelando os seus segredos à medida que o jogador explora.
 
 ---
 
@@ -25,97 +25,109 @@ O jogador desce 3 andares repletos de inimigos, cada um com um boss no final. O 
 
 | Campo | Valor |
 |-------|-------|
-| **Género** | Top-down dungeon crawler |
+| **Género** | Survival / Exploration top-down |
 | **Perspetiva** | 2D top-down |
-| **Objetivo** | Descer os 3 andares, derrotar os 3 bosses e eliminar o DarkLord |
-| **Estrutura** | 3 andares × 4 salas fixas (12 salas no total) |
-| **Vitória** | Derrotar o DarkLord na câmara final |
-| **Game Over** | HP = 0 |
+| **Objetivo** | Recolher recursos, encontrar sobreviventes e reconstruir o transmissor para escapar |
+| **Vitória** | Transmissor concluído e sinal enviado |
+| **Game Over** | HP = 0 (fome, sede ou perigos da ilha) |
 
 ---
 
 ## História
 
-> *"O DarkHold permaneceu selado por séculos sob as ruínas do Castelo Maldito. Hoje, os seus portões abriram-se. O DarkLord despertou. Só um guerreiro corajoso pode descer às suas profundezas e pôr fim à sua maldição."*
+> *"Acordas na praia. Há destroços à tua volta. Não sabes quanto tempo passaste inconsciente. A ilha parece abandonada... mas há sinais de que não estás sozinho."*
 
-A narrativa é apresentada no menu antes de iniciar o jogo, disponível nas 3 línguas suportadas.
+A ilha tem 4 zonas distintas, cada uma com os seus recursos, segredos e sobreviventes escondidos.
+
+---
+
+## Zonas da Ilha
+
+```
+🏖️ PRAIA       → zona inicial, recursos básicos, primeiro sobrevivente
+🌲 FLORESTA    → madeira, comida, perigos, sobrevivente escondido
+⛰️ MONTANHA    → minério, vistas, peças do transmissor
+🏚️ RUÍNAS      → segredos da ilha, peça final, boss opcional
+```
 
 ---
 
 ## Core Game Loop
 
 ```
-Entrar numa sala
+Explorar zona
       ↓
-Combater inimigos (melee X / ranged Z)
+Recolher recursos (madeira, comida, metal, peças)
       ↓
-Inimigos eliminados → Porta abre
+Encontrar sobrevivente → desbloqueia nova zona / recurso automático
       ↓
-Recolher drops (chaves, poções, power-ups)
+Cumprir objetivo intermédio (abrigo → água → energia → transmissor)
       ↓
-Avançar para a próxima sala
+Desbloquear zona seguinte
       ↓
-Última sala do andar? → Boss Fight
-      ↓
-Derrotar boss → Próximo andar (ou Vitória se Andar 3)
+Repetir até transmissor completo → Vitória
 ```
 
 ---
 
-## Estrutura dos Andares
+## Objetivos Intermédios (progressão)
 
-```
-ANDAR 1 (fácil)   → [Entrada] → [Combate: Skeletons]   → [Tesouro] → [Boss: Skeleton King]
-ANDAR 2 (médio)   → [Entrada] → [Combate: Ghosts+Bats] → [Armadilha] → [Boss: Shadow Wraith]
-ANDAR 3 (difícil) → [Entrada] → [Combate: Elite Mix]   → [Corredor] → [Boss: DarkLord 💀]
-```
-
-- Porta de saída **trancada** até eliminar todos os inimigos da sala
-- Salas de Tesouro contêm baús que requerem **chaves** para abrir
-- Dificuldade aumenta progressivamente a cada andar
-
----
-
-## Inimigos
-
-| Inimigo | HP | Dano | Comportamento |
-|---------|----|------|--------------|
-| **Skeleton** 💀 | 2 | 1 ❤️ | Persegue o jogador em linha reta |
-| **Ghost** 👻 | 3 | 1 ❤️ | Zigzag, atravessa paredes |
-| **Bat** 🦇 | 1 | 0.5 ❤️ | Rápido, movimento errático, spawn em grupos de 3 |
-| **Skeleton King** 👑 | 15 | 1.5 ❤️ | Boss A1 — melee + invoca Skeletons |
-| **Shadow Wraith** 🌑 | 18 | 1 ❤️ | Boss A2 — projéteis em cruz + teleporte |
-| **DarkLord** 💀🔥 | 25 | 1–2 ❤️ | Boss Final — 2 fases (melee → espiral + invocação) |
+| # | Objetivo | Como cumprir |
+|---|----------|-------------|
+| 1 | Construir abrigo | Recolher 10 madeira |
+| 2 | Encontrar água potável | Explorar floresta |
+| 3 | Encontrar primeiro sobrevivente | Explorar praia completa |
+| 4 | Restaurar gerador | Recolher 5 metal |
+| 5 | Explorar as ruínas | Desbloquear com sobrevivente 2 |
+| 6 | Encontrar peças do transmissor | 3 peças espalhadas pela ilha |
+| 7 | **Enviar sinal** | Transmissor completo → Vitória |
 
 ---
 
-## Sistema de Pontuação
+## Recursos
 
-| Evento | Pontos |
-|--------|--------|
-| Matar Skeleton | +10 |
-| Matar Bat | +15 |
-| Matar Ghost | +20 |
-| Matar Boss de andar | +100 |
-| Matar DarkLord | +300 |
-| Abrir baú | +25 |
-| Andar sem dano | +50 (bónus) |
-| Tomar dano | −5 |
-
-O **highscore** é guardado em `localStorage` e apresentado na cena de Vitória e Game Over.
+| Recurso | Onde encontrar | Para quê |
+|---------|---------------|----------|
+| 🪵 Madeira | Floresta | Abrigo, estruturas |
+| 🍎 Comida | Floresta, praia | Recuperar HP |
+| ⚙️ Metal | Montanha, ruínas | Gerador, transmissor |
+| 🔩 Peças raras | Ruínas | Transmissor |
+| 💊 Primeiros socorros | Exploração | Recuperar HP |
 
 ---
 
-## Power-ups
+## Sobreviventes (NPCs)
 
-| Item | Efeito | Duração |
-|------|--------|---------|
-| ❤️ Poção Vermelha | +1 coração (máx 5) | Instantâneo |
-| 🔵 Orbe Azul | Restaura cargas mágicas | Instantâneo |
-| 👟 Bota Dourada | +30% velocidade | 10 segundos |
-| ⚔️ Espada Brilhante | +1 dano melee | 15 segundos |
+| Sobrevivente | Localização | Contribuição |
+|-------------|-------------|-------------|
+| Pescador | Praia | Gera comida automaticamente |
+| Lenhador | Floresta | Gera madeira automaticamente |
+| Engenheiro | Montanha | Gera metal automaticamente |
+| Cientista | Ruínas | Desbloqueia transmissor |
 
-Power-ups temporários são visíveis na HUD com barra de duração. O ícone pisca quando está a acabar.
+---
+
+## Sistema de Objetivos
+
+- Lista de objetivos visível no HUD (pode ser aberta/fechada)
+- Objetivos desbloqueiam-se sequencialmente
+- Cada objetivo cumprido dá feedback visual e sonoro
+- Progresso guardado em `localStorage`
+
+---
+
+## Day / Night Cycle
+
+- Ciclo dia/noite visual com overlay gradual
+- **De dia:** exploração normal
+- **De noite:** visibilidade reduzida, recursos mais difíceis de encontrar
+- Duração: ~5 minutos por ciclo completo
+
+---
+
+## Easter Egg 🚬
+
+> Podem encontrar tabaco espalhado pela ilha. Fumar dá um boost temporário de velocidade... mas faz perder HP lentamente. A escolha é vossa.
 
 ---
 
@@ -124,9 +136,9 @@ Power-ups temporários são visíveis na HUD com barra de duração. O ícone pi
 | Tecla | Ação |
 |-------|------|
 | `W A S D` / `↑ ↓ ← →` | Mover |
-| `X` ou `J` | Ataque melee (espada) |
-| `Z` ou `K` | Ataque ranged — magia (cooldown 1s) |
-| `R` | Reiniciar (no Game Over) |
+| `E` | Interagir (recolher recurso / falar com NPC) |
+| `I` | Abrir / fechar inventário |
+| `J` | Abrir / fechar lista de objetivos |
 | `ESC` | Pausar |
 
 ---
@@ -135,33 +147,30 @@ Power-ups temporários são visíveis na HUD com barra de duração. O ícone pi
 
 | Cena | Função |
 |------|--------|
-| `BootScene` | Carrega assets mínimos (logo, barra de carregamento) |
-| `PreloadScene` | Carrega todos os assets com barra de progresso animada |
-| `MenuScene` | Menu principal + seletor de língua 🇵🇹🇬🇧🇫🇷 |
-| `GameScene` | Núcleo do jogo — salas, player, inimigos, física |
-| `HUDScene` | UI paralela — ❤️ corações, score, 🗝️ chaves, cooldown |
-| `GameOverScene` | Game Over com score final + opção de reiniciar |
-| `VictoryScene` | Vitória com animação, score final e highscore |
+| `BootScene` | Carrega assets mínimos |
+| `PreloadScene` | Carrega todos os assets com barra de progresso |
+| `MenuScene` | Menu principal + seletor de língua |
+| `GameScene` | Núcleo do jogo — ilha, jogador, NPCs, recursos |
+| `HUDScene` | UI paralela — HP, inventário, objetivos, hora do dia |
+| `GameOverScene` | Game Over + opção de reiniciar |
+| `VictoryScene` | Sinal enviado — vitória + créditos |
 
 ---
 
 ## Suporte Multilíngue
 
-O jogo suporta **3 línguas**, selecionáveis no menu principal através de flags clicáveis:
-
 | Flag | Língua |
 |------|--------|
 | 🇵🇹 | Português (padrão) |
 | 🇬🇧 | English |
-| 🇫🇷 | Français |
 
-Toda a interface está traduzida via sistema `I18n.js` com ficheiros JSON por língua em `assets/locales/`. Não existem strings hardcoded no código.
+Toda a interface traduzida via `I18n.js` com ficheiros `pt.json` e `en.json`.
 
 ---
 
 ## Como Executar
 
-> O jogo requer um servidor HTTP local. Não funciona corretamente via `file://`.
+> O jogo requer um servidor HTTP local. Não funciona via `file://`.
 
 ### Opção 1 — Live Server (VS Code) ✅ Recomendado
 1. Abrir a pasta do projeto no VS Code
@@ -173,37 +182,33 @@ Toda a interface está traduzida via sistema `I18n.js` com ficheiros JSON por l�
 ```bash
 npx serve .
 ```
-Abrir `http://localhost:3000` no browser.
 
 ### Opção 3 — Python
 ```bash
 python3 -m http.server 8000
 ```
-Abrir `http://localhost:8000` no browser.
 
 ---
 
 ## Versão de Phaser
 
-**Phaser 3.80** incluído via CDN:
+**Phaser 3.80** via CDN — sem instalação necessária.
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.min.js"></script>
 ```
-
-Não são necessárias dependências adicionais. Sem `npm install`.
 
 ---
 
 ## Estrutura do Projeto
 
 ```
-DarkHold/
-├── index.html                  # ponto de entrada — carrega Phaser CDN + main.js
-├── .gitignore
+Stranded/
+├── index.html
 ├── README.md
+├── .gitignore
 ├── src/
-│   ├── main.js                 # configuração Phaser, registo de cenas
+│   ├── main.js
 │   ├── scenes/
 │   │   ├── BootScene.js
 │   │   ├── PreloadScene.js
@@ -214,27 +219,24 @@ DarkHold/
 │   │   └── VictoryScene.js
 │   ├── entities/
 │   │   ├── Player.js
-│   │   ├── EnemyBase.js
-│   │   ├── Skeleton.js
-│   │   ├── Ghost.js
-│   │   ├── Bat.js
-│   │   └── Boss.js
+│   │   └── NPC.js
 │   ├── systems/
-│   │   ├── RoomManager.js
-│   │   ├── CombatSystem.js
+│   │   ├── InventorySystem.js
+│   │   ├── ObjectiveSystem.js
+│   │   ├── DayNightSystem.js
+│   │   ├── SaveSystem.js
 │   │   └── I18n.js
 │   └── utils/
 │       └── Constants.js
 └── assets/
-    ├── images/                 # sprites individuais, UI, logo
-    ├── spritesheets/           # animações (player, inimigos, boss, efeitos)
-    ├── tilemaps/               # ficheiros .json exportados do Tiled
-    ├── tilesets/               # PNG dos tilesets
-    ├── audio/                  # música OGG + SFX OGG
+    ├── images/
+    ├── spritesheets/
+    ├── tilemaps/
+    ├── tilesets/
+    ├── audio/
     └── locales/
         ├── pt.json
-        ├── en.json
-        └── fr.json
+        └── en.json
 ```
 
 ---
@@ -245,53 +247,46 @@ DarkHold/
 
 | Asset | Formato | Resolução | Origem | Justificação |
 |-------|---------|-----------|--------|--------------|
-| Player spritesheet | PNG | 128×256 px | Kenney RPG Pack | 4 direções × 4 frames walk + attack; dimensão proporcional ao uso |
-| Enemy spritesheets (×3) | PNG | 64×64 px | Kenney / itch.io | Resolução adequada à escala de jogo, sem desperdício |
-| Boss spritesheets (×2) | PNG | 96×96 px | itch.io free | Escala maior justificada pelo tamanho visual do boss |
-| DarkLord spritesheet | PNG | 128×128 px | itch.io free | Boss final — maior detalhe e impacto visual |
-| Dungeon Tileset | PNG | tiles 16×16 px | Kenney Roguelike Pack | Tiles pequenos, estilo coerente, ficheiro único eficiente |
-| Partículas / efeitos mágicos | PNG | 16×16 px | Kenney Particles Pack | Explosões e efeitos de magia; spritesheet leve |
-| UI elements (corações, ícones) | PNG | variável | Kenney UI Pack | Coerência visual com o resto dos assets |
+| Player spritesheet | PNG | 64×64 px | Kenney RPG Pack | Walk 4 direções, proporcional ao tile size |
+| NPC spritesheets (×4) | PNG | 64×64 px | Kenney / itch.io | Dimensão uniforme, estilo coerente |
+| Tileset ilha (praia, floresta, montanha, ruínas) | PNG | tiles 16×16 px | Kenney Topo Pack | Tiles pequenos, eficientes, estilo tropical |
+| Recursos (madeira, comida, metal) | PNG | 16×16 px | Kenney | Ícones simples, legíveis à escala |
+| UI elements | PNG | variável | Kenney UI Pack | Coerência visual |
+| Partículas (água, folhas, faíscas) | PNG | 8×8 px | Kenney Particles | Leves, atmosfera |
 
 ### Áudio
 
 | Asset | Formato | Tamanho aprox. | Origem | Justificação |
 |-------|---------|----------------|--------|--------------|
-| Música menu | OGG | ~400 KB | OpenGameArt | Loop comprimido; OGG em vez de WAV reduz ~10× o tamanho |
-| Música dungeon A1 | OGG | ~500 KB | OpenGameArt | Ambiente tenso adequado ao andar 1 |
-| Música dungeon A2/A3 | OGG | ~500 KB cada | OpenGameArt | Intensidade crescente por andar |
-| Música boss | OGG | ~600 KB | OpenGameArt | Tema distinto e mais intenso para combate de boss |
-| SFX: swing espada | OGG | ~25 KB | bfxr.net | Gerado especificamente para feedback do ataque melee |
-| SFX: impacto / hit | OGG | ~20 KB | bfxr.net | Feedback imediato ao acertar inimigo |
-| SFX: magia / projétil | OGG | ~30 KB | bfxr.net | Distinguível do ataque melee |
-| SFX: morte inimigo | OGG | ~25 KB | freesound.org | Satisfatório, curto |
-| SFX: porta a abrir | OGG | ~40 KB | freesound.org | Feedback claro da transição de sala |
-| SFX: apanhar item | OGG | ~20 KB | bfxr.net | Power-up / poção coletado |
-| SFX: dano recebido | OGG | ~20 KB | bfxr.net | Feedback ao jogador ao ser atingido |
-| Jingle Game Over | OGG | ~80 KB | bfxr.net | Curto, reconhecível |
-| Jingle Vitória | OGG | ~120 KB | OpenGameArt | Satisfatório, celebratório |
+| Música menu | OGG | ~300 KB | OpenGameArt | Ambiente calmo, loop |
+| Música dia (ilha) | OGG | ~500 KB | OpenGameArt | Tropical, relaxante |
+| Música noite (ilha) | OGG | ~500 KB | OpenGameArt | Tensa, misteriosa |
+| SFX: passos areia/erva | OGG | ~20 KB | freesound.org | Feedback de movimento |
+| SFX: recolher recurso | OGG | ~15 KB | bfxr.net | Feedback imediato |
+| SFX: falar com NPC | OGG | ~10 KB | bfxr.net | Curto, reconhecível |
+| SFX: objetivo cumprido | OGG | ~30 KB | bfxr.net | Satisfatório |
+| SFX: tabaco 😂 | OGG | ~20 KB | bfxr.net | Easter egg |
+| SFX: game over | OGG | ~60 KB | OpenGameArt | Dramático |
+| Jingle vitória | OGG | ~100 KB | OpenGameArt | Celebratório |
 
-**Total estimado de assets: ~6 MB** *(abaixo do limite recomendado de 10 MB)*
-
-Todos os ficheiros de áudio estão em formato **OGG** (comprimido), sem ficheiros WAV brutos no repositório.
+**Total estimado: ~4 MB**
 
 ---
 
-## Funcionalidades Implementadas
+## Funcionalidades
 
-- [x] 3 andares × 4 salas (12 salas desenhadas no Tiled)
-- [x] 3 tipos de inimigos com IA distinta (Skeleton, Ghost, Bat)
-- [x] 3 bosses de andar + boss final com **2 fases** (DarkLord)
-- [x] Combate **melee** (espada) + **ranged** (magia) com cooldown
-- [x] Sistema de chaves e baús
-- [x] 4 tipos de power-ups com duração e HUD indicator
-- [x] Sistema de pontuação com **highscore em localStorage**
-- [x] Suporte a **3 línguas**: Português 🇵🇹, English 🇬🇧, Français 🇫🇷
-- [x] Banda sonora completa: 4 músicas + 13 SFX distintos
-- [x] HUD paralela (corações, score, chaves, cooldown, andar)
-- [x] Partículas em explosões e efeitos mágicos
-- [x] Tweens em menus, transições e portas
-- [x] Camera follow + shake + fade
+- [x] Movimento + colisões com tilemap
+- [x] 4 zonas da ilha exploráveis
+- [x] Sistema de recolha de recursos
+- [x] Inventário simples
+- [x] 4 NPCs sobreviventes com automação
+- [x] Sistema de objetivos sequenciais
+- [x] Day/night cycle visual
+- [x] Save system (localStorage)
+- [x] Suporte PT 🇵🇹 / EN 🇬🇧
+- [x] Banda sonora + SFX
+- [x] HUD limpa e informativa
+- [x] Easter egg do tabaco 🚬
 
 ---
 
@@ -318,8 +313,8 @@ Todos os ficheiros de áudio estão em formato **OGG** (comprimido), sem ficheir
 | Recurso | Origem |
 |---------|--------|
 | Engine | [Phaser 3](https://phaser.io) |
-| Assets visuais | [Kenney.nl](https://kenney.nl) — Roguelike/RPG Pack, UI Pack, Particles |
-| Assets visuais adicionais | [itch.io](https://itch.io/game-assets/free) — packs gratuitos |
+| Assets visuais | [Kenney.nl](https://kenney.nl) |
+| Assets adicionais | [itch.io](https://itch.io/game-assets/free) |
 | Música | [OpenGameArt.org](https://opengameart.org) |
 | SFX | [bfxr.net](https://www.bfxr.net) e [freesound.org](https://freesound.org) |
-| Tilemaps | Criados com [Tiled Map Editor](https://www.mapeditor.org) |
+| Tilemaps | [Tiled Map Editor](https://www.mapeditor.org) |
