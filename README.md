@@ -313,8 +313,8 @@ Stranded/
 | Recurso | Origem |
 |---------|--------|
 | Engine | [Phaser 3](https://phaser.io) |
-| Assets visuais | [Kenney.nl](https://kenney.nl) |
-| Assets adicionais | [itch.io](https://itch.io/game-assets/free) |
+| Tileset + sprites principais | [Sunnyside World por danieldiggle](https://danieldiggle.itch.io/sunnyside) — gratuito, licença livre para projetos livres e comerciais |
+| Assets adicionais | [Kenney.nl](https://kenney.nl) |
 | Música | [OpenGameArt.org](https://opengameart.org) |
 | SFX | [bfxr.net](https://www.bfxr.net) e [freesound.org](https://freesound.org) |
 | Tilemaps | [Tiled Map Editor](https://www.mapeditor.org) |
