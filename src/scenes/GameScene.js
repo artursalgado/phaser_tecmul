@@ -51,7 +51,22 @@ export default class GameScene extends Phaser.Scene {
     }
 
     update() {
+        const speed = 200;
+        const body = this.player.body;
 
+        body.setVelocity(0); // sem isto o jogador desliza eternamente 
 
+        // cada frame verifica se alguma tecla está pressionada e move o jogador nessa direção.
+        if (this.cursors.left.isDown || this.wasd.left.isDown) {
+            body.setVelocityX(-speed);
+        } else if (this.cursors.right.isDown || this.wasd.right.isDown) {
+            body.setVelocityX(speed);
+        }
+
+        if (this.cursors.up.isDown || this.wasd.up.isDown) {
+            body.setVelocityY(-speed);
+        } else if (this.cursors.down.isDown || this.wasd.down.isDown) {
+            body.setVelocityY(speed);
+        }
     }
 }
