@@ -1,549 +1,277 @@
 """
-Gerador de mapa v4 — tile IDs conservadores (linhas 0-16 do tileset Sunnyside 64 cols)
-Novidades: biomas por ruído, floresta densa, 5 POIs, caminhos curvos, orla de areia detalhada
+generate_map.py v5 — Ilha de sobrevivência com IDs verificados
+Tileset: Sunnyside World 16px (1024x1024, 64 colunas, 16x16 por tile)
+Formula de ID: id = row * 64 + col + 2  (linha 0 é vazia, firstgid=1)
+  Exemplo: row=1, col=1 -> 1*64 + 1 + 2 = 67  ← ERRADO
+  Formula correta (verificada com tile_colors.csv):
+    tile 66: row=1, col=1  ->  1*64 + 1 + 1 = 66  ✓
+    tile 67: row=1, col=2  ->  1*64 + 2 + 1 = 67  ✓
+    Formula: id = row * 64 + col + 1
 """
-import json, random, math, copy
-from collections import deque
 
-random.seed(99)
+import json, random, math
 
-# ---------------------------------------------------------------------------
-# TILESET spr_tileset_sunnysideworld_16px.png — 64 colunas, 1-indexed (Tiled)
-# ---------------------------------------------------------------------------
-def T(row, col):
-    return row * 64 + col + 1
+# ─── DIMENSÕES ────────────────────────────────────────────────────────────────
+MAP_W, MAP_H = 80, 60
+TILE_SIZE    = 16
+COLS_PER_ROW = 64
 
-# ── CHÃO ─────────────────────────────────────────────────────────────────────
-# Oceano
-OCEAN_DEEP  = T(9, 0)
-OCEAN_MID   = T(9, 1)
-OCEAN_SHORE = T(9, 2)
+def tid(row, col):
+    """Converte (row, col) do tileset para tile ID (firstgid=1)."""
+    return row * COLS_PER_ROW + col + 1
 
-# Areia/praia — linha 7
-SAND_A = T(7, 0)
-SAND_B = T(7, 1)
-SAND_C = T(7, 2)
-SAND_D = T(7, 3)
+# ─── IDs VERIFICADOS ─────────────────────────────────────────────────────────
+# Linha 1 (row=1) — tiles base
+GRASS_A    = tid(1, 1)   # 66  relva clara (r=95,g=193,b=76)
+GRASS_B    = tid(1, 2)   # 67  relva clara variante
+SAND_BEACH = tid(1, 3)   # 68  areia de praia castanho
+WATER_EDGE = tid(1, 4)   # 69  água rasa azul vivo
+SAND_LIGHT = tid(1, 5)   # 70  areia clara
+DIRT_BASE  = tid(1, 37)  # 102 terra castanha (r=140,g=83,b=56)
 
-# Relva — linha 0
-GRASS_A = T(0, 0)
-GRASS_B = T(0, 1)
-GRASS_C = T(0, 2)
-GRASS_D = T(0, 3)
+# Linhas 2-4 — mais relva variante
+GRASS_C = tid(2, 1)   # 130
+GRASS_D = tid(2, 2)   # 131
+GRASS_E = tid(2, 3)   # 132
+GRASS_F = tid(2, 4)   # 133
+GRASS_G = tid(2, 5)   # 134
+GRASS_H = tid(2, 6)   # 135
 
-# Terra/caminho — linha 3
-DIRT_A = T(3, 0)
-DIRT_B = T(3, 1)
-DIRT_C = T(3, 2)
+# Relva escura (floresta) — linha 1, colunas 51-52
+FOREST_A = tid(1, 51)   # 116
+FOREST_B = tid(1, 52)   # 117
+FOREST_C = tid(1, 55)   # 120  ainda mais escura
+FOREST_D = tid(1, 56)   # 121
 
-# Solo agrícola — linha 4
-SOIL_A = T(4, 0)
-SOIL_B = T(4, 1)
+# Arbustos — linha 1, colunas 27-30
+BUSH_A = tid(1, 27)  # 92
+BUSH_B = tid(1, 28)  # 93
+BUSH_C = tid(1, 29)  # 94
+BUSH_D = tid(1, 30)  # 95
 
-# Água interior — linha 10
-LAKE_DEEP  = T(10, 0)
-LAKE_MID   = T(10, 1)
-LAKE_SHORE = T(10, 2)
+# Água profunda — linha 6 (mais bonita/saturada)
+WATER_A = tid(6, 30)   # 415 (r=79,g=194,b=235)
+WATER_B = tid(6, 31)   # 416
+WATER_C = tid(6, 32)   # 417
+WATER_D = tid(7, 30)   # 479 (r=48,g=183,b=231)
+WATER_E = tid(7, 31)   # 480
+WATER_F = tid(8, 30)   # 543 (r=48,g=218,b=231)
+WATER_G = tid(8, 31)   # 544
 
-# ── DECORAÇÃO ────────────────────────────────────────────────────────────────
-# Árvores (topo / base) — linhas 1-2
-TREE_A = (T(1, 0), T(2, 0))
-TREE_B = (T(1, 2), T(2, 2))
-TREE_C = (T(1, 4), T(2, 4))
-TREE_D = (T(1, 6), T(2, 6))   # árvore de fruto
-TREE_E = (T(1, 8), T(2, 8))   # árvore outonal
+# Praia / areia sólida
+BEACH_A = tid(7, 1)    # 450 (r=228,g=166,b=114)
+BEACH_B = tid(7, 9)    # 458
+BEACH_C = tid(7, 10)   # 459
+BEACH_D = tid(7, 34)   # 483 areia clara
 
-TREES = [TREE_A, TREE_B, TREE_C, TREE_D, TREE_E]
+# Transições água→praia/relva (linha 7)
+TRANS_WATER_GRASS = tid(7, 22)   # 471 água com verde
+TRANS_TO_GRASS1   = tid(7, 23)   # 472
+TRANS_TO_GRASS2   = tid(7, 27)   # 476
+TRANS_TO_GRASS3   = tid(7, 28)   # 477 quase relva
 
-# Arbustos — linha 5
-BUSH_A = T(5, 0)
-BUSH_B = T(5, 2)
-BUSH_C = T(5, 4)
+# Caminhos de terra (linhas 9-10)
+PATH_A = tid(9, 1)    # 578 (r=197,g=128,b=91)
+PATH_B = tid(9, 2)    # 579
+PATH_C = tid(10, 9)   # 651 (r=192,g=132,b=96)
 
-# Flores / ervas — linha 0 cols 4-7
-FLOWER_A   = T(0, 4)
-FLOWER_B   = T(0, 5)
-FLOWER_C   = T(0, 6)
-GRASS_TALL = T(0, 7)
+# ─── GRUPOS ──────────────────────────────────────────────────────────────────
+GRASS_ALL  = [GRASS_A, GRASS_B, GRASS_C, GRASS_D,
+              GRASS_E, GRASS_F, GRASS_G, GRASS_H]
+FOREST_ALL = [FOREST_A, FOREST_B, FOREST_C, FOREST_D,
+              FOREST_A, FOREST_B]   # duplicar para maior probabilidade
+WATER_ALL  = [WATER_A, WATER_B, WATER_C, WATER_D,
+              WATER_E, WATER_F, WATER_G]
+BEACH_ALL  = [BEACH_A, BEACH_B, BEACH_C, BEACH_D]
+PATH_ALL   = [PATH_A, PATH_B, PATH_C, DIRT_BASE]
+TRANS_ALL  = [TRANS_WATER_GRASS, TRANS_TO_GRASS1,
+              TRANS_TO_GRASS2, TRANS_TO_GRASS3]
+BUSH_ALL   = [BUSH_A, BUSH_B, BUSH_C, BUSH_D]
 
-# Cogumelos — linha 6
-SHROOM_A = T(6, 0)
-SHROOM_B = T(6, 1)
+# ─── CAMADAS ─────────────────────────────────────────────────────────────────
+chao    = [[0]*MAP_W for _ in range(MAP_H)]
+deco    = [[0]*MAP_W for _ in range(MAP_H)]
+colisao = [[0]*MAP_W for _ in range(MAP_H)]
 
-# Rochas — linha 8
-ROCK_A   = T(8, 0)
-ROCK_B   = T(8, 1)
-ROCK_C   = T(8, 2)
-ROCK_D   = T(8, 3)
-ROCK_BIG = T(8, 4)
+rng = random.Random(99)
 
-ROCKS = [ROCK_A, ROCK_B, ROCK_C, ROCK_D, ROCK_A, ROCK_B, ROCK_BIG]
+# ─── PARÂMETROS DA ILHA ───────────────────────────────────────────────────────
+cx, cy = MAP_W // 2, MAP_H // 2    # centro: (40, 30)
+rx, ry = 33, 23                     # raios elípticos
 
-# Praia — linha 7 cols 4-7
-SHELL_A  = T(7, 4)
-SHELL_B  = T(7, 5)
-SEAWEED  = T(7, 6)
-STARFISH = T(7, 7)
+def dist_norm(x, y):
+    return math.sqrt(((x - cx) / rx)**2 + ((y - cy) / ry)**2)
 
-# Estruturas — linhas 11-15
-WALL_H  = T(11, 0)
-WALL_V  = T(11, 1)
-WALL_C  = T(11, 2)
-FENCE_H = T(12, 0)
-FENCE_V = T(12, 1)
-FENCE_C = T(12, 2)
-CHEST   = T(13, 0)
-BARREL  = T(13, 1)
-FIRE_LG = T(14, 0)
-FIRE_SM = T(14, 1)
-WELL    = T(14, 2)
-SIGN    = T(14, 3)
-TORCH   = T(15, 0)
-GRAVE   = T(15, 1)
-CROSS   = T(15, 2)
-PILLAR  = T(15, 3)
+def coast_noise(x, y):
+    """Ruído na borda para fazer a ilha parecer natural."""
+    angle = math.atan2(y - cy, x - cx)
+    return (0.10 * math.sin(angle * 4 + 0.3) +
+            0.07 * math.sin(angle * 9 + 1.2) +
+            0.05 * math.sin(angle * 16 + 2.7) +
+            0.04 * math.cos(angle * 7 - 0.5))
 
-# ---------------------------------------------------------------------------
-W, H = 80, 60
+# ─── 1. PREENCHER TUDO COM ÁGUA ──────────────────────────────────────────────
+for y in range(MAP_H):
+    for x in range(MAP_W):
+        # Alternar padrão de água para parecer natural
+        chao[y][x] = rng.choice(WATER_ALL)
 
-def make_grid(val=0):
-    return [[val] * W for _ in range(H)]
+# ─── 2. DESENHAR ILHA ────────────────────────────────────────────────────────
+for y in range(MAP_H):
+    for x in range(MAP_W):
+        d = dist_norm(x, y)
+        n = coast_noise(x, y)
 
-# ── Carregar JSON original para extrair a forma/máscara da ilha ──────────────
-with open('assets/tilemaps/ilha.json', 'r', encoding='utf-8') as f:
-    orig = json.load(f)
-
-orig_flat = orig['layers'][0]['data']
-orig_chao = [orig_flat[r * W:(r + 1) * W] for r in range(H)]
-
-# ── Máscara de ilha via BFS a partir das bordas ──────────────────────────────
-visited = [[False] * W for _ in range(H)]
-queue   = deque()
-for c in range(W):
-    for r_edge in [0, H - 1]:
-        visited[r_edge][c] = True
-        queue.append((r_edge, c))
-for r in range(H):
-    for c_edge in [0, W - 1]:
-        visited[r][c_edge] = True
-        queue.append((r, c_edge))
-
-ocean_val = orig_chao[0][0]
-while queue:
-    r, c = queue.popleft()
-    for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
-        nr, nc = r + dr, c + dc
-        if 0 <= nr < H and 0 <= nc < W and not visited[nr][nc]:
-            if orig_chao[nr][nc] == ocean_val or orig_chao[nr][nc] == 0:
-                visited[nr][nc] = True
-                queue.append((nr, nc))
-
-island_mask = [[not visited[r][c] for c in range(W)] for r in range(H)]
-
-def is_island(r, c):
-    return 0 <= r < H and 0 <= c < W and island_mask[r][c]
-
-# ── Distância ao oceano (BFS) ─────────────────────────────────────────────────
-dist = [[9999] * W for _ in range(H)]
-queue = deque()
-for r in range(H):
-    for c in range(W):
-        if not island_mask[r][c]:
-            dist[r][c] = 0
-            queue.append((r, c))
-while queue:
-    r, c = queue.popleft()
-    for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
-        nr, nc = r + dr, c + dc
-        if 0 <= nr < H and 0 <= nc < W and dist[nr][nc] > dist[r][c] + 1:
-            dist[nr][nc] = dist[r][c] + 1
-            queue.append((nr, nc))
-
-max_d = max(dist[r][c] for r in range(H) for c in range(W) if island_mask[r][c])
-print(f"Ilha carregada — dist máx ao oceano: {max_d}")
-
-# ── Ruído suave para biomas ───────────────────────────────────────────────────
-def snoise(r, c, scale=0.12, sx=0, sy=0):
-    x = (c + sx) * scale
-    y = (r + sy) * scale
-    return (math.sin(x) * math.cos(y) + math.cos(x * 0.71) * math.sin(y * 1.31)) * 0.5
-
-# ── Centro da ilha ────────────────────────────────────────────────────────────
-island_cells = [(r, c) for r in range(H) for c in range(W) if island_mask[r][c]]
-CR = sum(r for r, c in island_cells) // len(island_cells)
-CC = sum(c for r, c in island_cells) // len(island_cells)
-PLAYER_ROW, PLAYER_COL = CR, CC
-print(f"Centro da ilha / spawn do jogador: ({CR},{CC}) -> pixel ({CC*16},{CR*16})")
-
-# ── Spawn de JavaScript — actualizar GameScene.js com coordenadas reais
-SPAWN_X = CC * 16 + 8
-SPAWN_Y = CR * 16 + 8
-
-def near_spawn(r, c, rad=7):
-    return abs(r - PLAYER_ROW) <= rad and abs(c - PLAYER_COL) <= rad
-
-# ---------------------------------------------------------------------------
-# GERAR CHÃO COM BIOMAS
-# ---------------------------------------------------------------------------
-chao = make_grid(OCEAN_DEEP)
-
-for r in range(H):
-    for c in range(W):
-        if not island_mask[r][c]:
-            # Oceano
-            has_neighbor = any(is_island(r+dr, c+dc) for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)])
-            chao[r][c] = OCEAN_SHORE if has_neighbor else OCEAN_DEEP
-            continue
-
-        d  = dist[r][c]
-        n1 = snoise(r, c, 0.13, 5,  3)
-        n2 = snoise(r, c, 0.20, 17, 31)
-        rv = random.random()
-
-        if d == 1:
-            chao[r][c] = SAND_A
-        elif d == 2:
-            chao[r][c] = SAND_B if rv < 0.55 else SAND_A
-        elif d == 3:
-            chao[r][c] = SAND_B if rv < 0.35 else (SAND_C if rv < 0.55 else GRASS_A)
-        elif d <= 5:
-            chao[r][c] = GRASS_A if rv < 0.5 else (SAND_C if rv < 0.7 else GRASS_B)
-        else:
-            t = (d / max_d) + n1 * 0.35 + n2 * 0.15
-            if t < 0.22:
-                chao[r][c] = GRASS_A if rv < 0.55 else GRASS_B
-            elif t < 0.44:
-                chao[r][c] = GRASS_B if rv < 0.5  else GRASS_C
-            elif t < 0.66:
-                chao[r][c] = GRASS_C if rv < 0.45 else GRASS_D
+        if d < 0.60 + n:
+            # Interior: floresta densa no centro, clareira nos arredores
+            if d < 0.25:
+                chao[y][x] = rng.choice(FOREST_ALL)
+            elif d < 0.45:
+                chao[y][x] = rng.choice(FOREST_ALL[:2] + GRASS_ALL)
             else:
-                chao[r][c] = GRASS_D if rv < 0.6  else DIRT_C
+                chao[y][x] = rng.choice(GRASS_ALL)
 
-# ---------------------------------------------------------------------------
-# DECORAÇÃO E COLISÃO
-# ---------------------------------------------------------------------------
-deco  = make_grid(0)
-colis = make_grid(0)
-blocked = make_grid(False)
+        elif d < 0.73 + n:
+            # Praia / litoral
+            if d < 0.67 + n:
+                chao[y][x] = rng.choice(BEACH_ALL)
+            else:
+                chao[y][x] = rng.choice(BEACH_ALL[:2])
 
-def can_place(r, c, rad=0):
-    if not is_island(r, c): return False
-    if blocked[r][c]: return False
-    if near_spawn(r, c): return False
-    for dr in range(-rad, rad + 1):
-        for dc in range(-rad, rad + 1):
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < H and 0 <= nc < W and blocked[nr][nc]:
-                return False
-    return True
+        elif d < 0.82 + n:
+            # Água rasa junto à costa
+            chao[y][x] = rng.choice(TRANS_ALL)
+        # else: água profunda (já definido)
 
-def mark_blocked(r, c, rad=1):
-    for dr in range(-rad, rad + 1):
-        for dc in range(-rad, rad + 1):
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < H and 0 <= nc < W:
-                blocked[nr][nc] = True
+# ─── 3. CAMINHOS DE TERRA ─────────────────────────────────────────────────────
+def is_land(x, y):
+    """Verifica se o tile em (x,y) é terra firme."""
+    d = dist_norm(x, y)
+    n = coast_noise(x, y)
+    return d < 0.60 + n
 
-# ── ÁRVORES ──────────────────────────────────────────────────────────────────
-planted = 0
-for _ in range(5000):
-    r = random.randint(4, H - 4)
-    c = random.randint(4, W - 4)
-    if dist[r][c] < 5: continue
-    if not can_place(r, c, 1): continue
-    if not is_island(r - 1, c) or blocked[r - 1][c]: continue
-    # Mais árvores no interior (floresta)
-    prob = 0.5 + (dist[r][c] / max_d) * 0.5
-    if random.random() > prob: continue
-    tt, tb = random.choice(TREES)
-    deco[r - 1][c] = tt
-    deco[r][c]     = tb
-    colis[r][c]    = tb
-    mark_blocked(r, c, 2)
-    mark_blocked(r - 1, c, 1)
-    planted += 1
-    if planted >= 160: break
-print(f"Árvores: {planted}")
+def draw_path(x0, y0, x1, y1, w=1):
+    """Traça caminho de terra de (x0,y0) a (x1,y1)."""
+    steps = max(abs(x1 - x0), abs(y1 - y0))
+    if steps == 0:
+        return
+    for i in range(steps + 1):
+        t = i / steps
+        px = int(x0 + (x1 - x0) * t)
+        py = int(y0 + (y1 - y0) * t)
+        for wy in range(-w, w + 1):
+            for wx in range(-w, w + 1):
+                nx, ny = px + wx, py + wy
+                if 0 <= nx < MAP_W and 0 <= ny < MAP_H and is_land(nx, ny):
+                    chao[ny][nx] = rng.choice(PATH_ALL)
 
-# ── ROCHAS ────────────────────────────────────────────────────────────────────
-rocks = 0
-for _ in range(3000):
-    r = random.randint(3, H - 3)
-    c = random.randint(3, W - 3)
-    if dist[r][c] < 3: continue
-    if not can_place(r, c, 1): continue
-    rk = random.choice(ROCKS)
-    deco[r][c]  = rk
-    colis[r][c] = rk
-    mark_blocked(r, c, 1)
-    rocks += 1
-    if rocks >= 70: break
-print(f"Rochas: {rocks}")
+# Cruzamento central + 4 braços
+draw_path(cx - 20, cy,     cx + 20, cy,     w=1)   # horizontal
+draw_path(cx,      cy - 15, cx,     cy + 15, w=1)   # vertical
+draw_path(cx - 14, cy - 10, cx + 14, cy + 10, w=1) # diagonal NE
+draw_path(cx - 14, cy + 10, cx + 14, cy - 10, w=1) # diagonal SE
 
-# ── ARBUSTOS ─────────────────────────────────────────────────────────────────
-bushes = 0
-for _ in range(4000):
-    r = random.randint(3, H - 3)
-    c = random.randint(3, W - 3)
-    if dist[r][c] < 4: continue
-    if not is_island(r, c) or blocked[r][c]: continue
-    if near_spawn(r, c): continue
-    deco[r][c] = random.choice([BUSH_A, BUSH_B, BUSH_C, BUSH_A, BUSH_B])
-    blocked[r][c] = True
-    bushes += 1
-    if bushes >= 120: break
-print(f"Arbustos: {bushes}")
+# ─── 4. DECORAÇÃO (arbustos) ──────────────────────────────────────────────────
+deco_count = 0
+for y in range(MAP_H):
+    for x in range(MAP_W):
+        base = chao[y][x]
+        d    = dist_norm(x, y)
+        n    = coast_noise(x, y)
 
-# ── COGUMELOS ─────────────────────────────────────────────────────────────────
-shrooms = 0
-for r in range(H):
-    for c in range(W):
-        if not is_island(r, c) or blocked[r][c]: continue
-        if dist[r][c] < 10: continue
-        if near_spawn(r, c, 5): continue
-        if random.random() < 0.05:
-            deco[r][c] = random.choice([SHROOM_A, SHROOM_B])
-            blocked[r][c] = True
-            shrooms += 1
-print(f"Cogumelos: {shrooms}")
+        if base in FOREST_ALL and rng.random() < 0.12:
+            deco[y][x] = rng.choice(BUSH_ALL)
+            deco_count += 1
+        elif base in GRASS_ALL and rng.random() < 0.05:
+            deco[y][x] = rng.choice(BUSH_ALL[:2])
+            deco_count += 1
 
-# ── FLORES / ERVAS ────────────────────────────────────────────────────────────
-flowers = 0
-for r in range(H):
-    for c in range(W):
-        if not is_island(r, c) or blocked[r][c]: continue
-        if dist[r][c] < 4: continue
-        if random.random() < 0.12:
-            deco[r][c] = random.choice([FLOWER_A, FLOWER_B, FLOWER_C, GRASS_TALL, FLOWER_A])
-            flowers += 1
-print(f"Flores/ervas: {flowers}")
+# ─── 5. COLISÕES ──────────────────────────────────────────────────────────────
+COLLIDE_TILES = set(WATER_ALL + TRANS_ALL + [WATER_EDGE])
 
-# ── PRAIA ─────────────────────────────────────────────────────────────────────
-beach_deco = 0
-for r in range(H):
-    for c in range(W):
-        if not is_island(r, c) or blocked[r][c]: continue
-        if dist[r][c] > 3: continue
-        if random.random() < 0.10:
-            deco[r][c] = random.choice([SHELL_A, SHELL_B, STARFISH, SEAWEED, SHELL_A])
-            beach_deco += 1
-print(f"Praia deco: {beach_deco}")
+collision_count = 0
+for y in range(MAP_H):
+    for x in range(MAP_W):
+        if chao[y][x] in COLLIDE_TILES:
+            colisao[y][x] = WATER_A   # tile sólido invisível
+            collision_count += 1
+        elif deco[y][x] in BUSH_ALL:
+            colisao[y][x] = BUSH_A
+            collision_count += 1
 
-# ---------------------------------------------------------------------------
-# CAMINHOS DE TERRA — cruzamento orgânico pelo spawn
-# ---------------------------------------------------------------------------
-def draw_path(r0, c0, r1, c1, width=1):
-    pts, jit = [], 0
-    dr = abs(r1 - r0); dc = abs(c1 - c0)
-    sr = 1 if r1 > r0 else -1
-    sc = 1 if c1 > c0 else -1
-    err = dr - dc
-    r, c = r0, c0
-    while True:
-        for wr in range(-width, width + 1):
-            for wc in range(-width, width + 1):
-                nr, nc = r + wr + jit, c + wc
-                if is_island(nr, nc):
-                    pts.append((nr, nc))
-        if r == r1 and c == c1: break
-        e2 = 2 * err
-        if e2 > -dc: err -= dc; r += sr
-        if e2 <  dr: err += dr; c += sc
-        if random.random() < 0.15:
-            jit += random.choice([-1, 0, 1])
-            jit = max(-1, min(1, jit))
-    return pts
+# ─── ESTATÍSTICAS ─────────────────────────────────────────────────────────────
+total = MAP_W * MAP_H
+land  = sum(1 for y in range(MAP_H) for x in range(MAP_W)
+            if chao[y][x] not in COLLIDE_TILES and chao[y][x] not in BEACH_ALL)
 
-path_pts = set()
-path_pts.update(draw_path(PLAYER_ROW, 5,          PLAYER_ROW, W - 5, width=1))
-path_pts.update(draw_path(5,          PLAYER_COL, H - 5,     PLAYER_COL, width=1))
-# Caminho diagonal para ruínas NE
-path_pts.update(draw_path(PLAYER_ROW, PLAYER_COL, 10, W - 10, width=1))
+print(f"Mapa: {MAP_W}×{MAP_H}  ({total} tiles total)")
+print(f"  Terra firme: {land} tiles")
+print(f"  Decorações:  {deco_count}")
+print(f"  Colisões:    {collision_count}")
+print(f"  Spawn:       pixel ({cx*TILE_SIZE}, {cy*TILE_SIZE})")
 
-for (r, c) in path_pts:
-    if is_island(r, c):
-        chao[r][c]  = DIRT_A if random.random() < 0.65 else DIRT_B
-        deco[r][c]  = 0
-        colis[r][c] = 0
-        blocked[r][c] = False
+# ─── CONVERTER PARA FLAT ─────────────────────────────────────────────────────
+def flat(grid):
+    return [tile for row in grid for tile in row]
 
-print(f"Caminhos: {len(path_pts)} tiles")
-
-# ---------------------------------------------------------------------------
-# POIs — Pontos de Interesse
-# ---------------------------------------------------------------------------
-
-# ── 1. CABANA INICIAL (norte-oeste do spawn) ─────────────────────────────────
-HR, HC = PLAYER_ROW - 10, PLAYER_COL - 4
-if all(is_island(HR + dr, HC + dc) for dr in range(5) for dc in range(7)):
-    for dr in range(5):
-        for dc in range(7):
-            r2, c2 = HR + dr, HC + dc
-            chao[r2][c2]  = DIRT_B
-            deco[r2][c2]  = 0
-            colis[r2][c2] = 0
-            blocked[r2][c2] = True
-    # Paredes
-    for dc in range(7):
-        r2, c2 = HR, HC + dc
-        if is_island(r2, c2): deco[r2][c2] = colis[r2][c2] = WALL_H
-    for dr in range(5):
-        for cc2 in [HC, HC + 6]:
-            r2 = HR + dr
-            if is_island(r2, cc2): deco[r2][cc2] = colis[r2][cc2] = WALL_V
-    # Porta central sul (2 tiles)
-    for dc in range(2, 5):
-        r2, c2 = HR + 4, HC + dc
-        if is_island(r2, c2): deco[r2][c2] = colis[r2][c2] = 0
-    # Interior
-    deco[HR+1][HC+1] = FIRE_SM
-    deco[HR+1][HC+5] = CHEST;  colis[HR+1][HC+5] = CHEST
-    deco[HR+2][HC+5] = BARREL; colis[HR+2][HC+5] = BARREL
-    # Poço a leste
-    wr2, wc2 = HR + 2, HC + 9
-    if is_island(wr2, wc2):
-        deco[wr2][wc2] = colis[wr2][wc2] = WELL
-        mark_blocked(wr2, wc2, 1)
-    # Tochas
-    for tr, tc in [(HR - 1, HC), (HR - 1, HC + 6)]:
-        if is_island(tr, tc) and not blocked[tr][tc]: deco[tr][tc] = TORCH
-    print("Cabana construída")
-
-# ── 2. RUÍNAS ANTIGAS (nordeste) ─────────────────────────────────────────────
-RR, RC = 7, W - 16
-if is_island(RR, RC) and is_island(RR + 7, RC + 7):
-    for dr in range(8):
-        for dc in range(8):
-            r2, c2 = RR + dr, RC + dc
-            if is_island(r2, c2):
-                chao[r2][c2] = DIRT_C
-                deco[r2][c2] = colis[r2][c2] = 0
-                blocked[r2][c2] = True
-    walls = [
-        (RR,   RC,   WALL_H), (RR, RC+1, WALL_H), (RR, RC+2, WALL_H),
-        (RR,   RC+4, WALL_H), (RR, RC+5, WALL_H),
-        (RR+1, RC,   WALL_V), (RR+2, RC, WALL_V), (RR+4, RC, WALL_V),
-        (RR+6, RC+2, WALL_H), (RR+6, RC+3, WALL_H),
-        (RR+1, RC+7, WALL_V), (RR+3, RC+7, WALL_V),
+# ─── JSON COM TILESET INLINE (sem .tsj externo) ──────────────────────────────
+tilemap = {
+    "height": MAP_H,
+    "width":  MAP_W,
+    "tileheight": TILE_SIZE,
+    "tilewidth":  TILE_SIZE,
+    "orientation": "orthogonal",
+    "renderorder": "right-down",
+    "type": "map",
+    "version": "1.10",
+    "infinite": False,
+    "nextlayerid": 5,
+    "nextobjectid": 1,
+    "tilesets": [
+        {
+            "columns":     64,
+            "firstgid":    1,
+            "image":       "../../tilesets/spr_tileset_sunnysideworld_16px.png",
+            "imageheight": 1024,
+            "imagewidth":  1024,
+            "margin":      0,
+            "name":        "sunnyside",
+            "spacing":     0,
+            "tilecount":   4096,
+            "tileheight":  16,
+            "tilewidth":   16
+        }
+    ],
+    "layers": [
+        {
+            "id": 1, "name": "chao",
+            "type": "tilelayer",
+            "x": 0, "y": 0,
+            "width": MAP_W, "height": MAP_H,
+            "visible": True, "opacity": 1,
+            "data": flat(chao)
+        },
+        {
+            "id": 2, "name": "Decoracao",
+            "type": "tilelayer",
+            "x": 0, "y": 0,
+            "width": MAP_W, "height": MAP_H,
+            "visible": True, "opacity": 1,
+            "data": flat(deco)
+        },
+        {
+            "id": 3, "name": "colisao",
+            "type": "tilelayer",
+            "x": 0, "y": 0,
+            "width": MAP_W, "height": MAP_H,
+            "visible": True, "opacity": 1,
+            "data": flat(colisao)
+        }
     ]
-    for r2, c2, t in walls:
-        if is_island(r2, c2): deco[r2][c2] = colis[r2][c2] = t
-    # Pilares + baú + lápides
-    for pr, pc in [(RR+1, RC+1), (RR+1, RC+6)]:
-        if is_island(pr, pc): deco[pr][pc] = colis[pr][pc] = PILLAR
-    deco[RR+3][RC+3] = colis[RR+3][RC+3] = CHEST
-    for gr, gc in [(RR+5, RC+3), (RR+5, RC+5), (RR+4, RC+6)]:
-        if is_island(gr, gc): deco[gr][gc] = colis[gr][gc] = GRAVE
-    print("Ruínas construídas")
+}
 
-# ── 3. LAGO INTERIOR (nordeste, interior) ────────────────────────────────────
-LR, LC, LRAD = 18, W - 20, 5
-lake_tiles = 0
-for dr in range(-LRAD - 2, LRAD + 3):
-    for dc in range(-LRAD - 2, LRAD + 3):
-        r2, c2 = LR + dr, LC + dc
-        if not (0 <= r2 < H and 0 <= c2 < W and is_island(r2, c2)): continue
-        dl = math.sqrt(dr * dr + dc * dc)
-        if dl <= LRAD - 1:
-            chao[r2][c2] = LAKE_DEEP
-            deco[r2][c2] = colis[r2][c2] = LAKE_DEEP
-            blocked[r2][c2] = True
-            lake_tiles += 1
-        elif dl <= LRAD:
-            chao[r2][c2] = LAKE_MID
-            deco[r2][c2] = colis[r2][c2] = LAKE_MID
-            blocked[r2][c2] = True
-            lake_tiles += 1
-        elif dl <= LRAD + 1:
-            chao[r2][c2] = SAND_B
-            deco[r2][c2] = colis[r2][c2] = 0
-print(f"Lago: {lake_tiles} tiles")
+out = "assets/tilemaps/ilha.json"
+with open(out, "w", encoding="utf-8") as f:
+    json.dump(tilemap, f, separators=(",", ":"))
 
-# ── 4. CAMPO DE CULTIVO (sul do spawn) ───────────────────────────────────────
-FR, FC = PLAYER_ROW + 7, PLAYER_COL - 5
-if is_island(FR, FC) and is_island(FR + 5, FC + 9):
-    for dr in range(5):
-        for dc in range(9):
-            r2, c2 = FR + dr, FC + dc
-            if is_island(r2, c2):
-                chao[r2][c2] = SOIL_A if dc % 2 == 0 else SOIL_B
-                deco[r2][c2] = colis[r2][c2] = 0
-                blocked[r2][c2] = False
-    # Cerca
-    for dc in range(-1, 10):
-        for br in [FR - 1, FR + 5]:
-            r2, c2 = br, FC + dc
-            if is_island(r2, c2) and not blocked[r2][c2]:
-                deco[r2][c2] = colis[r2][c2] = FENCE_H
-                blocked[r2][c2] = True
-    for dr in range(-1, 7):
-        for bc in [FC - 1, FC + 9]:
-            r2, c2 = FR + dr, bc
-            if is_island(r2, c2) and not blocked[r2][c2]:
-                deco[r2][c2] = colis[r2][c2] = FENCE_V
-                blocked[r2][c2] = True
-    for cr, cc in [(FR-1,FC-1),(FR-1,FC+9),(FR+5,FC-1),(FR+5,FC+9)]:
-        if is_island(cr, cc): deco[cr][cc] = colis[cr][cc] = FENCE_C
-    # Fogueira ao lado
-    if is_island(FR + 2, FC - 3): deco[FR+2][FC-3] = FIRE_LG
-    print("Campo de cultivo construído")
-
-# ── 5. CEMITÉRIO (sudoeste) ───────────────────────────────────────────────────
-CER, CEC = H - 18, 12
-if is_island(CER, CEC):
-    for dr in range(6):
-        for dc in range(7):
-            r2, c2 = CER + dr, CEC + dc
-            if is_island(r2, c2):
-                chao[r2][c2] = GRASS_D
-                deco[r2][c2] = colis[r2][c2] = 0
-                blocked[r2][c2] = True
-    graves = [
-        (CER+1, CEC+1, GRAVE), (CER+1, CEC+3, CROSS), (CER+1, CEC+5, GRAVE),
-        (CER+3, CEC+2, CROSS), (CER+3, CEC+4, GRAVE), (CER+4, CEC+1, CROSS),
-    ]
-    for gr, gc, gt in graves:
-        if is_island(gr, gc): deco[gr][gc] = colis[gr][gc] = gt
-    for dc in range(7):
-        r2 = CER
-        if is_island(r2, CEC + dc): deco[r2][CEC+dc] = colis[r2][CEC+dc] = FENCE_H
-    print("Cemitério construído")
-
-# ---------------------------------------------------------------------------
-# LIMPAR ÁREA DE SPAWN
-# ---------------------------------------------------------------------------
-SCLEAR = 8
-for dr in range(-SCLEAR, SCLEAR + 1):
-    for dc in range(-SCLEAR, SCLEAR + 1):
-        r2, c2 = PLAYER_ROW + dr, PLAYER_COL + dc
-        if 0 <= r2 < H and 0 <= c2 < W and is_island(r2, c2):
-            deco[r2][c2] = colis[r2][c2] = 0
-            blocked[r2][c2] = False
-            if chao[r2][c2] in (LAKE_DEEP, LAKE_MID):
-                chao[r2][c2] = GRASS_A
-
-print(f"Spawn limpo em ({PLAYER_ROW},{PLAYER_COL}) -> pixel ({SPAWN_X},{SPAWN_Y})")
-
-# ---------------------------------------------------------------------------
-# MONTAR JSON FINAL
-# ---------------------------------------------------------------------------
-result = copy.deepcopy(orig)
-
-def flat(g):
-    out = []
-    for row in g: out.extend(row)
-    return out
-
-result['layers'][0]['data'] = flat(chao)
-result['layers'][1]['data'] = flat(colis)
-result['layers'][2]['data'] = flat(deco)
-
-with open('assets/tilemaps/ilha.json', 'w', encoding='utf-8') as f:
-    json.dump(result, f, separators=(',', ':'))
-
-dc  = sum(1 for t in flat(deco)  if t != 0)
-co  = sum(1 for t in flat(colis) if t != 0)
-ct  = len(set(flat(chao)))
-print(f"\nFEITO!  decorações={dc}  colisões={co}  tipos_chão={ct}")
-print(f"Coordenadas de spawn para GameScene.js: x={SPAWN_X}, y={SPAWN_Y}")
-
+print(f"\nGuardado: {out}")
