@@ -1,7 +1,10 @@
 /**
- * Player — Phaser 3 Arcade Sprite (sem Container — evita bugs de physics)
- * Frame: 96×64px, setScale(1) → personagem vísivel com zoom 2.5
- * Camadas hair + tools são sprites separados que copiam a posição
+ * Player — Phaser.Physics.Arcade.Sprite (SEM Container, evita todos os bugs de physics)
+ *
+ * Frame: 96×64 px  |  scale: 0.75  |  origin: (0.5, 0.75)
+ * No ecrã (zoom 2.5): personagem fica com ~120px de altura → perfeito
+ *
+ * Camadas visuais extra (hair, tools) são sprites separados que seguem o player.
  */
 export default class Player extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y) {
@@ -10,85 +13,88 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(this);
 
         this.scene       = scene;
-        this.speedWalk   = 90;
-        this.speedRun    = 160;
+        this.speedWalk   = 100;
+        this.speedRun    = 180;
         this.facing      = 'right';
         this.isBusy      = false;
 
         // Ataque
         this.attackDamage   = 20;
-        this.attackRange    = 48;
+        this.attackRange    = 50;
         this.attackCooldown = 600;
         this.lastAttackTime = 0;
 
-        // Escala 1 = frame 96×64 no mapa. Com zoom 2.5 fica 240×160px no ecrã — ótimo
-        this.setScale(1);
+        // Aparência
+        this.setScale(0.75);
         this.setDepth(5);
-        // Origem no centro horizontal e 80% vertical (pés)
-        this.setOrigin(0.5, 0.8);
+        // origin(0.5, 0.75): o pivot Y está nos 3/4 do sprite (zona dos pés/cintura)
+        this.setOrigin(0.5, 0.75);
 
-        // Hitbox pequena centrada nos pés do sprite
-        // Frame 96 wide → offset x = (96-16)/2 = 40; 16px wide
-        // Frame 64 high → pés em ~52px → offset y=46, height=14
-        this.body.setSize(16, 14);
-        this.body.setOffset(40, 46);
+        // Hitbox física no espaço do frame (96×64):
+        //   largura 18, altura 14
+        //   offsetX = (96-18)/2 = 39  → centrado horizontalmente
+        //   offsetY = 64*0.75 - 7 = 48-7 = 41  → centrado no pivo Y (pés)
+        this.body.setSize(18, 14);
+        this.body.setOffset(39, 41);
         this.body.setCollideWorldBounds(true);
 
-        // ── Sombra ───────────────────────────────────────────────────────────
-        this.shadow = scene.add.ellipse(x, y + 4, 20, 7, 0x000000, 0.3).setDepth(4);
+        // Sombra oval
+        this.shadow = scene.add.ellipse(x, y + 4, 22, 7, 0x000000, 0.22).setDepth(4);
 
-        // ── Camadas visuais (sem physics — só seguem a posição) ──────────────
+        // Camada de cabelo (sobreposta, sem physics)
         this.hairSprite = scene.add.sprite(x, y, 'player_hair_idle', 0)
-            .setScale(1).setOrigin(0.5, 0.8).setDepth(6);
-        this.toolSprite = scene.add.sprite(x, y, 'player_tools_idle', 0)
-            .setScale(1).setOrigin(0.5, 0.8).setDepth(7).setVisible(false);
+            .setScale(0.75).setOrigin(0.5, 0.75).setDepth(6);
 
-        // ── Animações ────────────────────────────────────────────────────────
+        // Camada de ferramentas
+        this.toolSprite = scene.add.sprite(x, y, 'player_tools_idle', 0)
+            .setScale(0.75).setOrigin(0.5, 0.75).setDepth(7).setVisible(false);
+
         this._buildAnimations(scene);
         this.playAnim('idle');
 
-        // ── Teclas ───────────────────────────────────────────────────────────
+        // Teclas especiais
         this.attackKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.shiftKey  = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     }
 
     _buildAnimations(scene) {
-        const make = (key, tex, nFrames, fps, repeat = -1) => {
-            if (scene.anims.exists(key)) return;
-            scene.anims.create({
-                key,
-                frames: scene.anims.generateFrameNumbers(tex, { start: 0, end: nFrames - 1 }),
-                frameRate: fps,
-                repeat
-            });
+        const anim = (key, tex, nFrames, fps, repeat = -1) => {
+            if (!scene.anims.exists(key)) {
+                scene.anims.create({
+                    key,
+                    frames: scene.anims.generateFrameNumbers(tex, { start: 0, end: nFrames - 1 }),
+                    frameRate: fps,
+                    repeat
+                });
+            }
         };
-        // Base
-        make('player_idle',   'player_base_idle',    9,  6);
-        make('player_walk',   'player_base_walk',    8, 10);
-        make('player_run',    'player_base_run',     8, 14);
-        make('player_hurt',   'player_base_hurt',    8, 12, 0);
-        make('player_death',  'player_base_death',  13,  8, 0);
-        make('player_axe',    'player_base_axe',    10, 12, 0);
-        make('player_mining', 'player_base_mining', 10, 12, 0);
-        // Hair
-        make('hair_idle',     'player_hair_idle',    9,  6);
-        make('hair_walk',     'player_hair_walk',    8, 10);
-        make('hair_run',      'player_hair_run',     8, 14);
-        make('hair_hurt',     'player_hair_hurt',    8, 12, 0);
-        make('hair_death',    'player_hair_death',  13,  8, 0);
-        make('hair_axe',      'player_hair_axe',    10, 12, 0);
-        make('hair_mining',   'player_hair_mining', 10, 12, 0);
-        // Tools
-        make('tools_idle',    'player_tools_idle',   9,  6);
-        make('tools_walk',    'player_tools_walk',   8, 10);
-        make('tools_run',     'player_tools_run',    8, 14);
-        make('tools_axe',     'player_tools_axe',   10, 12, 0);
-        make('tools_mining',  'player_tools_mining',10, 12, 0);
+        // Base (todos frameW=96 verificado)
+        anim('player_idle',   'player_base_idle',    9,  6);
+        anim('player_walk',   'player_base_walk',    8, 10);
+        anim('player_run',    'player_base_run',     8, 14);
+        anim('player_hurt',   'player_base_hurt',    8, 12, 0);
+        anim('player_death',  'player_base_death',  13,  8, 0);
+        anim('player_axe',    'player_base_axe',    10, 12, 0);
+        anim('player_mining', 'player_base_mining', 10, 12, 0);
+        // Cabelo
+        anim('hair_idle',     'player_hair_idle',    9,  6);
+        anim('hair_walk',     'player_hair_walk',    8, 10);
+        anim('hair_run',      'player_hair_run',     8, 14);
+        anim('hair_hurt',     'player_hair_hurt',    8, 12, 0);
+        anim('hair_death',    'player_hair_death',  13,  8, 0);
+        anim('hair_axe',      'player_hair_axe',    10, 12, 0);
+        anim('hair_mining',   'player_hair_mining', 10, 12, 0);
+        // Ferramentas
+        anim('tools_idle',    'player_tools_idle',   9,  6);
+        anim('tools_walk',    'player_tools_walk',   8, 10);
+        anim('tools_run',     'player_tools_run',    8, 14);
+        anim('tools_axe',     'player_tools_axe',   10, 12, 0);
+        anim('tools_mining',  'player_tools_mining',10, 12, 0);
     }
 
     playAnim(name, showTool = false) {
         this.play('player_' + name, true);
-        this.hairSprite.play('hair_' + name, true);
+        this.hairSprite.play('hair_'   + name, true);
         this.toolSprite.setVisible(showTool);
         if (showTool && this.scene.anims.exists('tools_' + name)) {
             this.toolSprite.play('tools_' + name, true);
@@ -101,14 +107,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.toolSprite.setFlipX(val);
     }
 
-    // Chama-se a cada frame para manter as camadas alinhadas
+    /** Sincroniza camadas visuais com a posição do sprite principal */
     _syncLayers() {
         this.hairSprite.setPosition(this.x, this.y);
         this.toolSprite.setPosition(this.x, this.y);
-        this.shadow.setPosition(this.x, this.y + 6);
-        // Sincronizar flip — hairSprite e toolSprite podem perder sync
-        this.hairSprite.setFlipX(this.flipX);
-        this.toolSprite.setFlipX(this.flipX);
+        this.shadow.setPosition(this.x, this.y + 5);
     }
 
     update(cursors, wasd, time) {
@@ -116,7 +119,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         if (this.isBusy) return;
 
-        // Ataque
+        // Ataque (ESPAÇO)
         if (Phaser.Input.Keyboard.JustDown(this.attackKey) &&
             time > this.lastAttackTime + this.attackCooldown) {
             this._doAttack(time);
@@ -131,7 +134,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         if (cursors.up.isDown    || wasd.up.isDown)    dy = -1;
         if (cursors.down.isDown  || wasd.down.isDown)  dy =  1;
 
-        // Normalizar diagonal
+        // Diagonal normalizada
         if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
 
         const running = this.shiftKey.isDown && (dx !== 0 || dy !== 0);
@@ -141,8 +144,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.body.setVelocityY(dy * speed);
 
         if (dx !== 0 || dy !== 0) {
-            if (dx < 0) this._setFlipAll(true);
-            else if (dx > 0) this._setFlipAll(false);
+            if (dx !== 0) this._setFlipAll(dx < 0);
             this.playAnim(running ? 'run' : 'walk', running);
         } else {
             this.playAnim('idle');
@@ -158,25 +160,27 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         const anim = (slot && slot.itemId === 'pickaxe') ? 'mining' : 'axe';
         this.playAnim(anim, true);
 
+        // Hitbox de ataque à frente
         const offX = this.flipX ? -this.attackRange : this.attackRange;
         const hitX = this.x + offX;
         const hitY = this.y;
 
-        // Dano nos goblins próximos
-        (this.scene.goblins?.getChildren() ?? []).forEach(g => {
+        // Detectar goblins no raio
+        const goblins = this.scene.goblins?.getChildren() ?? [];
+        goblins.forEach(g => {
             if (!g.dead) {
                 const d = Phaser.Math.Distance.Between(hitX, hitY, g.x, g.y);
-                if (d < this.attackRange + 20) {
+                if (d < this.attackRange + 16) {
                     g.takeDamage(this.attackDamage, this.flipX ? 'left' : 'right');
                 }
             }
         });
 
-        // Efeito visual
-        const ring = this.scene.add.circle(hitX, hitY, 18, 0xffff88, 0.55).setDepth(10);
+        // Efeito visual de impacto
+        const ring = this.scene.add.circle(hitX, hitY, 14, 0xffff88, 0.6).setDepth(10);
         this.scene.tweens.add({
-            targets: ring, scaleX: 2.2, scaleY: 2.2, alpha: 0,
-            duration: 220, onComplete: () => ring.destroy()
+            targets: ring, scaleX: 2.5, scaleY: 2.5, alpha: 0,
+            duration: 230, onComplete: () => ring.destroy()
         });
 
         this.once('animationcomplete', () => {
@@ -189,7 +193,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.playAnim('hurt');
         const targets = [this, this.hairSprite, this.toolSprite];
         this.scene.tweens.add({
-            targets, alpha: 0.15, duration: 65, yoyo: true, repeat: 5,
+            targets, alpha: 0.15, duration: 65, yoyo: true, repeat: 4,
             onComplete: () => {
                 targets.forEach(t => t.setAlpha(1));
                 if (!this.isBusy) this.playAnim('idle');

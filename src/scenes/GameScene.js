@@ -4,7 +4,7 @@ import Player from '../objects/Player.js';
 import CollectibleItem from '../objects/CollectibleItem.js';
 import Goblin from '../objects/Goblin.js';
 
-// Centro da ilha: tile (40,30) × 16px = pixel (640, 480)
+// Centro da ilha em píxeis (tile 40,30 com tiles 16px = 640,480)
 const CX = 640, CY = 480;
 
 const SPAWN_ITEMS = [
@@ -17,21 +17,23 @@ const SPAWN_ITEMS = [
     { x: CX - 48,  y: CY - 88, itemId: 'egg',     qty: 2 },
     { x: CX + 32,  y: CY + 32, itemId: 'axe',     qty: 1 },
     { x: CX - 32,  y: CY + 32, itemId: 'pickaxe', qty: 1 },
-    { x: CX + 120, y: CY,      itemId: 'water',   qty: 3 },
-    { x: CX - 120, y: CY,      itemId: 'water',   qty: 2 },
-    { x: CX,       y: CY-120,  itemId: 'wood',    qty: 2 },
-    { x: CX,       y: CY+120,  itemId: 'rock',    qty: 3 },
+    { x: CX + 112, y: CY,      itemId: 'water',   qty: 3 },
+    { x: CX - 112, y: CY,      itemId: 'water',   qty: 2 },
+    { x: CX,       y: CY - 112,itemId: 'wood',    qty: 2 },
+    { x: CX,       y: CY + 112,itemId: 'rock',    qty: 3 },
+    { x: CX + 136, y: CY - 80, itemId: 'fish',    qty: 1 },
+    { x: CX - 136, y: CY + 80, itemId: 'carrot',  qty: 2 },
     { x: CX + 48,  y: CY - 48, itemId: 'sword',   qty: 1 },
 ];
 
 const GOBLIN_SPAWNS = [
-    { x: CX - 200, y: CY - 140 },
-    { x: CX + 200, y: CY - 140 },
-    { x: CX - 200, y: CY + 140 },
-    { x: CX + 200, y: CY + 140 },
-    { x: CX,       y: CY - 200 },
-    { x: CX - 250, y: CY },
-    { x: CX + 250, y: CY },
+    { x: CX - 200, y: CY - 150 },
+    { x: CX + 200, y: CY - 150 },
+    { x: CX - 200, y: CY + 150 },
+    { x: CX + 200, y: CY + 150 },
+    { x: CX,       y: CY - 220 },
+    { x: CX - 260, y: CY },
+    { x: CX + 260, y: CY },
 ];
 
 const FOOD_VALUES = {
@@ -56,7 +58,7 @@ export default class GameScene extends Phaser.Scene {
         const tileset = mapa.addTilesetImage('sunnyside', 'sunnyside');
 
         if (!tileset) {
-            console.error('[GameScene] ERRO: tileset "sunnyside" nao encontrado no JSON!');
+            console.error('ERRO: tileset "sunnyside" não encontrado!');
             return;
         }
 
@@ -69,13 +71,12 @@ export default class GameScene extends Phaser.Scene {
 
         if (colisao) {
             colisao.setDepth(2);
-            // Colide com qualquer tile que não seja 0 (vazio)
             colisao.setCollisionByExclusion([-1, 0]);
-            colisao.setVisible(false); // invisível mas ativo
+            colisao.setVisible(false);
         }
 
-        const mapW = mapa.widthInPixels;   // 80*16 = 1280
-        const mapH = mapa.heightInPixels;  // 60*16 = 960
+        const mapW = mapa.widthInPixels;
+        const mapH = mapa.heightInPixels;
         this.physics.world.setBounds(0, 0, mapW, mapH);
 
         // ── SISTEMAS ──────────────────────────────────────────────────────────
@@ -87,8 +88,6 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // ── JOGADOR ───────────────────────────────────────────────────────────
-        // Player é agora Arcade.Sprite — setScale(1), frame 96×64
-        // Com zoom 2 a câmera → 192×128px no ecrã → personagem grande e visível
         this.player = new Player(this, CX, CY);
 
         if (colisao) {
@@ -96,12 +95,12 @@ export default class GameScene extends Phaser.Scene {
         }
 
         // ── CÂMERA ────────────────────────────────────────────────────────────
-        // zoom=2: cada tile de 16px fica 32px no ecrã — bom equilíbrio
-        // personagem 96px × zoom 2 = 192px no ecrã — claramente visível
+        // zoom=2.5: cada tile de 16px fica 40px no ecrã — bom para ver o mapa
+        // O jogador de 64px de altura × 0.75 × 2.5 = 120px no ecrã — perfeito
         this.cameras.main.setBounds(0, 0, mapW, mapH);
-        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-        this.cameras.main.setZoom(2);
-        this.cameras.main.setBackgroundColor('#3a8fa8');
+        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+        this.cameras.main.setZoom(2.5);
+        this.cameras.main.setBackgroundColor('#1a6b8a');
 
         // ── CONTROLOS ─────────────────────────────────────────────────────────
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -120,7 +119,7 @@ export default class GameScene extends Phaser.Scene {
             if (e.key === 'e' || e.key === 'E') this._useSelectedItem();
         });
 
-        // ── ITENS ─────────────────────────────────────────────────────────────
+        // ── ITENS NO MAPA ──────────────────────────────────────────────────────
         this.pickups = this.physics.add.group();
         SPAWN_ITEMS.forEach(s =>
             this.pickups.add(new CollectibleItem(this, s.x, s.y, s.itemId, s.qty))
@@ -131,14 +130,15 @@ export default class GameScene extends Phaser.Scene {
         this.goblins = this.physics.add.group();
         GOBLIN_SPAWNS.forEach(s => this.goblins.add(new Goblin(this, s.x, s.y)));
 
+        // Colisão goblins ↔ colisao layer
         if (colisao) {
             this.physics.add.collider(this.goblins, colisao);
         }
 
         this.events.on('enemyDied', (x, y) => {
-            const opts = ['wood','rock','wood','rock','carrot','fish','egg'];
+            const drops = ['wood','rock','wood','rock','carrot','fish','egg'];
             if (Math.random() < 0.8) {
-                const drop = opts[Phaser.Math.Between(0, opts.length-1)];
+                const drop = drops[Math.floor(Math.random() * drops.length)];
                 this.pickups.add(new CollectibleItem(this, x, y, drop, 1));
             }
         });
@@ -147,27 +147,26 @@ export default class GameScene extends Phaser.Scene {
             if (this._invulnerable) return;
             this.stats.takeDamage(amount);
             this.player.flashHurt();
-            this._setInvulnerable(900);
-            this.cameras.main.shake(110, 0.006);
+            this._setInvulnerable(1000);
+            this.cameras.main.shake(120, 0.006);
         });
 
         // ── HUD ───────────────────────────────────────────────────────────────
         this.scene.launch('HUDScene');
         this.scene.bringToTop('HUDScene');
 
-        // ── DICA INICIAL ──────────────────────────────────────────────────────
+        // ── DICA ──────────────────────────────────────────────────────────────
         const hint = this.add.text(
-            this.scale.width / 2, this.scale.height - 18,
-            'WASD/Setas — mover  |  SHIFT — correr  |  ESPAÇO — atacar  |  E — usar  |  1-8 — hotbar',
-            { fontSize: '9px', fill: '#ffffcc', stroke: '#000000', strokeThickness: 2 }
+            this.scale.width / 2,
+            this.scale.height - 20,
+            'WASD/setas mover  ·  SHIFT correr  ·  ESPAÇO atacar  ·  E usar  ·  1-8 hotbar',
+            { fontSize: '9px', fill: '#ffffbb', stroke: '#000', strokeThickness: 2 }
         ).setOrigin(0.5, 1).setScrollFactor(0).setDepth(100);
 
         this.time.delayedCall(8000, () => {
             this.tweens.add({ targets: hint, alpha: 0, duration: 1200,
                 onComplete: () => hint.destroy() });
         });
-
-        console.log('[GameScene] criado — jogador em', CX, CY, '| mapa', mapW, 'x', mapH);
     }
 
     update(time, delta) {
@@ -187,7 +186,7 @@ export default class GameScene extends Phaser.Scene {
               fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }
         ).setOrigin(0.5).setDepth(20);
 
-        this.tweens.add({ targets: txt, y: txt.y - 30, alpha: 0,
+        this.tweens.add({ targets: txt, y: txt.y - 28, alpha: 0,
             duration: 900, onComplete: () => txt.destroy() });
 
         if (added) item.destroy();
@@ -205,7 +204,7 @@ export default class GameScene extends Phaser.Scene {
         this.inventory.removeItem(slot.itemId, 1);
 
         const def = ITEM_DB[slot.itemId];
-        const txt = this.add.text(this.player.x, this.player.y - 40,
+        const txt = this.add.text(this.player.x, this.player.y - 36,
             `🍴 ${def ? def.name : slot.itemId}`,
             { fontSize: '12px', fill: '#88ff88', fontStyle: 'bold',
               stroke: '#000000', strokeThickness: 2 }
@@ -220,4 +219,3 @@ export default class GameScene extends Phaser.Scene {
         this.time.delayedCall(ms, () => { this._invulnerable = false; });
     }
 }
-
