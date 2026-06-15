@@ -4,102 +4,80 @@ export default class PreloadScene extends Phaser.Scene {
     }
 
     preload() {
-        // Barra de progresso simples
-        const bar = this.add.graphics();
+        // ── Barra de progresso ────────────────────────────────────────────────
+        const W = this.scale.width, H = this.scale.height;
+        this.add.rectangle(W/2, H/2, W, H, 0x1a1a2e);
         const barBg = this.add.graphics();
-        barBg.fillStyle(0x222222).fillRect(280, 295, 400, 20);
-        this.load.on('progress', (v) => {
-            bar.clear().fillStyle(0x7ec850).fillRect(282, 297, 396 * v, 16);
+        const bar   = this.add.graphics();
+        barBg.fillStyle(0x333355).fillRect(W/2-200, H/2-10, 400, 20);
+        this.load.on('progress', v => {
+            bar.clear().fillStyle(0x7ec850).fillRect(W/2-200, H/2-10, 400*v, 20);
         });
-        this.add.text(480, 270, 'A carregar...', {
-            fontSize: '20px', fill: '#ffffff'
+        this.add.text(W/2, H/2-30, 'A carregar...', {
+            fontSize: '22px', fill: '#ffffff', fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        //------------------------------------------------------------
-        // MAPA
-        //------------------------------------------------------------
+        // ── TILEMAP ───────────────────────────────────────────────────────────
         this.load.tilemapTiledJSON('ilha', 'assets/tilemaps/ilha.json');
         this.load.image('sunnyside', 'assets/tilesets/spr_tileset_sunnysideworld_16px.png');
 
-        //------------------------------------------------------------
-        // PLAYER — corpo (base)
-        //------------------------------------------------------------
-        // frame size: 48x48 para os spritesheets humanos (strip × frames)
-        const pBase = 'assets/spritesheets/human/';
-        const pHair = 'assets/spritesheets/human/';
+        // ── PLAYER — todos os frames são 96x64 ───────────────────────────────
+        const FW = 96, FH = 64;
+        const pH = 'assets/spritesheets/human/';
 
-        this.load.spritesheet('player_base_idle',   pBase + 'base_idle_strip9.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_base_walk',   pBase + 'base_walk_strip8.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_base_run',    pBase + 'base_run_strip8.png',    { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_base_hurt',   pBase + 'base_hurt_strip8.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_base_death',  pBase + 'base_death_strip13.png', { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_base_axe',    pBase + 'base_axe_strip10.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_base_mining', pBase + 'base_mining_strip10.png',{ frameWidth: 48, frameHeight: 48 });
+        // Base (corpo)
+        this.load.spritesheet('player_base_idle',   pH+'base_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_walk',   pH+'base_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_run',    pH+'base_run_strip8.png',     {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_hurt',   pH+'base_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_death',  pH+'base_death_strip13.png',  {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_axe',    pH+'base_axe_strip10.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_mining', pH+'base_mining_strip10.png', {frameWidth:FW,frameHeight:FH});
 
-        //------------------------------------------------------------
-        // PLAYER — cabelo (mophair)
-        //------------------------------------------------------------
-        this.load.spritesheet('player_hair_idle',   pHair + 'mophair_idle_strip9.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_hair_walk',   pHair + 'mophair_walk_strip8.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_hair_run',    pHair + 'mophair_run_strip8.png',    { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_hair_hurt',   pHair + 'mophair_hurt_strip8.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_hair_death',  pHair + 'mophair_death_strip13.png', { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_hair_axe',    pHair + 'mophair_axe_strip10.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_hair_mining', pHair + 'mophair_mining_strip10.png',{ frameWidth: 48, frameHeight: 48 });
+        // Cabelo (mophair)
+        this.load.spritesheet('player_hair_idle',   pH+'mophair_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_walk',   pH+'mophair_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_run',    pH+'mophair_run_strip8.png',     {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_hurt',   pH+'mophair_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_death',  pH+'mophair_death_strip13.png',  {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_axe',    pH+'mophair_axe_strip10.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_mining', pH+'mophair_mining_strip10.png', {frameWidth:FW,frameHeight:FH});
 
-        //------------------------------------------------------------
-        // PLAYER — ferramentas (tools)
-        //------------------------------------------------------------
-        this.load.spritesheet('player_tools_idle',   pBase + 'tools_idle_strip9.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_tools_walk',   pBase + 'tools_walk_strip8.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_tools_run',    pBase + 'tools_run_strip8.png',    { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_tools_hurt',   pBase + 'tools_hurt_strip8.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_tools_axe',    pBase + 'tools_axe_strip10.png',   { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('player_tools_mining', pBase + 'tools_mining_strip10.png',{ frameWidth: 48, frameHeight: 48 });
+        // Ferramentas
+        this.load.spritesheet('player_tools_idle',   pH+'tools_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_tools_walk',   pH+'tools_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_tools_run',    pH+'tools_run_strip8.png',     {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_tools_hurt',   pH+'tools_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_tools_axe',    pH+'tools_axe_strip10.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_tools_mining', pH+'tools_mining_strip10.png', {frameWidth:FW,frameHeight:FH});
 
-        //------------------------------------------------------------
-        // GOBLIN
-        //------------------------------------------------------------
-        const pGob = 'assets/spritesheets/goblin/';
-        this.load.spritesheet('goblin_idle',  pGob + 'spr_idle_strip9.png',  { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('goblin_walk',  pGob + 'spr_walk_strip8.png',  { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('goblin_hurt',  pGob + 'spr_hurt_strip8.png',  { frameWidth: 48, frameHeight: 48 });
-        this.load.spritesheet('goblin_death', pGob + 'spr_death_strip13.png',{ frameWidth: 48, frameHeight: 48 });
+        // ── GOBLIN — frameW=96 (os strip names são enganadores em alguns ficheiros)
+        // spr_idle_strip9 é 768px → 768/96 = 8 frames reais (não 9!)
+        // spr_walk_strip8 é 768px → 8 frames ✓
+        // spr_hurt_strip8 é 768px → 8 frames ✓
+        // spr_death_strip13 é 864px → 864/96 = 9 frames reais
+        const pG = 'assets/spritesheets/goblin/';
+        this.load.spritesheet('goblin_idle',  pG+'spr_idle_strip9.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_walk',  pG+'spr_walk_strip8.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_hurt',  pG+'spr_hurt_strip8.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_death', pG+'spr_death_strip13.png', {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_attack',pG+'spr_attack_strip10.png',{frameWidth:FW,frameHeight:FH});
 
-        //------------------------------------------------------------
-        // RECURSOS E ITENS COLECIONÁVEIS
-        //------------------------------------------------------------
-        this.load.image('wood',       'assets/images/wood.png');
-        this.load.image('rock',       'assets/images/rock.png');
-        this.load.image('fish',       'assets/images/fish.png');
-        this.load.image('egg',        'assets/images/egg.png');
-        this.load.image('milk',       'assets/images/milk.png');
-        this.load.image('water',      'assets/images/water.png');
-        this.load.image('carrot_00',  'assets/images/carrot_00.png');
-        this.load.image('potato_00',  'assets/images/potato_00.png');
-        this.load.image('wheat_00',   'assets/images/wheat_00.png');
+        // ── ITENS ─────────────────────────────────────────────────────────────
+        ['wood','rock','fish','egg','milk','water'].forEach(k =>
+            this.load.image(k, `assets/images/${k}.png`));
+        ['carrot','potato','wheat'].forEach(k =>
+            this.load.image(k, `assets/images/${k}_00.png`));
 
-        //------------------------------------------------------------
-        // FERRAMENTAS
-        //------------------------------------------------------------
-        this.load.image('axe',     'assets/images/axe.png');
-        this.load.image('pickaxe', 'assets/images/pickaxe.png');
-        this.load.image('hammer',  'assets/images/hammer.png');
-        this.load.image('shovel',  'assets/images/shovel.png');
-        this.load.image('sword',   'assets/images/sword.png');
+        // ── FERRAMENTAS ───────────────────────────────────────────────────────
+        ['axe','pickaxe','hammer','shovel','sword'].forEach(k =>
+            this.load.image(k, `assets/images/${k}.png`));
 
-        //------------------------------------------------------------
-        // INTERFACE (HUD)
-        //------------------------------------------------------------
-        this.load.image('itemdisc_01', 'assets/images/itemdisc_01.png');
-        this.load.image('itemdisc_02', 'assets/images/itemdisc_02.png');
-        this.load.image('greenbar_00', 'assets/images/greenbar_00.png');
-        this.load.image('greenbar_06', 'assets/images/greenbar_06.png');
-        this.load.image('redbar_00',   'assets/images/redbar_00.png');
-        this.load.image('redbar_06',   'assets/images/redbar_06.png');
-        this.load.image('bluebar_00',  'assets/images/bluebar_00.png');
-        this.load.image('bluebar_05',  'assets/images/bluebar_05.png');
-        this.load.image('indicator',   'assets/images/indicator.png');
+        // ── HUD ───────────────────────────────────────────────────────────────
+        ['itemdisc_01','itemdisc_02','indicator'].forEach(k =>
+            this.load.image(k, `assets/images/${k}.png`));
+        ['greenbar_00','greenbar_06','redbar_00','redbar_06','bluebar_00','bluebar_05'].forEach(k =>
+            this.load.image(k, `assets/images/${k}.png`));
     }
 
     create() {
