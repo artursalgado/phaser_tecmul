@@ -5,6 +5,7 @@ import GameScene from './scenes/GameScene.js';
 import HUDScene from './scenes/HUDScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
 import VictoryScene from './scenes/VictoryScene.js';
+import PauseScene from './scenes/PauseScene.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -14,7 +15,7 @@ const config = {
         width: 960,
         height: 640,
     },
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#0a0a1a',
     physics: {
         default: 'arcade',
         arcade: {
@@ -29,7 +30,8 @@ const config = {
         GameScene,
         HUDScene,
         GameOverScene,
-        VictoryScene
+        VictoryScene,
+        PauseScene
     ]
 };
 

@@ -1,21 +1,20 @@
 import { ITEM_DB } from '../systems/Inventory.js';
+import I18n from '../systems/I18n.js';
 
 export default class HUDScene extends Phaser.Scene {
     constructor() {
         super('HUDScene');
+        this._criticalTween = null;
     }
 
     create() {
-        this.gameScene  = this.scene.get('GameScene');
-        this.inventory  = this.gameScene.inventory;
-        this.stats      = this.gameScene.stats;
+        this.gameScene = this.scene.get('GameScene');
+        this.inventory = this.gameScene.inventory;
+        this.stats     = this.gameScene.stats;
 
-        const W = 960;
-        const H = 640;
+        const W = 960, H = 640;
 
-        //------------------------------------------------------------
-        // HOTBAR (inventário inferior)
-        //------------------------------------------------------------
+        // ── HOTBAR ──────────────────────────────────────────────────────────
         this.slotBgs   = [];
         this.slotIcons = [];
         this.slotTexts = [];
@@ -26,95 +25,144 @@ export default class HUDScene extends Phaser.Scene {
         const hotbarX    = (W - totalWidth) / 2 + slotSize / 2;
         const hotbarY    = H - 36;
 
-        this.add.rectangle(W / 2, hotbarY, totalWidth + 16, slotSize + 16, 0x000000, 0.4).setDepth(0);
+        this.add.rectangle(W / 2, hotbarY, totalWidth + 16, slotSize + 16, 0x000000, 0.45).setDepth(0);
 
         for (let i = 0; i < this.inventory.size; i++) {
-            const x = hotbarX + i * (slotSize + spacing);
-
+            const x  = hotbarX + i * (slotSize + spacing);
             const bg   = this.add.image(x, hotbarY, 'itemdisc_01').setScale(3).setDepth(1);
             const icon = this.add.image(x, hotbarY, 'wood').setScale(2.5).setVisible(false).setDepth(2);
             const text = this.add.text(x + 18, hotbarY + 18, '', {
                 fontSize: '11px', fill: '#ffffff', fontStyle: 'bold'
             }).setOrigin(1, 1).setDepth(3);
-
-            // Número do slot (1-8)
             this.add.text(x - 20, hotbarY - 20, String(i + 1), {
                 fontSize: '9px', fill: '#aaaaaa'
             }).setOrigin(0, 0).setDepth(3);
-
             this.slotBgs.push(bg);
             this.slotIcons.push(icon);
             this.slotTexts.push(text);
         }
 
-        // Dica "E para usar"
-        this.add.text(W / 2, hotbarY + 32, '[E] usar item', {
+        this.add.text(W / 2, hotbarY + 32, I18n.t('hud.use_item'), {
             fontSize: '9px', fill: '#888888'
         }).setOrigin(0.5).setDepth(3);
 
-        //------------------------------------------------------------
-        // BARRAS DE STATS (canto superior esquerdo)
-        //------------------------------------------------------------
-        const barW = 120;
-        const barH = 10;
-        const barX = 16;
-        const labelX = barX + barW + 6;
+        // ── BARRAS DE STATS (canto superior esquerdo) ───────────────────────
+        const barW = 120, barH = 10;
+        const barX = 16, labelX = barX + barW + 6;
         let barY = 20;
         const gap = 20;
 
-        // Painél de fundo
-        this.add.rectangle(barX + barW / 2, barY + gap * 1.5, barW + 50, 90, 0x000000, 0.4).setDepth(0);
+        this.add.rectangle(barX + barW / 2 + 7, barY + gap * 1.5, barW + 60, 94, 0x000000, 0.45).setDepth(0);
 
-        // VIDA — vermelho
+        // VIDA
         this.add.text(barX, barY, '❤', { fontSize: '10px', fill: '#ff4444' }).setDepth(3);
         this.healthBg  = this.add.rectangle(barX + 14 + barW / 2, barY + 4, barW, barH, 0x550000).setDepth(1);
         this.healthBar = this.add.rectangle(barX + 14, barY + 4, barW, barH, 0xff4444).setDepth(2).setOrigin(0, 0.5);
         this.healthTxt = this.add.text(labelX + 14, barY - 1, '', { fontSize: '9px', fill: '#ffaaaa' }).setDepth(3);
-
         barY += gap;
 
-        // FOME — laranja
+        // FOME
         this.add.text(barX, barY, '🍖', { fontSize: '10px', fill: '#ffaa00' }).setDepth(3);
         this.hungerBg  = this.add.rectangle(barX + 14 + barW / 2, barY + 4, barW, barH, 0x553300).setDepth(1);
         this.hungerBar = this.add.rectangle(barX + 14, barY + 4, barW, barH, 0xffaa00).setDepth(2).setOrigin(0, 0.5);
         this.hungerTxt = this.add.text(labelX + 14, barY - 1, '', { fontSize: '9px', fill: '#ffddaa' }).setDepth(3);
-
         barY += gap;
 
-        // SEDE — azul
+        // SEDE
         this.add.text(barX, barY, '💧', { fontSize: '10px', fill: '#44aaff' }).setDepth(3);
         this.thirstBg  = this.add.rectangle(barX + 14 + barW / 2, barY + 4, barW, barH, 0x003355).setDepth(1);
         this.thirstBar = this.add.rectangle(barX + 14, barY + 4, barW, barH, 0x44aaff).setDepth(2).setOrigin(0, 0.5);
         this.thirstTxt = this.add.text(labelX + 14, barY - 1, '', { fontSize: '9px', fill: '#aaddff' }).setDepth(3);
-
         barY += gap;
 
-        // ENERGIA — verde
+        // ENERGIA
         this.add.text(barX, barY, '⚡', { fontSize: '10px', fill: '#88ff44' }).setDepth(3);
         this.energyBg  = this.add.rectangle(barX + 14 + barW / 2, barY + 4, barW, barH, 0x223300).setDepth(1);
         this.energyBar = this.add.rectangle(barX + 14, barY + 4, barW, barH, 0x88ff44).setDepth(2).setOrigin(0, 0.5);
         this.energyTxt = this.add.text(labelX + 14, barY - 1, '', { fontSize: '9px', fill: '#ccffaa' }).setDepth(3);
 
-        //------------------------------------------------------------
-        // OUVIR EVENTOS
-        //------------------------------------------------------------
+        // ── PAINEL CANTO SUPERIOR DIREITO: timer + score + kills ─────────────
+        const panelX = W - 8;
+        const panelY = 14;
+        this.add.rectangle(panelX - 78, panelY + 38, 148, 80, 0x000000, 0.45).setDepth(0);
+
+        this.timerTxt = this.add.text(panelX - 10, panelY, '0:00', {
+            fontSize: '22px', fill: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(1, 0).setDepth(3);
+
+        this.scoreTxt = this.add.text(panelX - 10, panelY + 28, '0 pts', {
+            fontSize: '12px', fill: '#f0e68c'
+        }).setOrigin(1, 0).setDepth(3);
+
+        this.killsTxt = this.add.text(panelX - 10, panelY + 44, '☠ 0', {
+            fontSize: '12px', fill: '#ff8888'
+        }).setOrigin(1, 0).setDepth(3);
+
+        // Barra de progresso de sobrevivência (para vitória)
+        this.add.text(panelX - 10, panelY + 60, '⏳', {
+            fontSize: '10px', fill: '#aaaaaa'
+        }).setOrigin(1, 0).setDepth(3);
+        this.progressBg  = this.add.rectangle(panelX - 78, panelY + 68, 120, 6, 0x333333).setDepth(1);
+        this.progressBar = this.add.rectangle(panelX - 136, panelY + 68, 0, 6, 0x88ff44)
+            .setDepth(2).setOrigin(0, 0.5);
+
+        // ── AVISO CRÍTICO (centro do ecrã, aparece quando HP < 25%) ──────────
+        this.criticalOverlay = this.add.rectangle(W / 2, H / 2, W, H, 0xff0000, 0)
+            .setDepth(50).setScrollFactor(0);
+        this.criticalTxt = this.add.text(W / 2, 100, '⚠ ' + (I18n.lang === 'en' ? 'CRITICAL HP!' : 'VIDA CRÍTICA!') + ' ⚠', {
+            fontSize: '16px', fill: '#ff4444', fontStyle: 'bold',
+            stroke: '#000', strokeThickness: 3
+        }).setOrigin(0.5).setDepth(51).setAlpha(0).setScrollFactor(0);
+
+        // ── EVENTOS ──────────────────────────────────────────────────────────
         this.inventory.on('changed',         () => this._refreshHotbar());
-        this.inventory.on('selectionChanged', () => this._refreshHotbar());
+        this.inventory.on('selectionChanged',() => this._refreshHotbar());
         this.stats.on('changed',             () => this._refreshBars());
 
         this._refreshHotbar();
         this._refreshBars();
     }
 
-    //----------------------------------------------------------------
-    // ATUALIZAR HOTBAR
-    //----------------------------------------------------------------
+    update() {
+        if (!this.gameScene) return;
+
+        // Timer
+        const sec  = Math.floor(this.gameScene.elapsedSec);
+        const mm   = Math.floor(sec / 60);
+        const ss   = String(sec % 60).padStart(2, '0');
+        this.timerTxt.setText(`${mm}:${ss}`);
+
+        // Score e kills
+        this.scoreTxt.setText(this.gameScene.score + ' pts');
+        this.killsTxt.setText('☠ ' + this.gameScene.killCount);
+
+        // Barra de progresso para vitória
+        const pct = Math.min(1, this.gameScene.elapsedSec / this.gameScene.victoryTime);
+        this.progressBar.setDisplaySize(120 * pct, 6);
+        this.progressBar.setFillStyle(pct > 0.75 ? 0xffff00 : 0x88ff44);
+
+        // Aviso crítico de HP
+        const hpCritical = this.stats && this.stats.healthPct < 0.25;
+        if (hpCritical && !this._blinking) {
+            this._blinking = true;
+            this.tweens.add({
+                targets: [this.criticalOverlay, this.criticalTxt],
+                alpha: { from: 0, to: 0.12 },
+                duration: 400, yoyo: true, repeat: -1
+            });
+        } else if (!hpCritical && this._blinking) {
+            this._blinking = false;
+            this.tweens.killTweensOf([this.criticalOverlay, this.criticalTxt]);
+            this.criticalOverlay.setAlpha(0);
+            this.criticalTxt.setAlpha(0);
+        }
+    }
+
     _refreshHotbar() {
         this.inventory.slots.forEach((slot, i) => {
             const bg   = this.slotBgs[i];
             const icon = this.slotIcons[i];
             const text = this.slotTexts[i];
-
             if (slot) {
                 const def = ITEM_DB[slot.itemId];
                 icon.setTexture(def ? def.icon : slot.itemId).setVisible(true);
@@ -123,32 +171,23 @@ export default class HUDScene extends Phaser.Scene {
                 icon.setVisible(false);
                 text.setText('');
             }
-
             bg.setTexture(i === this.inventory.selectedSlot ? 'itemdisc_02' : 'itemdisc_01');
         });
     }
 
-    //----------------------------------------------------------------
-    // ATUALIZAR BARRAS DE STATS
-    //----------------------------------------------------------------
     _refreshBars() {
         const s = this.stats;
         const barW = 120;
-
         this.healthBar.setDisplaySize(Math.max(0, barW * s.healthPct), 10);
         this.hungerBar.setDisplaySize(Math.max(0, barW * s.hungerPct), 10);
         this.thirstBar.setDisplaySize(Math.max(0, barW * s.thirstPct), 10);
         this.energyBar.setDisplaySize(Math.max(0, barW * s.energyPct), 10);
-
         this.healthTxt.setText(Math.ceil(s.health)  + '/' + s.maxHealth);
         this.hungerTxt.setText(Math.ceil(s.hunger)  + '/' + s.maxHunger);
         this.thirstTxt.setText(Math.ceil(s.thirst)  + '/' + s.maxThirst);
         this.energyTxt.setText(Math.ceil(s.energy)  + '/' + s.maxEnergy);
-
-        // Piscar vermelho quando crítico
-        const pct = s.healthPct;
-        this.healthBar.setFillStyle(pct < 0.25 ? 0xff0000 : 0xff4444);
-        this.hungerBar.setFillStyle(s.hungerPct < 0.2 ? 0xff6600 : 0xffaa00);
-        this.thirstBar.setFillStyle(s.thirstPct < 0.2 ? 0x0066ff : 0x44aaff);
+        this.healthBar.setFillStyle(s.healthPct < 0.25 ? 0xff0000 : 0xff4444);
+        this.hungerBar.setFillStyle(s.hungerPct < 0.2  ? 0xff6600 : 0xffaa00);
+        this.thirstBar.setFillStyle(s.thirstPct < 0.2  ? 0x0066ff : 0x44aaff);
     }
 }

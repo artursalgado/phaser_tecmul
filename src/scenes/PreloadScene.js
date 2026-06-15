@@ -16,19 +16,13 @@ export default class PreloadScene extends Phaser.Scene {
             bar.clear().fillStyle(0x7ec850).fillRect(W/2-200, H/2-10, 400*v, 20);
         });
 
-        // Texto de loading (atualizado depois do I18n estar carregado — usa PT por omissão)
-        this.add.text(W/2, H/2-30, 'A carregar... / Loading...', {
+        this.add.text(W/2, H/2-40, 'A carregar... / Loading...', {
             fontSize: '22px', fill: '#ffffff', fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // ── I18N ──────────────────────────────────────────────────────────────
         this.load.json('i18n_pt', 'assets/i18n/pt.json');
         this.load.json('i18n_en', 'assets/i18n/en.json');
-
-        // ── ÁUDIO ─────────────────────────────────────────────────────────────
-        // Sons gerados proceduralmente via Web Audio API (sem ficheiros externos)
-        // Serão criados em BootScene. Aqui apenas registamos as chaves via
-        // AudioContext para não precisar de ficheiros .mp3/.ogg externos.
 
         // ── TILEMAP ───────────────────────────────────────────────────────────
         this.load.tilemapTiledJSON('ilha', 'assets/tilemaps/ilha.json');
@@ -71,6 +65,14 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.spritesheet('goblin_hurt',   pG+'spr_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
         this.load.spritesheet('goblin_death',  pG+'spr_death_strip13.png',  {frameWidth:FW,frameHeight:FH});
         this.load.spritesheet('goblin_attack', pG+'spr_attack_strip10.png', {frameWidth:FW,frameHeight:FH});
+
+        // ── SKELETON (segundo tipo de inimigo) ────────────────────────────────
+        const pS = 'assets/spritesheets/skeleton/';
+        this.load.spritesheet('skeleton_idle',   pS+'skeleton_idle_strip6.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_walk',   pS+'skeleton_walk_strip8.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_hurt',   pS+'skeleton_hurt_strip7.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_death',  pS+'skeleton_death_strip10.png', {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_attack', pS+'skeleton_attack_strip7.png', {frameWidth:FW,frameHeight:FH});
 
         // ── ITENS ─────────────────────────────────────────────────────────────
         ['wood','rock','fish','egg','milk','water'].forEach(k =>

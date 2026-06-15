@@ -1,17 +1,18 @@
 /**
- * Goblin — Arcade Sprite com tiers de dificuldade
- * tier 1 = normal | tier 2 = forte (vermelho) | tier 3 = elite (roxo)
- * 
- * Frames por animação (spritesheets reais):
- *  idle:   spr_idle_strip9   → 9 frames
- *  walk:   spr_walk_strip8   → 8 frames
- *  hurt:   spr_hurt_strip8   → 8 frames
- *  death:  spr_death_strip13 → 13 frames (só tem 10 no assets, usamos 10)
- *  attack: spr_attack_strip10→ 10 frames
+ * Skeleton — segundo tipo de inimigo
+ * Mais rápido que o goblin mas menos HP.
+ * Aparece a partir da vaga 2.
+ *
+ * Frames (skeleton spritesheets):
+ *  idle:   skeleton_idle_strip6   → 6
+ *  walk:   skeleton_walk_strip8   → 8
+ *  hurt:   skeleton_hurt_strip7   → 7
+ *  death:  skeleton_death_strip10 → 10
+ *  attack: skeleton_attack_strip7 → 7
  */
-export default class Goblin extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y, tier = 1) {
-        super(scene, x, y, 'goblin_idle', 0);
+export default class Skeleton extends Phaser.Physics.Arcade.Sprite {
+    constructor(scene, x, y) {
+        super(scene, x, y, 'skeleton_idle', 0);
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
@@ -22,44 +23,31 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
         this.body.setOffset(39, 48);
         this.body.setCollideWorldBounds(true);
 
-        // Tier — define stats e cor
-        this.tier = tier;
-        this._applyTier(tier);
-
+        // Stats do skeleton
+        this.maxHealth      = 30;
+        this.health         = 30;
+        this.speed          = 90;    // mais rápido que goblin tier 1
+        this.damage         = 15;
         this.dead           = false;
-        this.damageCooldown = 900;
+        this.damageCooldown = 750;
         this.lastDamageTime = 0;
         this.stunUntil      = 0;
-        this.detectionRange = 200;
+        this.detectionRange = 240;   // maior alcance de detecção
         this.attackRange    = 22;
-        this.state          = 'PATROL';
         this.patrolTarget   = { x, y };
         this.patrolTimer    = 0;
         this._attacking     = false;
 
-        // Barra de vida (criada no scene mas sincronizada manualmente)
-        this.hpBarBg = scene.add.rectangle(0, 0, 22, 4, 0x330000).setDepth(10).setVisible(false);
-        this.hpBar   = scene.add.rectangle(0, 0, 22, 4, 0xff3333)
+        // Cor azulada para distinguir dos goblins
+        this.setTint(0xaaddff);
+
+        // Barra de vida
+        this.hpBarBg = scene.add.rectangle(0, 0, 22, 4, 0x000033).setDepth(10).setVisible(false);
+        this.hpBar   = scene.add.rectangle(0, 0, 22, 4, 0x4499ff)
             .setDepth(11).setOrigin(0, 0.5).setVisible(false);
 
         this._buildAnims(scene);
-        this.play('goblin_idle', true);
-    }
-
-    _applyTier(tier) {
-        const tiers = {
-            1: { hp: 40,  speed: 55,  damage: 12, tint: null,       scale: 0.75 },
-            2: { hp: 70,  speed: 70,  damage: 20, tint: 0xff8888,   scale: 0.82 },
-            3: { hp: 110, speed: 85,  damage: 30, tint: 0xcc88ff,   scale: 0.90 },
-        };
-        const cfg = tiers[tier] || tiers[1];
-        this.maxHealth = cfg.hp;
-        this.health    = cfg.hp;
-        this.speed     = cfg.speed;
-        this.damage    = cfg.damage;
-        this.setScale(cfg.scale);
-        if (cfg.tint) this.setTint(cfg.tint);
-        this._baseTint = cfg.tint;
+        this.play('skeleton_idle', true);
     }
 
     _buildAnims(scene) {
@@ -73,12 +61,11 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
                 });
             }
         };
-        // Número correto de frames baseado nos nomes dos ficheiros
-        make('goblin_idle',   'goblin_idle',    9,  6);   // strip9
-        make('goblin_walk',   'goblin_walk',    8, 10);   // strip8
-        make('goblin_hurt',   'goblin_hurt',    8, 12, 0);// strip8
-        make('goblin_death',  'goblin_death',  10,  8, 0);// strip13 → só 10 únicos
-        make('goblin_attack', 'goblin_attack', 10, 12, 0);// strip10
+        make('skeleton_idle',   'skeleton_idle',    6,  6);
+        make('skeleton_walk',   'skeleton_walk',    8, 12);
+        make('skeleton_hurt',   'skeleton_hurt',    7, 14, 0);
+        make('skeleton_death',  'skeleton_death',  10,  8, 0);
+        make('skeleton_attack', 'skeleton_attack',  7, 12, 0);
     }
 
     _updateHpBar() {
@@ -109,29 +96,26 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
 
         if (dist < this.detectionRange) {
             if (dist < this.attackRange) {
-                // Em alcance de ataque
                 this.body.setVelocity(0);
                 if (time > this.lastDamageTime + this.damageCooldown) {
                     this.lastDamageTime = time;
                     this._doAttack(player);
                 } else {
-                    this.play('goblin_idle', true);
+                    this.play('skeleton_idle', true);
                 }
             } else {
-                // Perseguição
                 const nx = dx / dist, ny = dy / dist;
                 this.body.setVelocityX(nx * this.speed);
                 this.body.setVelocityY(ny * this.speed);
                 this.setFlipX(dx < 0);
-                this.play('goblin_walk', true);
+                this.play('skeleton_walk', true);
             }
         } else {
-            // Patrulha aleatória
             this.patrolTimer -= 16;
             if (this.patrolTimer <= 0) {
-                this.patrolTimer = Phaser.Math.Between(1500, 3500);
+                this.patrolTimer = Phaser.Math.Between(1000, 2500);
                 const angle = Math.random() * Math.PI * 2;
-                const range = Phaser.Math.Between(40, 100);
+                const range = Phaser.Math.Between(50, 120);
                 this.patrolTarget = {
                     x: this.x + Math.cos(angle) * range,
                     y: this.y + Math.sin(angle) * range
@@ -141,14 +125,14 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
             const ptDy   = this.patrolTarget.y - this.y;
             const ptDist = Math.sqrt(ptDx * ptDx + ptDy * ptDy);
             if (ptDist > 8) {
-                const spd = this.speed * 0.45;
+                const spd = this.speed * 0.5;
                 this.body.setVelocityX((ptDx / ptDist) * spd);
                 this.body.setVelocityY((ptDy / ptDist) * spd);
                 this.setFlipX(ptDx < 0);
-                this.play('goblin_walk', true);
+                this.play('skeleton_walk', true);
             } else {
                 this.body.setVelocity(0);
-                this.play('goblin_idle', true);
+                this.play('skeleton_idle', true);
             }
         }
     }
@@ -156,21 +140,19 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
     _doAttack(player) {
         this._attacking = true;
         this.body.setVelocity(0);
-        this.play('goblin_attack', true);
+        this.play('skeleton_attack', true);
 
-        // Flash amarelo no início do ataque (aviso visual)
-        this.setTint(0xffff00);
-        this.scene.time.delayedCall(200, () => {
+        this.setTint(0xffffff);
+        this.scene.time.delayedCall(160, () => {
             if (!this.dead) {
-                this.clearTint();
-                if (this._baseTint) this.setTint(this._baseTint);
+                this.setTint(0xaaddff);
                 this.scene.events.emit('playerDamaged', this.damage);
             }
         });
 
         this.once('animationcomplete', () => {
             this._attacking = false;
-            if (!this.dead) this.play('goblin_idle', true);
+            if (!this.dead) this.play('skeleton_idle', true);
         });
     }
 
@@ -179,29 +161,26 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
         this.health -= amount;
         this._attacking = false;
 
-        // Knockback
-        const kbX = fromDir === 'right' ? 200 : -200;
-        this.body.setVelocity(kbX, -80);
-        this.stunUntil = this.scene.time.now + 350;
+        const kbX = fromDir === 'right' ? 250 : -250;
+        this.body.setVelocity(kbX, -100);
+        this.stunUntil = this.scene.time.now + 280;
 
-        this.play('goblin_hurt', true);
-        this.setTint(0xff4444);
-        this.scene.time.delayedCall(350, () => {
+        this.play('skeleton_hurt', true);
+        this.setTint(0xff8888);
+        this.scene.time.delayedCall(280, () => {
             if (!this.dead) {
-                this.clearTint();
-                if (this._baseTint) this.setTint(this._baseTint);
-                this.play('goblin_walk', true);
+                this.setTint(0xaaddff);
             }
         });
 
-        // Texto de dano flutuante
+        // Texto de dano
         const txt = this.scene.add.text(this.x, this.y - 24, `-${amount}`, {
-            fontSize: '14px', fill: '#ff4444', fontStyle: 'bold',
+            fontSize: '14px', fill: '#4499ff', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 3
         }).setOrigin(0.5).setDepth(20);
         this.scene.tweens.add({
             targets: txt, y: txt.y - 32, alpha: 0,
-            duration: 750, onComplete: () => txt.destroy()
+            duration: 650, onComplete: () => txt.destroy()
         });
 
         this._updateHpBar();
@@ -215,7 +194,7 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
         this.body.setVelocity(0);
         this.body.enable = false;
         this.clearTint();
-        this.play('goblin_death', true);
+        this.play('skeleton_death', true);
         this.once('animationcomplete', () => {
             this.scene.events.emit('enemyDied', this.x, this.y);
             this.destroy();

@@ -6,51 +6,56 @@ export default class VictoryScene extends Phaser.Scene {
         super('VictoryScene');
     }
 
-    create() {
+    create(data) {
         const W = 960, H = 640;
+        const score = data?.score ?? 0;
+        const kills = data?.kills ?? 0;
+        const time  = data?.time  ?? 0;
 
-        // Som de vitória
         SoundManager.play('victory');
 
-        // Fundo com fade-in dourado
         const overlay = this.add.rectangle(W/2, H/2, W, H, 0x1a1000, 0);
         this.tweens.add({ targets: overlay, alpha: 0.9, duration: 600 });
 
-        // Partículas simples (estrelas)
+        // Estrelas decorativas
         for (let i = 0; i < 30; i++) {
             const star = this.add.text(
                 Phaser.Math.Between(50, W - 50),
                 Phaser.Math.Between(50, H - 50),
-                '✦',
-                { fontSize: Phaser.Math.Between(10, 24) + 'px', fill: '#f0e68c' }
+                '✦', { fontSize: Phaser.Math.Between(10, 24) + 'px', fill: '#f0e68c' }
             ).setAlpha(0);
-
             this.tweens.add({
                 targets: star,
                 alpha: { from: 0, to: Phaser.Math.FloatBetween(0.3, 1) },
                 duration: Phaser.Math.Between(500, 1500),
                 delay: Phaser.Math.Between(0, 1000),
-                yoyo: true,
-                repeat: -1
+                yoyo: true, repeat: -1
             });
         }
 
-        // Título
-        const titulo = this.add.text(W/2, H/2 - 120, I18n.t('victory.title'), {
+        const titulo = this.add.text(W/2, H/2 - 160, I18n.t('victory.title'), {
             fontSize: '64px', fill: '#f0e68c', fontStyle: 'bold'
         }).setOrigin(0.5).setAlpha(0);
 
-        const sub = this.add.text(W/2, H/2 - 30, I18n.t('victory.subtitle'), {
+        const sub = this.add.text(W/2, H/2 - 80, I18n.t('victory.subtitle'), {
             fontSize: '22px', fill: '#ddddaa', fontStyle: 'italic'
         }).setOrigin(0.5).setAlpha(0);
 
-        this.tweens.add({ targets: [titulo, sub], alpha: 1, duration: 900, delay: 400 });
+        // Stats de fim de jogo
+        const mm = Math.floor(time / 60), ss = String(time % 60).padStart(2,'0');
+        const statsLabel = I18n.lang === 'en'
+            ? `Time: ${mm}:${ss}  |  Kills: ${kills}  |  Score: ${score}`
+            : `Tempo: ${mm}:${ss}  |  Abates: ${kills}  |  Pontos: ${score}`;
 
-        // Botão jogar novamente
-        const btnRestart = this.add.text(W/2, H/2 + 70, I18n.t('victory.restart'), {
+        const statsText = this.add.text(W/2, H/2 - 30, statsLabel, {
+            fontSize: '18px', fill: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(0.5).setAlpha(0);
+
+        this.tweens.add({ targets: [titulo, sub, statsText], alpha: 1, duration: 900, delay: 400 });
+
+        const btnRestart = this.add.text(W/2, H/2 + 60, I18n.t('victory.restart'), {
             fontSize: '28px', fill: '#f0e68c', fontStyle: 'bold'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
         btnRestart.on('pointerover', () => btnRestart.setStyle({ fill: '#ffffff' }));
         btnRestart.on('pointerout',  () => btnRestart.setStyle({ fill: '#f0e68c' }));
         btnRestart.on('pointerdown', () => {
@@ -60,11 +65,9 @@ export default class VictoryScene extends Phaser.Scene {
             this.scene.launch('HUDScene');
         });
 
-        // Botão menu
-        const btnMenu = this.add.text(W/2, H/2 + 120, I18n.t('victory.menu'), {
+        const btnMenu = this.add.text(W/2, H/2 + 110, I18n.t('victory.menu'), {
             fontSize: '20px', fill: '#888888'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
         btnMenu.on('pointerover', () => btnMenu.setStyle({ fill: '#cccccc' }));
         btnMenu.on('pointerout',  () => btnMenu.setStyle({ fill: '#888888' }));
         btnMenu.on('pointerdown', () => {
@@ -73,7 +76,6 @@ export default class VictoryScene extends Phaser.Scene {
             this.scene.start('MenuScene');
         });
 
-        // Tecla R
         this.input.keyboard.once('keydown-R', () => {
             this.scene.stop('VictoryScene');
             this.scene.start('GameScene');
