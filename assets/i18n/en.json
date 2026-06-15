@@ -1,0 +1,44 @@
+{
+  "menu": {
+    "title": "STRANDED",
+    "subtitle": "One island. No way out. Find a path.",
+    "play": "▶  PLAY",
+    "credits": "Controls: WASD/Arrows · SHIFT sprint · SPACE attack · E use · 1-8 hotbar"
+  },
+  "hud": {
+    "use_item": "[E] use item",
+    "hint": "WASD/arrows move  ·  SHIFT sprint  ·  SPACE attack  ·  E use  ·  1-8 hotbar",
+    "inventory_full": "Inventory full!"
+  },
+  "gameover": {
+    "title": "💀 GAME OVER",
+    "subtitle": "You didn't survive the island.",
+    "restart": "↺  Try Again",
+    "menu": "← Main Menu"
+  },
+  "victory": {
+    "title": "🏆 VICTORY!",
+    "subtitle": "You survived the island!",
+    "restart": "↺  Play Again",
+    "menu": "← Main Menu"
+  },
+  "preload": {
+    "loading": "Loading..."
+  },
+  "items": {
+    "wood":    "Wood",
+    "rock":    "Rock",
+    "carrot":  "Carrot",
+    "potato":  "Potato",
+    "wheat":   "Wheat",
+    "fish":    "Fish",
+    "egg":     "Egg",
+    "milk":    "Milk",
+    "water":   "Water",
+    "axe":     "Axe",
+    "pickaxe": "Pickaxe",
+    "hammer":  "Hammer",
+    "shovel":  "Shovel",
+    "sword":   "Sword"
+  }
+}

@@ -1,3 +1,5 @@
+import I18n from '../systems/I18n.js';
+
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
         super('PreloadScene');
@@ -13,9 +15,20 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.on('progress', v => {
             bar.clear().fillStyle(0x7ec850).fillRect(W/2-200, H/2-10, 400*v, 20);
         });
-        this.add.text(W/2, H/2-30, 'A carregar...', {
+
+        // Texto de loading (atualizado depois do I18n estar carregado — usa PT por omissão)
+        this.add.text(W/2, H/2-30, 'A carregar... / Loading...', {
             fontSize: '22px', fill: '#ffffff', fontStyle: 'bold'
         }).setOrigin(0.5);
+
+        // ── I18N ──────────────────────────────────────────────────────────────
+        this.load.json('i18n_pt', 'assets/i18n/pt.json');
+        this.load.json('i18n_en', 'assets/i18n/en.json');
+
+        // ── ÁUDIO ─────────────────────────────────────────────────────────────
+        // Sons gerados proceduralmente via Web Audio API (sem ficheiros externos)
+        // Serão criados em BootScene. Aqui apenas registamos as chaves via
+        // AudioContext para não precisar de ficheiros .mp3/.ogg externos.
 
         // ── TILEMAP ───────────────────────────────────────────────────────────
         this.load.tilemapTiledJSON('ilha', 'assets/tilemaps/ilha.json');
@@ -51,17 +64,13 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.spritesheet('player_tools_axe',    pH+'tools_axe_strip10.png',    {frameWidth:FW,frameHeight:FH});
         this.load.spritesheet('player_tools_mining', pH+'tools_mining_strip10.png', {frameWidth:FW,frameHeight:FH});
 
-        // ── GOBLIN — frameW=96 (os strip names são enganadores em alguns ficheiros)
-        // spr_idle_strip9 é 768px → 768/96 = 8 frames reais (não 9!)
-        // spr_walk_strip8 é 768px → 8 frames ✓
-        // spr_hurt_strip8 é 768px → 8 frames ✓
-        // spr_death_strip13 é 864px → 864/96 = 9 frames reais
+        // ── GOBLIN ────────────────────────────────────────────────────────────
         const pG = 'assets/spritesheets/goblin/';
-        this.load.spritesheet('goblin_idle',  pG+'spr_idle_strip9.png',   {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('goblin_walk',  pG+'spr_walk_strip8.png',   {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('goblin_hurt',  pG+'spr_hurt_strip8.png',   {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('goblin_death', pG+'spr_death_strip13.png', {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('goblin_attack',pG+'spr_attack_strip10.png',{frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_idle',   pG+'spr_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_walk',   pG+'spr_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_hurt',   pG+'spr_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_death',  pG+'spr_death_strip13.png',  {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_attack', pG+'spr_attack_strip10.png', {frameWidth:FW,frameHeight:FH});
 
         // ── ITENS ─────────────────────────────────────────────────────────────
         ['wood','rock','fish','egg','milk','water'].forEach(k =>
@@ -81,6 +90,8 @@ export default class PreloadScene extends Phaser.Scene {
     }
 
     create() {
+        // Inicializar o sistema de i18n com os JSONs carregados
+        I18n.init(this.cache);
         this.scene.start('MenuScene');
     }
 }

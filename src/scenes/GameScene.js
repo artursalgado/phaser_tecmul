@@ -3,6 +3,8 @@ import PlayerStats from '../systems/PlayerStats.js';
 import Player from '../objects/Player.js';
 import CollectibleItem from '../objects/CollectibleItem.js';
 import Goblin from '../objects/Goblin.js';
+import I18n from '../systems/I18n.js';
+import SoundManager from '../systems/SoundManager.js';
 
 // Centro da ilha em píxeis (tile 40,30 com tiles 16px = 640,480)
 const CX = 640, CY = 480;
@@ -53,6 +55,9 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+        // Garantir que o AudioContext está ativo após interação do utilizador
+        SoundManager.resume();
+
         // ── TILEMAP ───────────────────────────────────────────────────────────
         const mapa    = this.make.tilemap({ key: 'ilha' });
         const tileset = mapa.addTilesetImage('sunnyside', 'sunnyside');
@@ -95,8 +100,6 @@ export default class GameScene extends Phaser.Scene {
         }
 
         // ── CÂMERA ────────────────────────────────────────────────────────────
-        // zoom=2.5: cada tile de 16px fica 40px no ecrã — bom para ver o mapa
-        // O jogador de 64px de altura × 0.75 × 2.5 = 120px no ecrã — perfeito
         this.cameras.main.setBounds(0, 0, mapW, mapH);
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.cameras.main.setZoom(2.5);
@@ -130,7 +133,6 @@ export default class GameScene extends Phaser.Scene {
         this.goblins = this.physics.add.group();
         GOBLIN_SPAWNS.forEach(s => this.goblins.add(new Goblin(this, s.x, s.y)));
 
-        // Colisão goblins ↔ colisao layer
         if (colisao) {
             this.physics.add.collider(this.goblins, colisao);
         }
@@ -147,8 +149,17 @@ export default class GameScene extends Phaser.Scene {
             if (this._invulnerable) return;
             this.stats.takeDamage(amount);
             this.player.flashHurt();
+            SoundManager.play('hurt');
             this._setInvulnerable(1000);
             this.cameras.main.shake(120, 0.006);
+        });
+
+        this.events.on('playerAttack', () => {
+            SoundManager.play('attack');
+        });
+
+        this.events.on('enemyHurt', () => {
+            SoundManager.play('goblin_hurt');
         });
 
         // ── HUD ───────────────────────────────────────────────────────────────
@@ -159,7 +170,7 @@ export default class GameScene extends Phaser.Scene {
         const hint = this.add.text(
             this.scale.width / 2,
             this.scale.height - 20,
-            'WASD/setas mover  ·  SHIFT correr  ·  ESPAÇO atacar  ·  E usar  ·  1-8 hotbar',
+            I18n.t('hud.hint'),
             { fontSize: '9px', fill: '#ffffbb', stroke: '#000', strokeThickness: 2 }
         ).setOrigin(0.5, 1).setScrollFactor(0).setDepth(100);
 
@@ -177,11 +188,13 @@ export default class GameScene extends Phaser.Scene {
 
     _pickupItem(player, item) {
         const def   = ITEM_DB[item.itemId];
-        const nome  = def ? def.name : item.itemId;
+        const nome  = I18n.t(`items.${item.itemId}`) || (def ? def.name : item.itemId);
         const added = this.inventory.addItem(item.itemId, item.quantity);
 
+        if (added) SoundManager.play('pickup');
+
         const txt = this.add.text(item.x, item.y - 20,
-            added ? `+${item.quantity} ${nome}` : 'Inventário cheio!',
+            added ? `+${item.quantity} ${nome}` : I18n.t('hud.inventory_full'),
             { fontSize: '10px', fill: added ? '#ffffff' : '#ff8888',
               fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }
         ).setOrigin(0.5).setDepth(20);
@@ -202,10 +215,11 @@ export default class GameScene extends Phaser.Scene {
         if (effect.thirst) this.stats.drink(effect.thirst);
         if (effect.health) this.stats.heal(effect.health);
         this.inventory.removeItem(slot.itemId, 1);
+        SoundManager.play('pickup');
 
-        const def = ITEM_DB[slot.itemId];
+        const nome = I18n.t(`items.${slot.itemId}`);
         const txt = this.add.text(this.player.x, this.player.y - 36,
-            `🍴 ${def ? def.name : slot.itemId}`,
+            `🍴 ${nome}`,
             { fontSize: '12px', fill: '#88ff88', fontStyle: 'bold',
               stroke: '#000000', strokeThickness: 2 }
         ).setOrigin(0.5).setDepth(20);

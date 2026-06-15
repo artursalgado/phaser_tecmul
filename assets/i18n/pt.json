@@ -1,0 +1,44 @@
+{
+  "menu": {
+    "title": "STRANDED",
+    "subtitle": "Uma ilha. Sem saída. Encontra um caminho.",
+    "play": "▶  JOGAR",
+    "credits": "Controlos: WASD/Setas · SHIFT correr · ESPAÇO atacar · E usar · 1-8 hotbar"
+  },
+  "hud": {
+    "use_item": "[E] usar item",
+    "hint": "WASD/setas mover  ·  SHIFT correr  ·  ESPAÇO atacar  ·  E usar  ·  1-8 hotbar",
+    "inventory_full": "Inventário cheio!"
+  },
+  "gameover": {
+    "title": "💀 GAME OVER",
+    "subtitle": "Não sobreviveste à ilha.",
+    "restart": "↺  Tentar Novamente",
+    "menu": "← Menu Principal"
+  },
+  "victory": {
+    "title": "🏆 VITÓRIA!",
+    "subtitle": "Conseguiste sobreviver à ilha!",
+    "restart": "↺  Jogar Novamente",
+    "menu": "← Menu Principal"
+  },
+  "preload": {
+    "loading": "A carregar..."
+  },
+  "items": {
+    "wood":    "Madeira",
+    "rock":    "Pedra",
+    "carrot":  "Cenoura",
+    "potato":  "Batata",
+    "wheat":   "Trigo",
+    "fish":    "Peixe",
+    "egg":     "Ovo",
+    "milk":    "Leite",
+    "water":   "Água",
+    "axe":     "Machado",
+    "pickaxe": "Picareta",
+    "hammer":  "Martelo",
+    "shovel":  "Pá",
+    "sword":   "Espada"
+  }
+}
