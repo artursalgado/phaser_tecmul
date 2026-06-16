@@ -21,7 +21,7 @@ from collections import deque
 MAP_W, MAP_H = 120, 90
 TILE         = 16
 COLS         = 64
-SEED         = 7
+SEED         = 21
 
 def tid(row, col):
     return row * COLS + col + 1
@@ -32,7 +32,7 @@ GRASS_VAR   = [67, 193, 196, 258]                        # variantes subtis de r
 SAND        = 68
 SAND_VAR    = [70, 72, 73, 74]                           # areias com textura/seixos
 WATER       = 69
-ROCK_GND    = 68                                         # chão pedregoso ~ areia/terra
+ROCK_GND    = GRASS                                      # chão pedregoso sobre relva escura
 
 # Decoração de relva
 DECO_BUSH     = [92, 93, 94, 95, 114, 115]
@@ -43,9 +43,13 @@ DECO_PEBBLE   = [143, 144, 288, 289, 290, 291]
 # Decoração de água
 DECO_SPARKLE  = [1420, 1421, 1422, 1423]
 
-# Árvores (1 largura × 2 altura: copa + tronco)
-TREE_CANOPY = [121, 122, 123]
-TREE_TRUNK  = [185, 186, 187]
+# Árvores 2 tiles largura × 2 tiles altura: (copa_esq, copa_dir, tronco_esq, tronco_dir)
+# Verificados em inspect_trees_top.png — gids 114-115 são copa standalone, 178-179 tronco
+TREE_SETS = [
+    (114, 115, 178, 179),   # árvore redonda verde (mais comum)
+    (114, 115, 178, 179),
+    (242, 243, 306, 307),   # macieira (rara)
+]
 # Rochas pequenas
 ROCK        = [1464, 1976, 1592]
 # Estruturas
@@ -110,7 +114,7 @@ def island_value(x, y):
     dy = (y - cy) / ry
     d = math.sqrt(dx * dx + dy * dy)
     n = elev_noise(x, y)
-    return (n * 0.95 + 0.25) - d
+    return (n * 0.80 + 0.28) - d
 
 terrain = [[DEEP] * MAP_W for _ in range(MAP_H)]
 for y in range(MAP_H):
@@ -118,15 +122,15 @@ for y in range(MAP_H):
         e = island_value(x, y)
         if e < -0.18:
             terrain[y][x] = DEEP
-        elif e < -0.02:
+        elif e < -0.05:
             terrain[y][x] = SHALLOW
-        elif e < 0.06:
+        elif e < 0.03:
             terrain[y][x] = SAND_T
         else:
             m = moist_noise(x, y)
-            if e > 0.42 and m < 0.42:
+            if e > 0.44 and m < 0.40:
                 terrain[y][x] = ROCK_T
-            elif m > 0.56:
+            elif m > 0.54:
                 terrain[y][x] = FOREST_T
             else:
                 terrain[y][x] = GRASS_T
@@ -161,28 +165,17 @@ for y in range(MAP_H):
         if t in (DEEP, SHALLOW):
             chao[y][x] = WATER
         elif t == SAND_T:
-            chao[y][x] = SAND if rng.random() > 0.10 else rng.choice(SAND_VAR)
+            chao[y][x] = SAND if rng.random() > 0.15 else rng.choice(SAND_VAR)
         elif t == ROCK_T:
-            chao[y][x] = ROCK_GND
+            chao[y][x] = rng.choice([ROCK_GND, 193, 196])   # relva escura para "rochoso"
+        elif t == FOREST_T:
+            chao[y][x] = rng.choice([GRASS, GRASS, 193, 196])  # chão floresta mais escuro
         else:
-            chao[y][x] = GRASS if rng.random() > 0.06 else rng.choice(GRASS_VAR)
+            chao[y][x] = GRASS if rng.random() > 0.08 else rng.choice(GRASS_VAR)
 
-# 2) COSTA — autotile nas células de AREIA que tocam ÁGUA
+# 2) COSTA — sem autotiling; areia aparece como blocos lisos
 def water_at(x, y):
     return (not (0 <= x < MAP_W and 0 <= y < MAP_H)) or is_water(terrain[y][x])
-
-for y in range(MAP_H):
-    for x in range(MAP_W):
-        if terrain[y][x] != SAND_T:
-            continue
-        mask = 0
-        if water_at(x, y - 1): mask |= 0b0001
-        if water_at(x + 1, y): mask |= 0b0010
-        if water_at(x, y + 1): mask |= 0b0100
-        if water_at(x - 1, y): mask |= 0b1000
-        gid = COAST.get(mask, 0)
-        if gid:
-            transicoes[y][x] = gid
 
 # 3) DECORAÇÃO
 deco_n = 0
@@ -191,17 +184,20 @@ for y in range(MAP_H):
         t = terrain[y][x]
         if t == GRASS_T:
             r = rng.random()
-            if r < 0.05:   decoracao[y][x] = rng.choice(DECO_FLOWER); deco_n += 1
-            elif r < 0.11: decoracao[y][x] = rng.choice(DECO_SPROUT); deco_n += 1
-            elif r < 0.15: decoracao[y][x] = rng.choice(DECO_BUSH);   deco_n += 1
+            if r < 0.07:   decoracao[y][x] = rng.choice(DECO_FLOWER); deco_n += 1
+            elif r < 0.14: decoracao[y][x] = rng.choice(DECO_SPROUT); deco_n += 1
+            elif r < 0.19: decoracao[y][x] = rng.choice(DECO_BUSH);   deco_n += 1
         elif t == FOREST_T:
-            if rng.random() < 0.12:
+            if rng.random() < 0.18:
                 decoracao[y][x] = rng.choice(DECO_SPROUT + DECO_BUSH); deco_n += 1
         elif t == SAND_T:
-            if rng.random() < 0.05:
+            if rng.random() < 0.08:
                 decoracao[y][x] = rng.choice(DECO_PEBBLE); deco_n += 1
+        elif t == SHALLOW:
+            if rng.random() < 0.03:
+                decoracao[y][x] = rng.choice(DECO_SPARKLE); deco_n += 1
         elif t == DEEP:
-            if rng.random() < 0.015:
+            if rng.random() < 0.010:
                 decoracao[y][x] = rng.choice(DECO_SPARKLE); deco_n += 1
 
 # 4) OBJETOS — árvores (tronco+copa), rochas. Evitar clareira central.
@@ -209,12 +205,13 @@ def near_center(x, y, r):
     return (x - cx) ** 2 + (y - cy) ** 2 < r ** 2
 
 def place_tree(x, y):
-    if y - 1 < 0: return False
-    if objetos[y][x] or objetos[y - 1][x]: return False
-    i = rng.randrange(len(TREE_TRUNK))
-    objetos[y][x] = TREE_TRUNK[i]
-    acima[y - 1][x] = TREE_CANOPY[i]
-    colisao[y][x] = TREE_TRUNK[i]
+    if y - 1 < 0 or x + 1 >= MAP_W: return False
+    for dx in (0, 1):
+        if objetos[y][x+dx] or acima[y-1][x+dx]: return False
+    cl, cr, tl, tr = rng.choice(TREE_SETS)
+    acima[y-1][x]   = cl;  acima[y-1][x+1]   = cr
+    objetos[y][x]   = tl;  objetos[y][x+1]   = tr
+    colisao[y][x]   = 1;   colisao[y][x+1]   = 1
     return True
 
 tree_n = rock_n = 0
@@ -223,14 +220,17 @@ for y in range(MAP_H):
         t = terrain[y][x]
         if near_center(x, y, CLEAR_R + 2):
             continue
-        if t == FOREST_T and rng.random() < 0.32:
+        if t == FOREST_T and rng.random() < 0.30:
             if place_tree(x, y): tree_n += 1
-        elif t == GRASS_T and rng.random() < 0.03:
+        elif t == GRASS_T and rng.random() < 0.04:
             if place_tree(x, y): tree_n += 1
-        elif t == ROCK_T and rng.random() < 0.18:
+        elif t == ROCK_T and rng.random() < 0.45:
             if not objetos[y][x]:
                 objetos[y][x] = rng.choice(ROCK); colisao[y][x] = 1; rock_n += 1
-        elif t == GRASS_T and rng.random() < 0.01:
+        elif t == SAND_T and rng.random() < 0.008:
+            if not objetos[y][x]:
+                objetos[y][x] = rng.choice(ROCK); colisao[y][x] = 1; rock_n += 1
+        elif t == GRASS_T and rng.random() < 0.012:
             if not objetos[y][x]:
                 objetos[y][x] = rng.choice(ROCK); colisao[y][x] = 1; rock_n += 1
 
@@ -368,7 +368,7 @@ tilemap = {
     "infinite": False, "nextlayerid": 8, "nextobjectid": oid,
     "tilesets": [{
         "columns": 64, "firstgid": 1,
-        "image": "../../tilesets/spr_tileset_sunnysideworld_16px.png",
+        "image": "../tilesets/spr_tileset_sunnysideworld_16px.png",
         "imageheight": 1024, "imagewidth": 1024,
         "margin": 0, "name": "sunnyside",
         "spacing": 0, "tilecount": 4096,
