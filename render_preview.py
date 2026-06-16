@@ -21,6 +21,8 @@ def tile_img(gid):
     return tileset.crop(box)
 
 for layer in data['layers']:
+    if layer.get('type') != 'tilelayer':
+        continue          # ignora objectgroup (spawns)
     arr = layer['data']
     for i, gid in enumerate(arr):
         if gid == 0:

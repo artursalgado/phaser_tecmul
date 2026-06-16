@@ -7,34 +7,29 @@ import Skeleton from '../objects/Skeleton.js';
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
 
-// Centro da ilha: tile (40,30) × 16px = pixel (640, 480)
-const CX = 640, CY = 480;
-
-const SPAWN_ITEMS = [
-    { x: CX - 64,  y: CY - 48, itemId: 'wood',    qty: 3 },
-    { x: CX + 72,  y: CY - 32, itemId: 'rock',    qty: 2 },
-    { x: CX - 80,  y: CY + 56, itemId: 'carrot',  qty: 2 },
-    { x: CX + 80,  y: CY + 64, itemId: 'potato',  qty: 2 },
-    { x: CX - 32,  y: CY + 80, itemId: 'wheat',   qty: 2 },
-    { x: CX + 48,  y: CY - 80, itemId: 'fish',    qty: 2 },
-    { x: CX - 48,  y: CY - 88, itemId: 'egg',     qty: 2 },
-    { x: CX + 32,  y: CY + 32, itemId: 'axe',     qty: 1 },
-    { x: CX - 32,  y: CY + 32, itemId: 'pickaxe', qty: 1 },
-    { x: CX + 120, y: CY,      itemId: 'water',   qty: 3 },
-    { x: CX - 120, y: CY,      itemId: 'water',   qty: 2 },
-    { x: CX,       y: CY-120,  itemId: 'wood',    qty: 2 },
-    { x: CX,       y: CY+120,  itemId: 'rock',    qty: 3 },
-    { x: CX + 48,  y: CY - 48, itemId: 'sword',   qty: 1 },
+// Fallback (usado só se o mapa não tiver object layer "spawns").
+// Offsets relativos ao centro do mapa, em pixels.
+const ITEM_OFFSETS = [
+    { dx: -64,  dy: -48, itemId: 'wood',    qty: 3 },
+    { dx:  72,  dy: -32, itemId: 'rock',    qty: 2 },
+    { dx: -80,  dy:  56, itemId: 'carrot',  qty: 2 },
+    { dx:  80,  dy:  64, itemId: 'potato',  qty: 2 },
+    { dx: -32,  dy:  80, itemId: 'wheat',   qty: 2 },
+    { dx:  48,  dy: -80, itemId: 'fish',    qty: 2 },
+    { dx: -48,  dy: -88, itemId: 'egg',     qty: 2 },
+    { dx:  32,  dy:  32, itemId: 'axe',     qty: 1 },
+    { dx: -32,  dy:  32, itemId: 'pickaxe', qty: 1 },
+    { dx: 120,  dy:   0, itemId: 'water',   qty: 3 },
+    { dx: -120, dy:   0, itemId: 'water',   qty: 2 },
+    { dx:   0,  dy:-120, itemId: 'wood',    qty: 2 },
+    { dx:   0,  dy: 120, itemId: 'rock',    qty: 3 },
+    { dx:  48,  dy: -48, itemId: 'sword',   qty: 1 },
 ];
 
-const GOBLIN_SPAWNS = [
-    { x: CX - 200, y: CY - 140 },
-    { x: CX + 200, y: CY - 140 },
-    { x: CX - 200, y: CY + 140 },
-    { x: CX + 200, y: CY + 140 },
-    { x: CX,       y: CY - 200 },
-    { x: CX - 250, y: CY },
-    { x: CX + 250, y: CY },
+const ENEMY_OFFSETS = [
+    { dx: -200, dy: -140 }, { dx: 200, dy: -140 },
+    { dx: -200, dy:  140 }, { dx: 200, dy:  140 },
+    { dx:    0, dy: -200 }, { dx: -250, dy: 0 }, { dx: 250, dy: 0 },
 ];
 
 const FOOD_VALUES = {
@@ -82,21 +77,34 @@ export default class GameScene extends Phaser.Scene {
             return;
         }
 
-        const chao      = mapa.createLayer('chao',      tileset, 0, 0);
-        const decoracao = mapa.createLayer('Decoracao', tileset, 0, 0);
-        const colisao   = mapa.createLayer('colisao',   tileset, 0, 0);
+        // Layers v7: chao(0) < transicoes(1) < decoracao(2) < [colisao oculto]
+        //            < objetos(4) < jogador(5) < acima(8 — copas por cima do jogador)
+        const chao       = mapa.createLayer('chao',       tileset, 0, 0);
+        const transicoes = mapa.createLayer('transicoes', tileset, 0, 0);
+        const decoracao  = mapa.createLayer('decoracao',  tileset, 0, 0);
+        const colisao    = mapa.createLayer('colisao',    tileset, 0, 0);
+        const objetos    = mapa.createLayer('objetos',    tileset, 0, 0);
+        const acima      = mapa.createLayer('acima',      tileset, 0, 0);
         chao?.setDepth(0);
-        decoracao?.setDepth(1);
+        transicoes?.setDepth(1);
+        decoracao?.setDepth(2);
+        objetos?.setDepth(4);
+        acima?.setDepth(8);
         if (colisao) {
             colisao.setDepth(2);
-            colisao.setCollisionByExclusion([-1, 0]);
+            colisao.setCollisionByExclusion([-1, 0]);   // qualquer tile != 0 colide
             colisao.setVisible(false);
         }
 
-        const mapW = mapa.widthInPixels;   // 80*16 = 1280
-        const mapH = mapa.heightInPixels;  // 60*16 = 960
+        const mapW = mapa.widthInPixels;
+        const mapH = mapa.heightInPixels;
+        this._mapW = mapW;
+        this._mapH = mapH;
         this.physics.world.setBounds(0, 0, mapW, mapH);
         this._colisao = colisao;
+
+        // ── SPAWNS (object layer do Tiled; fallback ao centro) ──────────────────
+        const spawns = this._readSpawns(mapa, mapW, mapH);
 
         // ── SISTEMAS ──────────────────────────────────────────────────────────
         this.inventory = new Inventory(8);
@@ -111,7 +119,7 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // ── JOGADOR ───────────────────────────────────────────────────────────
-        this.player = new Player(this, CX, CY);
+        this.player = new Player(this, spawns.player.x, spawns.player.y);
         if (colisao) this.physics.add.collider(this.player, colisao);
 
         // ── CÂMERA ────────────────────────────────────────────────────────────
@@ -137,14 +145,17 @@ export default class GameScene extends Phaser.Scene {
 
         // ── ITENS ─────────────────────────────────────────────────────────────
         this.pickups = this.physics.add.group();
-        SPAWN_ITEMS.forEach(s =>
+        spawns.items.forEach(s =>
             this.pickups.add(new CollectibleItem(this, s.x, s.y, s.itemId, s.qty))
         );
         this.physics.add.overlap(this.player, this.pickups, this._pickupItem, null, this);
 
         // ── INIMIGOS ──────────────────────────────────────────────────────────
         this.goblins = this.physics.add.group();
-        GOBLIN_SPAWNS.forEach(s => this._spawnGoblin(s.x, s.y));
+        spawns.enemies.forEach(s =>
+            s.kind === 'skeleton' ? this._spawnSkeleton(s.x, s.y)
+                                  : this._spawnGoblin(s.x, s.y, s.tier)
+        );
         if (colisao) this.physics.add.collider(this.goblins, colisao);
         this.physics.add.collider(this.goblins, this.goblins);
 
@@ -187,7 +198,43 @@ export default class GameScene extends Phaser.Scene {
                 onComplete: () => hint.destroy() });
         });
 
-        console.log('[GameScene] criado — jogador em', CX, CY, '| mapa', mapW, 'x', mapH);
+        console.log('[GameScene] criado — jogador em', spawns.player.x, spawns.player.y,
+                    '| mapa', mapW, 'x', mapH);
+    }
+
+    // ── Ler spawns do object layer "spawns" (fallback: centro + offsets) ────────
+    _readSpawns(mapa, mapW, mapH) {
+        const cx = mapW / 2, cy = mapH / 2;
+        const layer = mapa.getObjectLayer && mapa.getObjectLayer('spawns');
+        if (!layer || !layer.objects || !layer.objects.length) {
+            return {
+                player:  { x: cx, y: cy },
+                items:   ITEM_OFFSETS.map(o => ({ x: cx + o.dx, y: cy + o.dy,
+                                                  itemId: o.itemId, qty: o.qty })),
+                enemies: ENEMY_OFFSETS.map(o => ({ x: cx + o.dx, y: cy + o.dy,
+                                                   kind: 'goblin', tier: 1 })),
+            };
+        }
+        const prop = (o, k) => {
+            const p = (o.properties || []).find(pp => pp.name === k);
+            return p ? p.value : undefined;
+        };
+        const res = { player: { x: cx, y: cy }, items: [], enemies: [] };
+        for (const o of layer.objects) {
+            const name = o.name || o.type;
+            if (name === 'player_start') {
+                res.player = { x: o.x, y: o.y };
+            } else if (name === 'item') {
+                res.items.push({ x: o.x, y: o.y,
+                                 itemId: prop(o, 'itemId') || 'wood',
+                                 qty: parseInt(prop(o, 'qty') || '1', 10) });
+            } else if (name === 'enemy') {
+                res.enemies.push({ x: o.x, y: o.y,
+                                   kind: prop(o, 'kind') || 'goblin',
+                                   tier: parseInt(prop(o, 'tier') || '1', 10) });
+            }
+        }
+        return res;
     }
 
     update(time, delta) {
@@ -273,10 +320,12 @@ export default class GameScene extends Phaser.Scene {
             { x: 0,    y: -350 }, { x: 0,   y:  350 },
             { x: -350, y: 0    }, { x: 350, y:  0   },
         ];
+        const px = this.player ? this.player.x : this._mapW / 2;
+        const py = this.player ? this.player.y : this._mapH / 2;
         for (let i = 0; i < count; i++) {
             const off = offsets[i % offsets.length];
-            const sx = Phaser.Math.Clamp(CX + off.x + Phaser.Math.Between(-40, 40), 100, 1200);
-            const sy = Phaser.Math.Clamp(CY + off.y + Phaser.Math.Between(-40, 40), 100, 900);
+            const sx = Phaser.Math.Clamp(px + off.x + Phaser.Math.Between(-40, 40), 64, this._mapW - 64);
+            const sy = Phaser.Math.Clamp(py + off.y + Phaser.Math.Between(-40, 40), 64, this._mapH - 64);
             if (Math.random() < skelRatio) {
                 this._spawnSkeleton(sx, sy);
             } else {
