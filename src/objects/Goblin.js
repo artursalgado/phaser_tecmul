@@ -1,13 +1,12 @@
 /**
  * Goblin — Arcade Sprite com tiers de dificuldade
  * tier 1 = normal | tier 2 = forte (vermelho) | tier 3 = elite (roxo)
- * 
- * Frames por animação (spritesheets reais):
- *  idle:   spr_idle_strip9   → 9 frames
- *  walk:   spr_walk_strip8   → 8 frames
- *  hurt:   spr_hurt_strip8   → 8 frames
- *  death:  spr_death_strip13 → 13 frames (só tem 10 no assets, usamos 10)
- *  attack: spr_attack_strip10→ 10 frames
+ * Frames reais calculados (frameW=96):
+ *   idle:   768/96 = 8 frames
+ *   walk:   768/96 = 8 frames
+ *   hurt:   768/96 = 8 frames
+ *   death:  864/96 = 9 frames
+ *   attack: 864/96 = 9 frames
  */
 export default class Goblin extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, tier = 1) {
@@ -15,11 +14,13 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        this.setScale(0.75);
+        this.setScale(1);
         this.setDepth(4);
-        this.setOrigin(0.5, 0.75);
-        this.body.setSize(18, 16);
-        this.body.setOffset(39, 48);
+        this.setOrigin(0.5, 0.8);
+
+        // Hitbox igual ao player (frameW=96 → offset x=40; frameH=64 → offset y=46)
+        this.body.setSize(16, 14);
+        this.body.setOffset(40, 46);
         this.body.setCollideWorldBounds(true);
 
         // Tier — define stats e cor
@@ -37,10 +38,9 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
         this.patrolTimer    = 0;
         this._attacking     = false;
 
-        // Barra de vida (criada no scene mas sincronizada manualmente)
-        this.hpBarBg = scene.add.rectangle(0, 0, 22, 4, 0x330000).setDepth(10).setVisible(false);
-        this.hpBar   = scene.add.rectangle(0, 0, 22, 4, 0xff3333)
-            .setDepth(11).setOrigin(0, 0.5).setVisible(false);
+        // Barra de vida
+        this.hpBg  = scene.add.rectangle(x, y - 28, 24, 4, 0x440000).setDepth(10).setVisible(false);
+        this.hpBar = scene.add.rectangle(x - 12, y - 28, 24, 4, 0xff3333).setDepth(11).setOrigin(0, 0.5).setVisible(false);
 
         this._buildAnims(scene);
         this.play('goblin_idle', true);
@@ -63,42 +63,37 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
     }
 
     _buildAnims(scene) {
-        const make = (key, texture, nFrames, rate, repeat = -1) => {
-            if (!scene.anims.exists(key)) {
-                scene.anims.create({
-                    key,
-                    frames: scene.anims.generateFrameNumbers(texture, { start: 0, end: nFrames - 1 }),
-                    frameRate: rate,
-                    repeat
-                });
-            }
+        const make = (key, tex, n, fps, repeat = -1) => {
+            if (scene.anims.exists(key)) return;
+            scene.anims.create({
+                key,
+                frames: scene.anims.generateFrameNumbers(tex, { start: 0, end: n - 1 }),
+                frameRate: fps,
+                repeat
+            });
         };
-        // Número correto de frames baseado nos nomes dos ficheiros
-        make('goblin_idle',   'goblin_idle',    9,  6);   // strip9
-        make('goblin_walk',   'goblin_walk',    8, 10);   // strip8
-        make('goblin_hurt',   'goblin_hurt',    8, 12, 0);// strip8
-        make('goblin_death',  'goblin_death',  10,  8, 0);// strip13 → só 10 únicos
-        make('goblin_attack', 'goblin_attack', 10, 12, 0);// strip10
+        // Frame counts verified from image dimensions (frameW=96)
+        make('goblin_idle',   'goblin_idle',   8,  6);
+        make('goblin_walk',   'goblin_walk',   8, 10);
+        make('goblin_hurt',   'goblin_hurt',   8, 12, 0);
+        make('goblin_death',  'goblin_death',  9,  8, 0);
+        make('goblin_attack', 'goblin_attack', 9, 10, 0);
     }
 
-    _updateHpBar() {
+    _syncHpBar() {
         const pct = Math.max(0, this.health / this.maxHealth);
-        const by  = this.y - 28 * this.scaleY;
-        this.hpBarBg.setPosition(this.x, by);
-        this.hpBar.setPosition(this.x - 11, by);
-        this.hpBar.setDisplaySize(22 * pct, 4);
-        const show = pct < 1.0 && !this.dead;
-        this.hpBarBg.setVisible(show);
-        this.hpBar.setVisible(show);
+        const by  = this.y - 28;
+        this.hpBg.setPosition(this.x, by);
+        this.hpBar.setPosition(this.x - 12, by);
+        this.hpBar.setDisplaySize(24 * pct, 4);
+        const vis = pct < 1 && !this.dead;
+        this.hpBg.setVisible(vis);
+        this.hpBar.setVisible(vis);
     }
 
     update(player, time) {
         if (this.dead) return;
-        this._updateHpBar();
-
-        const dx   = player.x - this.x;
-        const dy   = player.y - this.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        this._syncHpBar();
 
         if (time < this.stunUntil) {
             this.body.setVelocity(0);
@@ -107,9 +102,12 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
 
         if (this._attacking) return;
 
+        const dx   = player.x - this.x;
+        const dy   = player.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
         if (dist < this.detectionRange) {
             if (dist < this.attackRange) {
-                // Em alcance de ataque
                 this.body.setVelocity(0);
                 if (time > this.lastDamageTime + this.damageCooldown) {
                     this.lastDamageTime = time;
@@ -131,20 +129,19 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
             if (this.patrolTimer <= 0) {
                 this.patrolTimer = Phaser.Math.Between(1500, 3500);
                 const angle = Math.random() * Math.PI * 2;
-                const range = Phaser.Math.Between(40, 100);
+                const r     = Phaser.Math.Between(40, 100);
                 this.patrolTarget = {
-                    x: this.x + Math.cos(angle) * range,
-                    y: this.y + Math.sin(angle) * range
+                    x: this.x + Math.cos(angle) * r,
+                    y: this.y + Math.sin(angle) * r
                 };
             }
-            const ptDx   = this.patrolTarget.x - this.x;
-            const ptDy   = this.patrolTarget.y - this.y;
-            const ptDist = Math.sqrt(ptDx * ptDx + ptDy * ptDy);
-            if (ptDist > 8) {
-                const spd = this.speed * 0.45;
-                this.body.setVelocityX((ptDx / ptDist) * spd);
-                this.body.setVelocityY((ptDy / ptDist) * spd);
-                this.setFlipX(ptDx < 0);
+            const pdx = this.patrolTarget.x - this.x;
+            const pdy = this.patrolTarget.y - this.y;
+            const pd  = Math.sqrt(pdx * pdx + pdy * pdy);
+            if (pd > 8) {
+                this.body.setVelocityX((pdx / pd) * this.speed * 0.45);
+                this.body.setVelocityY((pdy / pd) * this.speed * 0.45);
+                this.setFlipX(pdx < 0);
                 this.play('goblin_walk', true);
             } else {
                 this.body.setVelocity(0);
@@ -195,23 +192,21 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
         });
 
         // Texto de dano flutuante
-        const txt = this.scene.add.text(this.x, this.y - 24, `-${amount}`, {
+        const t = this.scene.add.text(this.x, this.y - 24, `-${amount}`, {
             fontSize: '14px', fill: '#ff4444', fontStyle: 'bold',
-            stroke: '#000000', strokeThickness: 3
+            stroke: '#000', strokeThickness: 3
         }).setOrigin(0.5).setDepth(20);
-        this.scene.tweens.add({
-            targets: txt, y: txt.y - 32, alpha: 0,
-            duration: 750, onComplete: () => txt.destroy()
-        });
+        this.scene.tweens.add({ targets: t, y: t.y - 30, alpha: 0,
+            duration: 700, onComplete: () => t.destroy() });
 
-        this._updateHpBar();
+        this._syncHpBar();
         if (this.health <= 0) this._die();
     }
 
     _die() {
         this.dead = true;
         this.hpBar?.destroy();
-        this.hpBarBg?.destroy();
+        this.hpBg?.destroy();
         this.body.setVelocity(0);
         this.body.enable = false;
         this.clearTint();

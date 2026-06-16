@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html><head><title>Test Assets</title></head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.min.js"></script>
+<script>
+const errors = [];
+const loaded = [];
+
+// Testar carregar cada spritesheet
+const testAssets = [
+  ['player_base_idle','assets/spritesheets/human/base_idle_strip9.png'],
+  ['player_hair_idle','assets/spritesheets/human/mophair_idle_strip9.png'],
+  ['player_tools_idle','assets/spritesheets/human/tools_idle_strip9.png'],
+  ['goblin_idle','assets/spritesheets/goblin/spr_idle_strip9.png'],
+  ['goblin_walk','assets/spritesheets/goblin/spr_walk_strip8.png'],
+  ['sunnyside','assets/tilesets/spr_tileset_sunnysideworld_16px.png'],
+];
+
+const cfg = {
+  type: Phaser.AUTO, width: 400, height: 300,
+  scene: {
+    preload() {
+      testAssets.forEach(([k,p]) => {
+        if (k==='sunnyside') this.load.image(k,p);
+        else this.load.spritesheet(k,p,{frameWidth:96,frameHeight:64});
+      });
+      this.load.tilemapTiledJSON('ilha','assets/tilemaps/ilha.json');
+      this.load.on('filecomplete',(k)=>{ document.body.innerHTML += '<br>OK: '+k; });
+      this.load.on('loaderror',(f)=>{ document.body.innerHTML += '<br><b style=color:red>ERR: '+f.key+'</b>'; });
+    },
+    create() {
+      document.body.innerHTML += '<br><b>DONE!</b>';
+      const m = this.make.tilemap({key:'ilha'});
+      const ts = m.addTilesetImage('sunnyside','sunnyside');
+      document.body.innerHTML += '<br>Tileset: '+(ts?'OK':'FALHOU!');
+    }
+  }
+};
+new Phaser.Game(cfg);
+</script>
+</body></html>

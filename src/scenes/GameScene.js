@@ -7,7 +7,7 @@ import Skeleton from '../objects/Skeleton.js';
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
 
-// Centro da ilha em píxeis (tile 40,30 com tiles 16px = 640,480)
+// Centro da ilha: tile (40,30) × 16px = pixel (640, 480)
 const CX = 640, CY = 480;
 
 const SPAWN_ITEMS = [
@@ -20,23 +20,21 @@ const SPAWN_ITEMS = [
     { x: CX - 48,  y: CY - 88, itemId: 'egg',     qty: 2 },
     { x: CX + 32,  y: CY + 32, itemId: 'axe',     qty: 1 },
     { x: CX - 32,  y: CY + 32, itemId: 'pickaxe', qty: 1 },
-    { x: CX + 112, y: CY,      itemId: 'water',   qty: 3 },
-    { x: CX - 112, y: CY,      itemId: 'water',   qty: 2 },
-    { x: CX,       y: CY - 112,itemId: 'wood',    qty: 2 },
-    { x: CX,       y: CY + 112,itemId: 'rock',    qty: 3 },
-    { x: CX + 136, y: CY - 80, itemId: 'fish',    qty: 1 },
-    { x: CX - 136, y: CY + 80, itemId: 'carrot',  qty: 2 },
+    { x: CX + 120, y: CY,      itemId: 'water',   qty: 3 },
+    { x: CX - 120, y: CY,      itemId: 'water',   qty: 2 },
+    { x: CX,       y: CY-120,  itemId: 'wood',    qty: 2 },
+    { x: CX,       y: CY+120,  itemId: 'rock',    qty: 3 },
     { x: CX + 48,  y: CY - 48, itemId: 'sword',   qty: 1 },
 ];
 
 const GOBLIN_SPAWNS = [
-    { x: CX - 200, y: CY - 150 },
-    { x: CX + 200, y: CY - 150 },
-    { x: CX - 200, y: CY + 150 },
-    { x: CX + 200, y: CY + 150 },
-    { x: CX,       y: CY - 220 },
-    { x: CX - 260, y: CY },
-    { x: CX + 260, y: CY },
+    { x: CX - 200, y: CY - 140 },
+    { x: CX + 200, y: CY - 140 },
+    { x: CX - 200, y: CY + 140 },
+    { x: CX + 200, y: CY + 140 },
+    { x: CX,       y: CY - 200 },
+    { x: CX - 250, y: CY },
+    { x: CX + 250, y: CY },
 ];
 
 const FOOD_VALUES = {
@@ -49,10 +47,7 @@ const FOOD_VALUES = {
     water:  { thirst: 45 },
 };
 
-// Tempo de sobrevivência para vitória (segundos)
 const VICTORY_TIME = 180;
-
-// Onda de reforço: cada N segundos spawn mais inimigos
 const WAVE_INTERVAL = 45;
 
 export default class GameScene extends Phaser.Scene {
@@ -81,7 +76,11 @@ export default class GameScene extends Phaser.Scene {
         // ── TILEMAP ───────────────────────────────────────────────────────────
         const mapa    = this.make.tilemap({ key: 'ilha' });
         const tileset = mapa.addTilesetImage('sunnyside', 'sunnyside');
-        if (!tileset) { console.error('Tileset não encontrado!'); return; }
+
+        if (!tileset) {
+            console.error('[GameScene] ERRO: tileset "sunnyside" nao encontrado no JSON!');
+            return;
+        }
 
         const chao      = mapa.createLayer('chao',      tileset, 0, 0);
         const decoracao = mapa.createLayer('Decoracao', tileset, 0, 0);
@@ -94,8 +93,8 @@ export default class GameScene extends Phaser.Scene {
             colisao.setVisible(false);
         }
 
-        const mapW = mapa.widthInPixels;
-        const mapH = mapa.heightInPixels;
+        const mapW = mapa.widthInPixels;   // 80*16 = 1280
+        const mapH = mapa.heightInPixels;  // 60*16 = 960
         this.physics.world.setBounds(0, 0, mapW, mapH);
         this._colisao = colisao;
 
@@ -117,9 +116,9 @@ export default class GameScene extends Phaser.Scene {
 
         // ── CÂMERA ────────────────────────────────────────────────────────────
         this.cameras.main.setBounds(0, 0, mapW, mapH);
-        this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        this.cameras.main.setZoom(2.5);
-        this.cameras.main.setBackgroundColor('#1a6b8a');
+        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+        this.cameras.main.setZoom(2);
+        this.cameras.main.setBackgroundColor('#3a8fa8');
 
         // ── CONTROLOS ─────────────────────────────────────────────────────────
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -153,9 +152,9 @@ export default class GameScene extends Phaser.Scene {
         this.events.on('enemyDied', (x, y) => {
             this._killCount++;
             this._score += 100;
-            const drops = ['wood','rock','wood','rock','carrot','fish','egg'];
+            const opts = ['wood','rock','wood','rock','carrot','fish','egg'];
             if (Math.random() < 0.8) {
-                const drop = drops[Math.floor(Math.random() * drops.length)];
+                const drop = opts[Phaser.Math.Between(0, opts.length-1)];
                 this.pickups.add(new CollectibleItem(this, x, y, drop, 1));
             }
         });
@@ -187,6 +186,8 @@ export default class GameScene extends Phaser.Scene {
             this.tweens.add({ targets: hint, alpha: 0, duration: 1200,
                 onComplete: () => hint.destroy() });
         });
+
+        console.log('[GameScene] criado — jogador em', CX, CY, '| mapa', mapW, 'x', mapH);
     }
 
     update(time, delta) {
@@ -241,16 +242,15 @@ export default class GameScene extends Phaser.Scene {
     // ── Spawn skeleton ─────────────────────────────────────────────────────
     _spawnSkeleton(x, y) {
         const s = new Skeleton(this, x, y);
-        this.goblins.add(s);  // mesmo grupo para colisões e update
+        this.goblins.add(s);
         if (this._colisao) this.physics.add.collider(s, this._colisao);
         return s;
     }
 
     // ── Spawn de onda de reforço ───────────────────────────────────────────
     _spawnWave() {
-        const count    = 2 + this._waveNumber;
-        const gobTier  = Math.min(this._waveNumber, 3);
-        // A partir da vaga 2, metade dos inimigos são skeletons
+        const count     = 2 + this._waveNumber;
+        const gobTier   = Math.min(this._waveNumber, 3);
         const skelRatio = this._waveNumber >= 2 ? 0.5 : 0;
 
         const waveLabel = I18n.lang === 'en'

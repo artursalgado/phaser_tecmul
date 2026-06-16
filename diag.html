@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html><head>
+<style>body{background:#111;color:#0f0;font-family:monospace;padding:10px}
+.err{color:#f44}.ok{color:#4f4}.warn{color:#fa0}</style>
+</head><body>
+<h3>Phaser 3 - Diagnóstico de Assets</h3>
+<div id="log"></div>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.min.js"></script>
+<script type="module">
+const log = (msg, cls='') => {
+  const d = document.getElementById('log');
+  d.innerHTML += `<div class="${cls}">${msg}</div>`;
+};
+
+// Interceptar console.error
+const origErr = console.error;
+console.error = (...a) => { log('ERR: '+a.join(' '),'err'); origErr(...a); };
+window.onerror = (m,s,l) => log(`JS ERROR: ${m} [${s}:${l}]`,'err');
+
+const FW=96, FH=64;
+const pB='assets/spritesheets/human/';
+const pG='assets/spritesheets/goblin/';
+
+const game = new Phaser.Game({
+  type: Phaser.AUTO, width:320, height:200, parent:null,
+  scene: {
+    preload() {
+      this.load.image('sunnyside','assets/tilesets/spr_tileset_sunnysideworld_16px.png');
+      this.load.tilemapTiledJSON('ilha','assets/tilemaps/ilha.json');
+      this.load.spritesheet('player_base_idle', pB+'base_idle_strip9.png',{frameWidth:FW,frameHeight:FH});
+      this.load.spritesheet('player_hair_idle', pB+'mophair_idle_strip9.png',{frameWidth:FW,frameHeight:FH});
+      this.load.spritesheet('goblin_idle', pG+'spr_idle_strip9.png',{frameWidth:FW,frameHeight:FH});
+      this.load.spritesheet('goblin_walk', pG+'spr_walk_strip8.png',{frameWidth:FW,frameHeight:FH});
+
+      this.load.on('filecomplete', (key) => log('✓ '+key,'ok'));
+      this.load.on('loaderror', (f) => log('✗ ERRO: '+f.key+' → '+f.src,'err'));
+    },
+    create() {
+      // Testar tilemap
+      try {
+        const m = this.make.tilemap({key:'ilha'});
+        const ts = m.addTilesetImage('sunnyside','sunnyside');
+        log('Tilemap: '+(ts?'✓ OK':'✗ FALHOU addTilesetImage'),'ok');
+        if(ts){
+          const l = m.createLayer('chao',ts,0,0);
+          log('Layer chao: '+(l?'✓ OK':'✗ FALHOU'),'ok');
+        }
+      } catch(e) { log('Tilemap ERR: '+e.message,'err'); }
+
+      // Testar sprite
+      try {
+        const s = this.add.sprite(0,0,'player_base_idle');
+        s.play(this.anims.create({
+          key:'test_idle',
+          frames: this.anims.generateFrameNumbers('player_base_idle',{start:0,end:8}),
+          frameRate:6, repeat:-1
+        }));
+        log('Sprite player: ✓ OK','ok');
+      } catch(e) { log('Sprite ERR: '+e.message,'err'); }
+
+      // Testar goblin (frames reais)
+      try {
+        const gframes = this.textures.get('goblin_idle').frameTotal;
+        log('Goblin idle frames: '+gframes,'ok');
+      } catch(e) { log('Goblin ERR: '+e.message,'err'); }
+
+      log('--- DIAGNÓSTICO COMPLETO ---','warn');
+    }
+  }
+});
+</script>
+</body></html>
