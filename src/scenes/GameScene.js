@@ -44,6 +44,7 @@ const FOOD_VALUES = {
     water:  { thirst: 45 },
 };
 
+
 export default class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
@@ -51,6 +52,14 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+        SoundManager.resume();
+
+        // Reset estado
+        this._elapsedSec = 0;
+        this._score      = 0;
+        this._killCount  = 0;
+        this._paused     = false;
+
         // ── TILEMAP ───────────────────────────────────────────────────────────
         const mapa    = this.make.tilemap({ key: 'ilha' });
         const tileset = mapa.addTilesetImage('sunnyside', 'sunnyside');
@@ -174,8 +183,38 @@ export default class GameScene extends Phaser.Scene {
         this.stats.update(delta);
         this.player.update(this.cursors, this.wasd, time);
         this.goblins.getChildren().forEach(g => g.update(this.player, time));
+        this._elapsedSec += delta / 1000;
     }
 
+    // ── Pausa ─────────────────────────────────────────────────────────────
+    _togglePause() {
+        if (this._paused) return;
+        this._paused = true;
+        SoundManager.play('pause');
+        this.scene.pause('GameScene');
+        this.scene.launch('PauseScene');
+        this.scene.get('PauseScene').events.once('shutdown', () => {
+            this._paused = false;
+        });
+    }
+
+    // ── Spawn goblin ──────────────────────────────────────────────────────
+    _spawnGoblin(x, y, tier = 1) {
+        const g = new Goblin(this, x, y, tier);
+        this.goblins.add(g);
+        if (this._colisao) this.physics.add.collider(g, this._colisao);
+        return g;
+    }
+
+    // ── Spawn skeleton ─────────────────────────────────────────────────────
+    _spawnSkeleton(x, y) {
+        const s = new Skeleton(this, x, y);
+        this.goblins.add(s);
+        if (this._colisao) this.physics.add.collider(s, this._colisao);
+        return s;
+    }
+
+    // ── Apanhar item ──────────────────────────────────────────────────────
     _pickupItem(player, item) {
         const def   = ITEM_DB[item.itemId];
         const nome  = def ? def.name : item.itemId;
@@ -219,5 +258,10 @@ export default class GameScene extends Phaser.Scene {
         this._invulnerable = true;
         this.time.delayedCall(ms, () => { this._invulnerable = false; });
     }
+
+    // Getters públicos para o HUD
+    get elapsedSec()  { return this._elapsedSec; }
+    get score()       { return this._score; }
+    get killCount()   { return this._killCount; }
 }
 

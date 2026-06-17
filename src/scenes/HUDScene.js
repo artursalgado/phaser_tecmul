@@ -104,6 +104,63 @@ export default class HUDScene extends Phaser.Scene {
 
         this._refreshHotbar();
         this._refreshBars();
+
+        //------------------------------------------------------------
+        // TIMER, SCORE E KILLS (canto superior direito)
+        //------------------------------------------------------------
+        this.timerTxt = this.add.text(W - 16, 16, '0:00', {
+            fontSize: '14px', fill: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(1, 0).setDepth(3);
+
+        this.scoreTxt = this.add.text(W - 16, 36, '0 pts', {
+            fontSize: '11px', fill: '#ffdd44'
+        }).setOrigin(1, 0).setDepth(3);
+
+        this.killsTxt = this.add.text(W - 16, 52, '☠ 0', {
+            fontSize: '11px', fill: '#ff8888'
+        }).setOrigin(1, 0).setDepth(3);
+
+        //------------------------------------------------------------
+        // AVISO DE VIDA CRÍTICA (overlay de tela cheia, escondido por defeito)
+        //------------------------------------------------------------
+        this.criticalOverlay = this.add.rectangle(W / 2, H / 2, W, H, 0xff0000, 0).setDepth(50);
+        this.criticalTxt = this.add.text(W / 2, 80, '⚠ VIDA CRÍTICA', {
+            fontSize: '16px', fill: '#ff4444', fontStyle: 'bold'
+        }).setOrigin(0.5).setAlpha(0).setDepth(51);
+        this._blinking = false;
+    }
+
+    update() {
+        if (!this.gameScene) return;
+
+        // Timer
+        const sec  = Math.floor(this.gameScene.elapsedSec);
+        const mm   = Math.floor(sec / 60);
+        const ss   = String(sec % 60).padStart(2, '0');
+        this.timerTxt.setText(`${mm}:${ss}`);
+
+        // Score e kills
+        this.scoreTxt.setText(this.gameScene.score + ' pts');
+        this.killsTxt.setText('☠ ' + this.gameScene.killCount);
+
+        // Barra de progresso da jangada — sera ligada ao QuestManager num commit futuro
+        // (por agora a barra fica parada a 0, sem usar o tempo)
+
+        // Aviso crítico de HP
+        const hpCritical = this.stats && this.stats.healthPct < 0.25;
+        if (hpCritical && !this._blinking) {
+            this._blinking = true;
+            this.tweens.add({
+                targets: [this.criticalOverlay, this.criticalTxt],
+                alpha: { from: 0, to: 0.12 },
+                duration: 400, yoyo: true, repeat: -1
+            });
+        } else if (!hpCritical && this._blinking) {
+            this._blinking = false;
+            this.tweens.killTweensOf([this.criticalOverlay, this.criticalTxt]);
+            this.criticalOverlay.setAlpha(0);
+            this.criticalTxt.setAlpha(0);
+        }
     }
 
     //----------------------------------------------------------------
