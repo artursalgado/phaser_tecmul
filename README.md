@@ -1,10 +1,10 @@
-# 🏝️ STRANDED — Jogo de Sobrevivência
+# 🏝️ STRANDED — Escapa da Ilha
 
 ## Elementos do Grupo
 
 | Nome | Número |
 |------|--------|
-| Artur Salgado |  EI 33385 |
+| Artur Salgado | EI 33385 |
 | *(preencher)* | *(preencher)* |
 
 ---
@@ -23,26 +23,36 @@
 
 **Género:** Top-down Adventure / Survival
 
-**Objetivo:** Sobreviver na ilha o máximo de tempo possível — gerir saúde, fome, sede e energia enquanto enfrenta goblins e recolhe recursos.
+**Premissa:** Acordas naufragado numa ilha. A tua jangada está em pedaços ao lado dos destroços. Reconstrói-a e foge.
 
-**Regras:**
-- O jogador começa no centro da ilha com barras de vida, fome, sede e energia a 100%.
-- As barras de fome e sede diminuem com o tempo — come e bebe itens para as recuperar.
-- Os goblins perseguem o jogador e causam dano ao contacto.
-- Apanhar itens do chão adiciona-os ao inventário (hotbar com 8 slots).
-- Usar itens comestíveis (E) recupera as barras.
-- Atacar (ESPAÇO) faz recuar os goblins e pode matá-los.
-- **Game Over** quando a vida chega a 0.
+**Objetivo (condição de vitória):** Construir a jangada juntando os 3 recursos espalhados pela ilha e interagir com os destroços para partir.
 
-**Funcionalidades:**
-- Mapa tilemap procedural com ilha rodeada de água
-- Jogador animado com múltiplos spritesheets sobrepostos (base + cabelo + ferramentas)
-- 7 goblins com IA de perseguição e animações (idle, walk, attack, hurt, death)
-- Inventário com 8 slots e hotbar visual
-- Sistema de stats (❤️ HP, 🍖 Fome, 💧 Sede, ⚡ Energia)
-- Drops aleatórios dos goblins ao morrer
-- Suporte multilíngue (PT + EN)
-- Sons procedurais via Web Audio API
+### Recursos a juntar
+
+| Recurso | Quantidade | Fonte | Zona |
+|---------|-----------|-------|------|
+| 🪵 Madeira | 5 | Cortar árvores (ESPAÇO) | Floresta |
+| 🪢 Corda | 3 | Destroços / baús na praia | Praia oposta |
+| ⛵ Vela | 1 | Drop do **boss skeleton** | Zona rochosa |
+
+### Regras
+
+- Cada zona tem **guardiões** (goblins ou skeletons) que protegem o recurso.
+- Stats (❤️ HP / 🍖 Fome / 💧 Sede / ⚡ Energia) descem devagar — comida e bebida servem para curar entre confrontos.
+- Morrer faz respawn na praia inicial perdendo **90 % dos materiais**; tens **1 vida extra por run**.
+- Quando tiveres tudo, voltas aos destroços → carregas **E** → mini-cutscene final → 🏆 **Vitória**.
+
+---
+
+## Sequência de ações até finalizar o jogo
+
+1. Acordas na **praia inicial** ao lado dos destroços da jangada (slots vazios visíveis).
+2. Atravessas para a **floresta** e cortas árvores → +5 🪵 Madeira (combate com goblins).
+3. Voltas aos destroços e a jangada começa a encher-se visualmente (1º slot ✓).
+4. Vais à **praia oposta** → derrotas os guardiões → abres destroços/baús → +3 🪢 Corda.
+5. Voltas → 2º slot ✓ — a jangada está quase pronta.
+6. Diriges-te à **zona rochosa** → enfrentas o **boss skeleton** → +1 ⛵ Vela.
+7. Voltas aos destroços → **E** → cutscene de partida → **VictoryScene** com estatísticas (tempo, mortes, kills).
 
 ---
 
@@ -52,34 +62,50 @@
 |-------|------|
 | **WASD** / **Setas** | Mover o jogador |
 | **SHIFT** | Correr (consome energia) |
-| **ESPAÇO** | Atacar |
-| **E** | Usar item selecionado na hotbar |
+| **ESPAÇO** | Atacar / cortar árvore |
+| **E** | Usar item / interagir (destroços, baús, jangada) |
+| **Q** | Abrir/fechar o painel de objetivos (quest log) |
 | **1 – 8** | Selecionar slot da hotbar |
+| **ESC** | Pausa |
 | **R** | Reiniciar (no ecrã de Game Over / Vitória) |
+
+---
+
+## Funcionalidades implementadas
+
+- Mapa tilemap procedural com ilha rodeada de água, biomas (relva, floresta, areia, rochoso) e zonas-objetivo
+- Jogador animado com múltiplos spritesheets sobrepostos (base + cabelo + ferramentas)
+- Inimigos com IA de perseguição: goblins (3 tiers) + skeletons + boss
+- Inventário com 8 slots e hotbar visual
+- Sistema de stats (HP / Fome / Sede / Energia)
+- Sistema de quest com 3 objetivos rastreáveis (painel HUD + toasts + tecla Q)
+- Drops de recursos por categoria (árvores, destroços, inimigos)
+- Mini-cutscene final ao escapar (tween de câmara + fade)
+- Death loop com respawn e 1 vida extra por run
+- Suporte multilíngue (PT + EN) com seletor no menu
+- Sons procedurais via Web Audio API
 
 ---
 
 ## Como Executar
 
 ### Opção 1 — Live Server (VS Code)
-1. Abrir a pasta `phaser_tecmul` no VS Code
+1. Abrir a pasta do projeto no VS Code
 2. Instalar extensão **Live Server**
-3. Clicar em **Go Live** na barra inferior
+3. Clicar em **Go Live**
 4. Abrir `http://127.0.0.1:5500` no browser
 
 ### Opção 2 — npx serve
 ```bash
-cd phaser_tecmul
 npx serve .
 ```
-Abrir `http://localhost:3000`
+Abrir `http://localhost:3000`.
 
 ### Opção 3 — Python
 ```bash
-cd phaser_tecmul
 python -m http.server 8080
 ```
-Abrir `http://localhost:8080`
+Abrir `http://localhost:8080`.
 
 > ⚠️ Não funciona com `file://` — precisa de servidor HTTP local.
 
@@ -93,23 +119,23 @@ Abrir `http://localhost:8080`
 |-------|---------|-----------|--------|
 | Tileset Sunnyside World | PNG | 1024×1024 px | [Sunnyside World (itch.io)](https://danieldiggle.itch.io/sunnyside) — licença gratuita |
 | Spritesheets do jogador (base, cabelo, ferramentas) | PNG | 96×64 px/frame, 8–13 frames | Sunnyside World asset pack |
-| Spritesheets do goblin | PNG | 96×64 px/frame, 8–13 frames | Sunnyside World asset pack |
-| Ícones de itens (madeira, pedra, comida, ferramentas) | PNG | 16×16 px | Sunnyside World asset pack |
-| HUD (barras, slots de inventário) | PNG | 16–48 px | Sunnyside World asset pack |
+| Spritesheets de goblin e skeleton | PNG | 96×64 px/frame, 8–13 frames | Sunnyside World asset pack |
+| Ícones de itens (madeira, corda, vela, comida, ferramentas) | PNG | 16×16 px | Sunnyside World asset pack |
+| HUD (barras, slots de inventário, quest panel) | PNG | 16–48 px | Sunnyside World asset pack |
 
-**Justificação de resolução:** Os sprites de 96×64 são proporcionais ao zoom da câmara (×2.5), resultando em ~240×160 px no ecrã — tamanho adequado e visível sem sobredimensionamento.
+**Justificação de resolução:** Os sprites de 96×64 são proporcionais ao zoom da câmara (×2.5), resultando em ~240×160 px no ecrã — proporcional ao uso, sem PNGs sobredimensionados.
 
 ### Áudio
 
 | Som | Tipo | Geração |
 |-----|------|---------|
-| Apanhar item | Efeito | Procedural (Web Audio API — oscilador sine 880→1320 Hz) |
-| Dano recebido | Efeito | Procedural (oscilador sawtooth com pitch descendente) |
-| Morte do jogador | Efeito | Procedural (3 tons descendentes em sequência) |
-| Ataque | Efeito | Procedural (burst de ruído branco com filtro bandpass) |
-| Goblin atingido | Efeito | Procedural (oscilador square 600→200 Hz) |
-| Clique no menu | Efeito | Procedural (tom sine 660 Hz curto) |
-| Vitória | Efeito | Procedural (fanfarra de 4 notas: Dó-Mi-Sol-Dó') |
+| Apanhar item | Efeito | Procedural (Web Audio API — sine 880→1320 Hz) |
+| Dano recebido | Efeito | Procedural (sawtooth com pitch descendente) |
+| Morte do jogador | Efeito | Procedural (3 tons descendentes) |
+| Ataque | Efeito | Procedural (ruído branco com filtro bandpass) |
+| Inimigo atingido | Efeito | Procedural (square 600→200 Hz) |
+| Clique de menu | Efeito | Procedural (sine 660 Hz curto) |
+| Vitória | Efeito | Procedural (fanfarra Dó-Mi-Sol-Dó') |
 
 Os sons são gerados em tempo real via **Web Audio API** sem ficheiros externos, evitando dependências e mantendo o total de assets abaixo de 10 MB.
 
@@ -118,7 +144,7 @@ Os sons são gerados em tempo real via **Web Audio API** sem ficheiros externos,
 - **2 línguas:** Português (PT) e Inglês (EN)
 - Ficheiros JSON em `assets/i18n/pt.json` e `assets/i18n/en.json`
 - Seletor de língua acessível no menu principal (botões PT / EN)
-- Toda a UI textual traduzida: menu, HUD, Game Over, Vitória, dicas
+- Toda a UI textual traduzida: menu, HUD, quest log, Game Over, Vitória, dicas
 - Sistema centralizado em `src/systems/I18n.js` — sem strings duplicadas no código
 
 ---
@@ -131,34 +157,14 @@ phaser_tecmul/
 ├── README.md
 ├── generate_map.py         # Script Python para gerar ilha.json
 ├── assets/
-│   ├── i18n/
-│   │   ├── pt.json         # Traduções PT
-│   │   └── en.json         # Traduções EN
-│   ├── tilemaps/
-│   │   └── ilha.json       # Mapa Tiled exportado
-│   ├── tilesets/
-│   │   └── spr_tileset_sunnysideworld_16px.png
-│   ├── spritesheets/
-│   │   ├── human/          # Spritesheets do jogador
-│   │   └── goblin/         # Spritesheets do goblin
+│   ├── i18n/               # Traduções PT / EN
+│   ├── tilemaps/           # Mapa Tiled exportado (ilha.json)
+│   ├── tilesets/           # Tileset Sunnyside
+│   ├── spritesheets/       # Sprites do player e inimigos
 │   └── images/             # Ícones de itens e HUD
 └── src/
-    ├── main.js             # Configuração do Phaser + registo de cenas
-    ├── scenes/
-    │   ├── BootScene.js
-    │   ├── PreloadScene.js
-    │   ├── MenuScene.js
-    │   ├── GameScene.js
-    │   ├── HUDScene.js
-    │   ├── GameOverScene.js
-    │   └── VictoryScene.js
-    ├── objects/
-    │   ├── Player.js
-    │   ├── Goblin.js
-    │   └── CollectibleItem.js
-    └── systems/
-        ├── I18n.js         # Sistema de internacionalização
-        ├── Inventory.js    # Inventário com 8 slots
-        ├── PlayerStats.js  # HP / Fome / Sede / Energia
-        └── SoundManager.js # Sons procedurais (Web Audio API)
+    ├── main.js             # Config Phaser + registo de cenas
+    ├── scenes/             # Boot, Preload, Menu, Game, HUD, Pause, GameOver, Victory
+    ├── objects/            # Player, Goblin, Skeleton, CollectibleItem, Boss (a criar)
+    └── systems/            # I18n, Inventory, PlayerStats, Quest (a criar), SoundManager
 ```
