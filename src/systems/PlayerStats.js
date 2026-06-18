@@ -17,13 +17,13 @@ export default class PlayerStats extends Phaser.Events.EventEmitter {
         this.dead = false;
 
         // Velocidade de decaimento por segundo (ajustável)
-        this.hungerDecay = 0.8;   // perde 0.8 de fome/seg
-        this.thirstDecay = 1.2;   // perde 1.2 de sede/seg (mais urgente)
-        this.energyDecay = 0.4;   // perde 0.4 de energia/seg
+        this.hungerDecay = 0.17;  // zero em ~10 min
+        this.thirstDecay = 0.25;  // zero em ~7 min (mais urgente)
+        this.energyDecay = 0.08;  // zero em ~20 min
 
         // Dano por segundo quando fome/sede chega a 0
-        this.starveDamage  = 3;
-        this.dehydrateDmg  = 5;
+        this.starveDamage  = 1.0;
+        this.dehydrateDmg  = 1.5;
     }
 
     // Chamado pelo GameScene a cada frame (delta em ms)
