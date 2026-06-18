@@ -98,7 +98,7 @@ export default class PreloadScene extends Phaser.Scene {
         // Ícones placeholder para os itens novos (corda e vela ainda não têm arte própria)
         this.load.image('rope', 'assets/images/basket.png');
         this.load.image('sail', 'assets/images/crate_top.png');
-        this.load.image('book', 'assets/images/plan alt.png');
+        this.load.image('book', 'assets/images/ui/book_icon.png');
         // Baú de destroços na praia oposta (usa a mesma imagem do crate normal)
         this.load.image('crate_base', 'assets/images/crate_base.png');
 
