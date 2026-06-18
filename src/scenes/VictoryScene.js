@@ -1,64 +1,106 @@
+import I18n from '../systems/I18n.js';
+import SoundManager from '../systems/SoundManager.js';
+
 export default class VictoryScene extends Phaser.Scene {
     constructor() {
         super('VictoryScene');
     }
 
-    create() {
+    create(data) {
         const W = 960, H = 640;
+        const score = data?.score ?? 0;
+        const kills = data?.kills ?? 0;
+        const time  = data?.time  ?? 0;
 
-        this.add.rectangle(W / 2, H / 2, W, H, 0x001a0d, 0.85);
+        SoundManager.play('victory');
+        SoundManager.stopBgMusic();
 
-        // Conteúdo principal -- começa invisível, aparece após a mini-cutscene
-        const title = this.add.text(W / 2, H / 2 - 100, '⛵ CONSEGUISTE FUGIR!', {
-            fontSize: '56px', fill: '#ffd700', fontStyle: 'bold'
+        const overlay = this.add.rectangle(W/2, H/2, W, H, 0x1a1000, 0);
+        this.tweens.add({ targets: overlay, alpha: 0.9, duration: 600 });
+
+        for (let i = 0; i < 30; i++) {
+            const star = this.add.text(
+                Phaser.Math.Between(50, W - 50),
+                Phaser.Math.Between(50, H - 50),
+                '*', { fontSize: Phaser.Math.Between(10, 24) + 'px', fill: '#f0e68c' }
+            ).setAlpha(0);
+            this.tweens.add({
+                targets: star,
+                alpha: { from: 0, to: Phaser.Math.FloatBetween(0.3, 1) },
+                duration: Phaser.Math.Between(500, 1500),
+                delay: Phaser.Math.Between(0, 1000),
+                yoyo: true, repeat: -1
+            });
+        }
+
+        const titulo = this.add.text(W/2, H/2 - 160, I18n.t('victory.title'), {
+            fontSize: '64px', fill: '#f0e68c', fontStyle: 'bold'
         }).setOrigin(0.5).setAlpha(0);
 
-        const subtitle = this.add.text(W / 2, H / 2, 'A jangada está completa. A ilha fica atrás de ti.', {
-            fontSize: '22px', fill: '#9ef79e', fontStyle: 'italic'
+        const sub = this.add.text(W/2, H/2 - 80, I18n.t('victory.subtitle'), {
+            fontSize: '22px', fill: '#ddddaa', fontStyle: 'italic'
         }).setOrigin(0.5).setAlpha(0);
 
-        const btnRestart = this.add.text(W / 2, H / 2 + 80, '↺  Jogar Novamente', {
+        const mm = Math.floor(time / 60), ss = String(time % 60).padStart(2,'0');
+        const statsLabel = I18n.lang === 'en'
+            ? ('Time: ' + mm + ':' + ss + '  |  Kills: ' + kills + '  |  Score: ' + score)
+            : ('Tempo: ' + mm + ':' + ss + '  |  Abates: ' + kills + '  |  Pontos: ' + score);
+
+        const statsText = this.add.text(W/2, H/2 - 30, statsLabel, {
+            fontSize: '18px', fill: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(0.5).setAlpha(0);
+
+        const btnRestart = this.add.text(W/2, H/2 + 60, I18n.t('victory.restart'), {
             fontSize: '28px', fill: '#f0e68c', fontStyle: 'bold'
         }).setOrigin(0.5).setAlpha(0).setInteractive({ useHandCursor: true });
-
         btnRestart.on('pointerover', () => btnRestart.setStyle({ fill: '#ffffff' }));
         btnRestart.on('pointerout',  () => btnRestart.setStyle({ fill: '#f0e68c' }));
         btnRestart.on('pointerdown', () => {
+            SoundManager.play('menu_click');
             this.scene.stop('VictoryScene');
             this.scene.start('GameScene');
             this.scene.launch('HUDScene');
         });
 
-        const btnMenu = this.add.text(W / 2, H / 2 + 130, '← Menu Principal', {
+        const btnMenu = this.add.text(W/2, H/2 + 110, I18n.t('victory.menu'), {
             fontSize: '20px', fill: '#888888'
         }).setOrigin(0.5).setAlpha(0).setInteractive({ useHandCursor: true });
-
         btnMenu.on('pointerover', () => btnMenu.setStyle({ fill: '#cccccc' }));
         btnMenu.on('pointerout',  () => btnMenu.setStyle({ fill: '#888888' }));
         btnMenu.on('pointerdown', () => {
+            SoundManager.play('menu_click');
             this.scene.stop('VictoryScene');
             this.scene.start('MenuScene');
         });
 
-        // ── Mini-cutscene (~7s) ──────────────────────────────────────────────
-        // Texto narrativo que aparece e desaparece em sequência, antes de
-        // revelar o ecrã de vitória com os botões.
-        const cutsceneText = this.add.text(W / 2, H / 2 - 20, '', {
+        this.input.keyboard.once('keydown-R', () => {
+            this.scene.stop('VictoryScene');
+            this.scene.start('GameScene');
+            this.scene.launch('HUDScene');
+        });
+
+        const cutsceneText = this.add.text(W/2, H/2 - 20, '', {
             fontSize: '24px', fill: '#ffffff', fontStyle: 'italic',
             align: 'center', wordWrap: { width: 700 }
         }).setOrigin(0.5);
 
-        const linhas = [
-            'A jangada está pronta.',
-            'Empurras os destroços para a água...',
-            'O mar abre-se à tua frente.'
+        const linhasPt = [
+            'A jangada esta pronta.',
+            'Empurras os destrocos para a agua...',
+            'O mar abre-se a tua frente.'
         ];
+        const linhasEn = [
+            'The raft is ready.',
+            'You push the wreckage into the water...',
+            'The sea opens up before you.'
+        ];
+        const linhas = I18n.lang === 'en' ? linhasEn : linhasPt;
 
         const mostrarLinha = (i) => {
             if (i >= linhas.length) {
                 cutsceneText.destroy();
                 this.tweens.add({
-                    targets: [title, subtitle, btnRestart, btnMenu],
+                    targets: [titulo, sub, statsText, btnRestart, btnMenu],
                     alpha: 1, duration: 600
                 });
                 return;

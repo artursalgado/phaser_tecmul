@@ -1,3 +1,5 @@
+import I18n from '../systems/I18n.js';
+
 export default class PreloadScene extends Phaser.Scene {
     constructor() {
         super('PreloadScene');
@@ -16,6 +18,10 @@ export default class PreloadScene extends Phaser.Scene {
         this.add.text(W/2, H/2-30, 'A carregar...', {
             fontSize: '22px', fill: '#ffffff', fontStyle: 'bold'
         }).setOrigin(0.5);
+
+        // -- I18N -----------------------------------------------------------
+        this.load.json('i18n_pt', 'assets/i18n/pt.json');
+        this.load.json('i18n_en', 'assets/i18n/en.json');
 
         // ── TILEMAP ───────────────────────────────────────────────────────────
         this.load.tilemapTiledJSON('ilha', 'assets/tilemaps/ilha.json');
@@ -100,6 +106,7 @@ export default class PreloadScene extends Phaser.Scene {
     }
 
     create() {
+        I18n.init(this.cache);
         this.scene.start('MenuScene');
     }
 }

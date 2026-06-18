@@ -6,6 +6,7 @@ import Goblin from '../objects/Goblin.js';
 import Skeleton from '../objects/Skeleton.js';
 import QuestManager, { RAFT_PARTS } from '../systems/QuestManager.js';
 import Tree from '../objects/Tree.js';
+import SoundManager from '../systems/SoundManager.js';
 
 // Centro da ilha: tile (40,30) × 16px = pixel (640, 480)
 const CX = 640, CY = 480;
@@ -113,11 +114,11 @@ export default class GameScene extends Phaser.Scene {
         this.stats.on('died', () => {
             this.quest.applyDeathPenalty(); // perde 90% do progresso da jangada ao morrer
             this.scene.stop('HUDScene');
-            this.scene.start('GameOverScene');
+            this.scene.start('GameOverScene', { score: this._score, kills: this._killCount, time: Math.floor(this._elapsedSec) });
         });
         this.quest.on('raftComplete', () => {
             this.scene.stop('HUDScene');
-            this.scene.start('VictoryScene');
+            this.scene.start('VictoryScene', { score: this._score, kills: this._killCount, time: Math.floor(this._elapsedSec) });
         });
 
         // ── JOGADOR ───────────────────────────────────────────────────────────
