@@ -1,37 +1,8 @@
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
+import makeBtn from '../utils/makeBtn.js';
 
-// ─── Helper: botão simples desenhado com Graphics ─────────────────────────────
-function makeBtn(scene, x, y, w, h, label, depth = 3) {
-    const BG_IDLE  = 0x3d2008;
-    const BG_HOVER = 0x6b3810;
-    const BORDER   = 0xc8901a;
-    const RADIUS   = 8;
-
-    const gfx = scene.add.graphics().setDepth(depth);
-    const txt = scene.add.text(x, y, label, {
-        fontFamily: 'Georgia, serif', fontSize: '19px',
-        fill: '#f5e0b0', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(depth + 1);
-
-    const draw = (hover) => {
-        gfx.clear();
-        gfx.fillStyle(hover ? BG_HOVER : BG_IDLE, 1);
-        gfx.fillRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
-        gfx.lineStyle(2, BORDER, hover ? 1 : 0.6);
-        gfx.strokeRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
-    };
-
-    draw(false);
-
-    const zone = scene.add.zone(x, y, w, h)
-        .setInteractive({ useHandCursor: true }).setDepth(depth + 2);
-
-    zone.on('pointerover',  () => { draw(true);  txt.setStyle({ fill: '#ffffff' }); });
-    zone.on('pointerout',   () => { draw(false); txt.setStyle({ fill: '#f5e0b0' }); });
-
-    return { gfx, txt, zone, setLabel: (s) => txt.setText(s) };
-}
+const MENU_BTN = { depth: 3, fontSize: '19px', idleFill: '#f5e0b0', border: 0xc8901a, borderIdleAlpha: 0.6, alpha: 1 };
 
 // ─── Helper: botão de língua pequeno ─────────────────────────────────────────
 function makeLangBtn(scene, x, y, label, depth = 3) {
@@ -112,7 +83,7 @@ export default class MenuScene extends Phaser.Scene {
         drawDiv();
 
         // ── Botão Jogar ───────────────────────────────────────────────────────
-        const btnJogar = makeBtn(this, W/2, H/2 - 34, 260, 52, I18n.t('menu.play'), 2);
+        const btnJogar = makeBtn(this, W/2, H/2 - 34, 260, 52, I18n.t('menu.play'), { ...MENU_BTN, depth: 2 });
         btnJogar.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
             SoundManager.resume();

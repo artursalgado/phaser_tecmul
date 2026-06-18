@@ -1,37 +1,6 @@
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
-
-// ─── Helper: botão desenhado com Graphics (sem texturas) ──────────────────────
-function makeBtn(scene, x, y, w, h, label, depth = 6) {
-    const BG_IDLE  = 0x3d2008;
-    const BG_HOVER = 0x6b3810;
-    const BORDER   = 0x9a6030;
-    const RADIUS   = 8;
-
-    const gfx = scene.add.graphics().setDepth(depth).setAlpha(0);
-    const txt = scene.add.text(x, y, label, {
-        fontFamily: 'Georgia, serif', fontSize: '16px',
-        fill: '#f0ddb8', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(depth + 1).setAlpha(0);
-
-    const draw = (hover) => {
-        gfx.clear();
-        gfx.fillStyle(hover ? BG_HOVER : BG_IDLE, 1);
-        gfx.fillRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
-        gfx.lineStyle(2, BORDER, 1);
-        gfx.strokeRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
-    };
-
-    draw(false);
-
-    const zone = scene.add.zone(x, y, w, h)
-        .setInteractive({ useHandCursor: true }).setDepth(depth + 2).setAlpha(0);
-
-    zone.on('pointerover',  () => { draw(true);  txt.setStyle({ fill: '#ffffff' }); });
-    zone.on('pointerout',   () => { draw(false); txt.setStyle({ fill: '#f0ddb8' }); });
-
-    return { gfx, txt, zone };
-}
+import makeBtn from '../utils/makeBtn.js';
 
 export default class GameOverScene extends Phaser.Scene {
     constructor() {
@@ -137,8 +106,7 @@ export default class GameOverScene extends Phaser.Scene {
             this.scene.start('MenuScene');
         });
 
-        this.add.text(W/2, H - 24,
-            I18n.lang === 'en' ? '[R] Retry  ·  [M] Menu' : '[R] Tentar de novo  ·  [M] Menu',
+        this.add.text(W/2, H - 24, I18n.t('gameover.keys'),
             { fontSize: '11px', fill: '#c8a870', stroke: '#000000', strokeThickness: 2 }
         ).setOrigin(0.5);
     }

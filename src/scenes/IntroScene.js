@@ -5,46 +5,15 @@ export default class IntroScene extends Phaser.Scene {
         super('IntroScene');
     }
 
-    preload() {
-        this.load.image('intro_veleiro',    'assets/intro/intro_veleiro.png');
-        this.load.image('intro_tempestade', 'assets/intro/intro_tempestade.png');
-        this.load.image('intro_explosao',   'assets/intro/intro_explosao.png');
-        this.load.image('intro_deriva',     'assets/intro/intro_deriva.png');
-        this.load.image('intro_praia',      'assets/intro/intro_praia.png');
-    }
-
     create() {
         const W = this.scale.width;
         const H = this.scale.height;
-        const pt = I18n.lang === 'pt';
 
-        const slides = [
-            {
-                key: 'intro_veleiro',
-                text: pt ? 'Uma noite calma em mar aberto...' : 'A calm evening on the open sea...',
-                duration: 3500,
-            },
-            {
-                key: 'intro_tempestade',
-                text: pt ? 'Até a tempestade chegar.' : 'Until the storm came.',
-                duration: 3000,
-            },
-            {
-                key: 'intro_explosao',
-                text: pt ? 'A jangada não resistiu.' : 'The raft didn\'t stand a chance.',
-                duration: 3000,
-            },
-            {
-                key: 'intro_deriva',
-                text: pt ? 'À deriva... rumo ao desconhecido.' : 'Drifting... towards the unknown.',
-                duration: 3500,
-            },
-            {
-                key: 'intro_praia',
-                text: pt ? 'Onde... onde estou?' : 'Where... where am I?',
-                duration: 4000,
-            },
-        ];
+        const i18nData  = this.cache.json.get(I18n.lang === 'pt' ? 'i18n_pt' : 'i18n_en');
+        const slideTexts = i18nData?.intro?.slides || [];
+        const SLIDE_KEYS      = ['intro_veleiro', 'intro_tempestade', 'intro_explosao', 'intro_deriva', 'intro_praia'];
+        const SLIDE_DURATIONS = [3500, 3000, 3000, 3500, 4000];
+        const slides = SLIDE_KEYS.map((key, i) => ({ key, text: slideTexts[i] || '', duration: SLIDE_DURATIONS[i] }));
 
         // Black background
         this.add.rectangle(W / 2, H / 2, W, H, 0x000000).setDepth(0);
@@ -71,7 +40,7 @@ export default class IntroScene extends Phaser.Scene {
         }).setOrigin(0.5).setAlpha(0).setDepth(4);
 
         // Skip hint
-        this.add.text(W - 16, H - 16, pt ? 'ESC para saltar' : 'ESC to skip', {
+        this.add.text(W - 16, H - 16, I18n.t('intro.skip'), {
             fontFamily: 'monospace',
             fontSize: '11px',
             color: '#666688',

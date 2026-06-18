@@ -113,7 +113,8 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('panel_win_loose', 'assets/images/ui/panel_win_loose.png');
         this.load.image('sound_on', 'assets/images/ui/sound_on.png');
         this.load.image('sound_off', 'assets/images/ui/sound_off.png');
-        this.load.image('intro_praia', 'assets/intro/intro_praia.png');
+        ['intro_veleiro', 'intro_tempestade', 'intro_explosao', 'intro_deriva', 'intro_praia'].forEach(k =>
+            this.load.image(k, `assets/intro/${k}.png`));
     }
 
     create() {

@@ -1,36 +1,6 @@
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
-
-function makeBtn(scene, x, y, w, h, label, depth = 6) {
-    const BG_IDLE  = 0x3d2008;
-    const BG_HOVER = 0x6b3810;
-    const BORDER   = 0x9a6030;
-    const RADIUS   = 8;
-
-    const gfx = scene.add.graphics().setDepth(depth).setAlpha(0);
-    const txt = scene.add.text(x, y, label, {
-        fontFamily: 'Georgia, serif', fontSize: '16px',
-        fill: '#f0ddb8', fontStyle: 'bold',
-    }).setOrigin(0.5).setDepth(depth + 1).setAlpha(0);
-
-    const draw = (hover) => {
-        gfx.clear();
-        gfx.fillStyle(hover ? BG_HOVER : BG_IDLE, 1);
-        gfx.fillRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
-        gfx.lineStyle(2, BORDER, 1);
-        gfx.strokeRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
-    };
-
-    draw(false);
-
-    const zone = scene.add.zone(x, y, w, h)
-        .setInteractive({ useHandCursor: true }).setDepth(depth + 2).setAlpha(0);
-
-    zone.on('pointerover',  () => { draw(true);  txt.setStyle({ fill: '#ffffff' }); });
-    zone.on('pointerout',   () => { draw(false); txt.setStyle({ fill: '#f0ddb8' }); });
-
-    return { gfx, txt, zone };
-}
+import makeBtn from '../utils/makeBtn.js';
 
 export default class VictoryScene extends Phaser.Scene {
     constructor() {
@@ -129,17 +99,8 @@ export default class VictoryScene extends Phaser.Scene {
             align: 'center', wordWrap: { width: 700 }
         }).setOrigin(0.5);
 
-        const linhasPt = [
-            'A jangada esta pronta.',
-            'Empurras os destrocos para a agua...',
-            'O mar abre-se a tua frente.'
-        ];
-        const linhasEn = [
-            'The raft is ready.',
-            'You push the wreckage into the water...',
-            'The sea opens up before you.'
-        ];
-        const linhas = I18n.lang === 'en' ? linhasEn : linhasPt;
+        const i18nData = this.cache.json.get(I18n.lang === 'pt' ? 'i18n_pt' : 'i18n_en');
+        const linhas = i18nData?.victory?.cutscene || [];
 
         const mostrarLinha = (i) => {
             if (i >= linhas.length) {

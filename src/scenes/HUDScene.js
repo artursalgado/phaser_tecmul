@@ -208,6 +208,7 @@ export default class HUDScene extends Phaser.Scene {
             this.quest.on('partDelivered',  this._refreshQuest, this);
             this.quest.on('penaltyApplied', this._refreshQuest, this);
             this.game.events.on('quest:updated', this._refreshQuest, this);
+            this.inventory.on('changed', this._refreshQuest, this);
             this._refreshQuest();
         }
 
@@ -332,8 +333,10 @@ export default class HUDScene extends Phaser.Scene {
             const entry = this._raftSlots[p.id];
             if (!entry) return;
             const { rects, cfg } = entry;
+            // Valor em tempo real: o máximo entre o entregue e o inventário
+            const current = Math.max(p.current, this.inventory.getQuantity(p.id));
             rects.forEach((r, i) => {
-                const filled = i < p.current;
+                const filled = i < current;
                 r.setFillStyle(filled ? cfg.color : cfg.emptyColor);
                 r.setStrokeStyle(1, filled ? 0xffffff : 0x555555, filled ? 0.5 : 1);
                 // Pulso no slot que acabou de ser preenchido
@@ -442,8 +445,11 @@ export default class HUDScene extends Phaser.Scene {
         this._questLogRows.forEach(row => {
             const p = progress.find(pp => pp.id === row.id);
             if (!p) return;
-            row.prog.setText(`${p.current}/${p.required}`);
-            row.prog.setColor(p.done ? '#88ff88' : '#ffaa88');
+            // Mostra o progresso atual com base no máximo entre o entregue e o inventário
+            const current = Math.max(p.current, this.inventory.getQuantity(row.id));
+            const done = current >= p.required;
+            row.prog.setText(`${current}/${p.required}`);
+            row.prog.setColor(done ? '#88ff88' : '#ffaa88');
         });
     }
 
@@ -700,6 +706,7 @@ export default class HUDScene extends Phaser.Scene {
 
     shutdown() {
         this.inventory?.off('changed',          this._refreshHotbar, this);
+        this.inventory?.off('changed',          this._refreshQuest,  this);
         this.inventory?.off('selectionChanged',  this._refreshHotbar, this);
         this.stats?.off('changed',               this._refreshBars,   this);
         if (this.quest) {

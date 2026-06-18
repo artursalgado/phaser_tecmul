@@ -81,25 +81,42 @@ export default class GameScene extends Phaser.Scene {
         SoundManager.resume();
         SoundManager.startBgMusic();
 
-        // Reset estado
         this._elapsedSec   = 0;
         this._score        = 0;
         this._killCount    = 0;
         this._paused       = false;
-        this._hasExtraLife = true;  // 1 vida extra por run -- 2a morte = Game Over
-        this._raftReady    = false; // true quando os 3 recursos estao entregues
+        this._hasExtraLife = true;
+        this._raftReady    = false;
 
-        // ── TILEMAP (mapa v7: 120x90, autotiling de costa, biomas) ─────────────
+        const { mapW, mapH } = this._setupTilemap();
+        if (!mapW) return;
+
+        const spawns = this._readSpawns(this._mapa, mapW, mapH);
+        this._spawnPos = { x: spawns.player.x, y: spawns.player.y };
+
+        this._setupSystems();
+
+        this.player = new Player(this, spawns.player.x, spawns.player.y);
+        if (this._colisao) this.physics.add.collider(this.player, this._colisao);
+        this.inventory.addItem('book', 1);
+
+        this._setupCamera(mapW, mapH);
+        this._setupControls();
+        this._setupWorld(spawns);
+        this._setupEvents();
+        this._setupHUD();
+    }
+
+    _setupTilemap() {
         const mapa    = this.make.tilemap({ key: 'ilha' });
+        this._mapa    = mapa;
         const tileset = mapa.addTilesetImage('sunnyside', 'sunnyside');
 
         if (!tileset) {
             console.error('[GameScene] ERRO: tileset "sunnyside" nao encontrado no JSON!');
-            return;
+            return { mapW: 0, mapH: 0 };
         }
 
-        // Layers v7: chao(0) < transicoes(1) < decoracao(2) < [colisao oculto]
-        //            < objetos(4) < jogador(5) < acima(8 — copas por cima do jogador)
         const chao       = mapa.createLayer('chao',       tileset, 0, 0);
         const transicoes = mapa.createLayer('transicoes', tileset, 0, 0);
         const decoracao  = mapa.createLayer('decoracao',  tileset, 0, 0);
@@ -113,7 +130,7 @@ export default class GameScene extends Phaser.Scene {
         acima?.setDepth(8);
         if (colisao) {
             colisao.setDepth(2);
-            colisao.setCollisionByExclusion([-1, 0]);   // qualquer tile != 0 colide
+            colisao.setCollisionByExclusion([-1, 0]);
             colisao.setVisible(false);
         }
 
@@ -124,18 +141,17 @@ export default class GameScene extends Phaser.Scene {
         this.physics.world.setBounds(0, 0, mapW, mapH);
         this._colisao = colisao;
 
-        // ── SPAWNS + POIs (object layer do Tiled; fallback ao centro) ──────────
-        const spawns = this._readSpawns(mapa, mapW, mapH);
-        this._spawnPos = { x: spawns.player.x, y: spawns.player.y }; // para respawn (vida extra)
+        return { mapW, mapH };
+    }
 
-        // ── SISTEMAS ──────────────────────────────────────────────────────────
+    _setupSystems() {
         this.inventory = new Inventory(8);
         this.stats     = new PlayerStats();
         this.quest     = new QuestManager();
-        this.quest.init(this);   // connect global event bus for quest:updated / quest:complete
+        this.quest.init(this);
 
         this.stats.on('died', () => {
-            this.quest.applyDeathPenalty(); // perde 90% do progresso da jangada ao morrer
+            this.quest.applyDeathPenalty();
             if (this._hasExtraLife) {
                 this._hasExtraLife = false;
                 this._respawnPlayer();
@@ -149,25 +165,22 @@ export default class GameScene extends Phaser.Scene {
             }
         });
         this.quest.on('raftComplete', () => {
-            this._raftReady = true; // so foge quando segurar E dentro da zona da jangada
+            this._raftReady = true;
             if (this.raftLabel) {
                 this.raftLabel.setText(I18n.lang === 'en' ? 'ESCAPE [E]' : 'FUGIR [E]');
                 this.raftLabel.setColor('#88ff88');
             }
         });
+    }
 
-        // ── JOGADOR ───────────────────────────────────────────────────────────
-        this.player = new Player(this, spawns.player.x, spawns.player.y);
-        if (colisao) this.physics.add.collider(this.player, colisao);
-        this.inventory.addItem('book', 1);
-
-        // ── CÂMERA ────────────────────────────────────────────────────────────
+    _setupCamera(mapW, mapH) {
         this.cameras.main.setBounds(0, 0, mapW, mapH);
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
         this.cameras.main.setZoom(2);
         this.cameras.main.setBackgroundColor('#3a8fa8');
+    }
 
-        // ── CONTROLOS ─────────────────────────────────────────────────────────
+    _setupControls() {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasd    = this.input.keyboard.addKeys({
             up:    Phaser.Input.Keyboard.KeyCodes.W,
@@ -190,53 +203,43 @@ export default class GameScene extends Phaser.Scene {
                 if (!hud?._bookOpen) this._togglePause();
             }
         });
+    }
 
-        // ── ITENS ─────────────────────────────────────────────────────────────
+    _setupWorld(spawns) {
         this.pickups = this.physics.add.group();
         spawns.items.forEach(s =>
             this.pickups.add(new CollectibleItem(this, s.x, s.y, s.itemId, s.qty))
         );
-        // Baus de destrocos na praia oposta -- unica fonte de corda do mapa
         ROPE_CRATE_SPAWNS.forEach(s =>
             this.pickups.add(new CollectibleItem(this, s.x, s.y, 'rope', 2))
         );
         this.physics.add.overlap(this.player, this.pickups, this._pickupItem, null, this);
 
-        // ── INIMIGOS ──────────────────────────────────────────────────────────
-        // Os inimigos só são criados quando o jogador apanha a primeira arma
-        // OU acumula ≥10 madeiras. Até lá os dados ficam guardados.
         this.goblins = this.physics.add.group();
-        this._pendingEnemySpawns = spawns.enemies.slice(); // cópia
-        if (colisao) this.physics.add.collider(this.goblins, colisao);
+        this._pendingEnemySpawns = spawns.enemies.slice();
+        if (this._colisao) this.physics.add.collider(this.goblins, this._colisao);
         this.physics.add.collider(this.goblins, this.goblins);
 
-        // ── ARVORES (cortar com ESPACO -- da madeira para a jangada) ───────────
-        // Sprites extra por cima do mapa, posicionadas perto do POI "ruina".
-        this.trees = this.add.group(); // grupo simples (sem physics de grupo) --
-                                        // as arvores tem corpo estatico proprio,
-                                        // evita conflito com Group.add() do Phaser
-        const treeBase = spawns.poi.ruina || { x: mapW / 2, y: mapH / 2 };
+        this.trees = this.add.group();
+        const treeBase = spawns.poi.ruina || { x: this._mapW / 2, y: this._mapH / 2 };
         TREE_OFFSETS_FROM_RUINA.forEach(o =>
             this.trees.add(new Tree(this, treeBase.x + o.dx, treeBase.y + o.dy))
         );
 
-        // ── JANGADA (zona de construcao na doca) ────────────────────────────────
-        // Um circulo visivel no chao -- quando o jogador esta dentro e preme F,
-        // os recursos do inventario (wood/rope/sail) sao entregues ao QuestManager.
-        const docaPos = spawns.poi.doca || { x: mapW / 2 + 80, y: mapH / 2 + 40 };
+        const docaPos = spawns.poi.doca || { x: this._mapW / 2 + 80, y: this._mapH / 2 + 40 };
         this.raftZone = { x: docaPos.x, y: docaPos.y, radius: 36 };
-
-        // Destrocos da jangada -- scale 0.7 para caber na zona de areia.
-        // depth 3: acima da areia (0-2), abaixo do jogador (5).
         this.add.image(this.raftZone.x, this.raftZone.y, 'spr_deco_coracle_land')
             .setDepth(3).setScale(0.7);
-        this.raftMarker = this.add.circle(this.raftZone.x, this.raftZone.y, this.raftZone.radius, 0xffdd66, 0.18).setDepth(1);
-        this.raftLabel = this.add.text(this.raftZone.x, this.raftZone.y - this.raftZone.radius - 8, 'JANGADA [F]', {
-            fontSize: '10px', fill: '#ffdd66', fontStyle: 'bold',
-            stroke: '#000000', strokeThickness: 2
-        }).setOrigin(0.5).setDepth(9);
-        // ── EVENTOS ───────────────────────────────────────────────────────────
-        // Phaser 3.80 shutdown() não chama removeAllListeners — limpar antes de re-registar
+        this.raftMarker = this.add.circle(
+            this.raftZone.x, this.raftZone.y, this.raftZone.radius, 0xffdd66, 0.18
+        ).setDepth(1);
+        this.raftLabel = this.add.text(
+            this.raftZone.x, this.raftZone.y - this.raftZone.radius - 8, 'JANGADA [F]',
+            { fontSize: '10px', fill: '#ffdd66', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }
+        ).setOrigin(0.5).setDepth(9);
+    }
+
+    _setupEvents() {
         this.events.off('enemyDied');
         this.events.off('playerDamaged');
         this.events.off('playerAttack');
@@ -252,7 +255,6 @@ export default class GameScene extends Phaser.Scene {
                 this.pickups.add(new CollectibleItem(this, x, y, drop, 1));
             }
         });
-
         this.events.on('playerDamaged', (amount) => {
             if (this._invulnerable) return;
             this.stats.takeDamage(amount);
@@ -261,16 +263,15 @@ export default class GameScene extends Phaser.Scene {
             this._setInvulnerable(1000);
             this.cameras.main.shake(120, 0.006);
         });
-
         this.events.on('playerAttack', () => SoundManager.play('attack'));
         this.events.on('enemyHurt',    () => SoundManager.play('goblin_hurt'));
         this.events.on('playerStep',   () => SoundManager.play('step'));
+    }
 
-        // ── HUD ───────────────────────────────────────────────────────────────
+    _setupHUD() {
         this.scene.launch('HUDScene');
         this.scene.bringToTop('HUDScene');
 
-        // ── DICA ──────────────────────────────────────────────────────────────
         const hintText = I18n.t('hud.hint') + '  ·  ESC pausa';
         const hint = this.add.text(
             this.scale.width / 2, this.scale.height - 20, hintText,
@@ -416,9 +417,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Mensagem de aviso na tela
         const W = this.scale.width, H = this.scale.height;
-        const reason = hasWeapon
-            ? (I18n.lang === 'en' ? '⚔ Danger approaches...' : '⚔ O perigo aproxima-se...')
-            : (I18n.lang === 'en' ? '🪵 Your activity draws attention...' : '🪵 A tua atividade chama atenção...');
+        const reason = hasWeapon ? I18n.t('hud.enemy_danger') : I18n.t('hud.enemy_attention');
         const warn = this.add.text(W / 2, H / 2 - 60, reason, {
             fontFamily: 'Georgia, serif', fontSize: '18px',
             fill: '#ff4444', fontStyle: 'bold italic',
@@ -544,7 +543,7 @@ export default class GameScene extends Phaser.Scene {
         this.scene.setVisible(false, 'HUDScene');
         SoundManager.play('victory');
 
-        const msg = I18n.lang === 'en' ? 'Setting sail...' : 'A largar a jangada...';
+        const msg = I18n.t('hud.sailing');
         this.add.text(this.scale.width / 2, 40, msg, {
             fontSize: '16px', fill: '#ffffff', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 3

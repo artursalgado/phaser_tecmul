@@ -8,7 +8,10 @@
   "hud": {
     "use_item": "[E] use item",
     "hint": "WASD move  ·  SHIFT sprint  ·  SPACE attack  ·  I inventory  ·  1-8 hotbar",
-    "inventory_full": "Inventory full!"
+    "inventory_full": "Inventory full!",
+    "enemy_danger": "⚔ Danger approaches...",
+    "enemy_attention": "🪵 Your activity draws attention...",
+    "sailing": "Setting sail..."
   },
   "inventory": {
     "title": "Inventory",
@@ -44,16 +47,32 @@
     "title": "💀 GAME OVER",
     "subtitle": "You didn't survive the island.",
     "restart": "↺  Try Again",
-    "menu": "← Main Menu"
+    "menu": "← Main Menu",
+    "keys": "[R] Retry  ·  [M] Menu"
   },
   "victory": {
     "title": "⛵ YOU ESCAPED!",
     "subtitle": "The raft is complete. The island is behind you.",
     "restart": "↺  Play Again",
-    "menu": "← Main Menu"
+    "menu": "← Main Menu",
+    "cutscene": [
+      "The raft is ready.",
+      "You push the wreckage into the water...",
+      "The sea opens up before you."
+    ]
   },
   "preload": {
     "loading": "Loading..."
+  },
+  "intro": {
+    "skip": "ESC to skip",
+    "slides": [
+      "A calm evening on the open sea...",
+      "Until the storm came.",
+      "The raft didn't stand a chance.",
+      "Drifting... towards the unknown.",
+      "Where... where am I?"
+    ]
   },
   "items": {
     "wood":    "Wood",
