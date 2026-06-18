@@ -70,8 +70,6 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
-        SoundManager.resume();
-
         // Reset estado
         this._elapsedSec = 0;
         this._score      = 0;
@@ -233,7 +231,6 @@ export default class GameScene extends Phaser.Scene {
     _togglePause() {
         if (this._paused) return;
         this._paused = true;
-        SoundManager.play('pause');
         this.scene.pause('GameScene');
         this.scene.launch('PauseScene');
         this.scene.get('PauseScene').events.once('shutdown', () => {
