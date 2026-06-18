@@ -50,6 +50,16 @@ export default class BossSkeleton extends Skeleton {
         this._roared = true;
         const scene = this.scene;
         scene.cameras.main.shake(300, 0.005);
+
+        // Zoom-in rápido ×1.1 para enfatizar a aparição do boss
+        const cam = scene.cameras.main;
+        scene.tweens.add({
+            targets: cam, zoom: cam.zoom * 1.1,
+            duration: 250, ease: 'Sine.easeOut',
+            onComplete: () => {
+                scene.tweens.add({ targets: cam, zoom: cam.zoom / 1.1, duration: 400, ease: 'Sine.easeIn' });
+            }
+        });
         const txt = scene.add.text(scene.scale.width / 2, 50, '💀 BOSS APARECEU!', {
             fontSize: '18px', fill: '#ff4400', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 4
