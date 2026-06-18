@@ -67,9 +67,21 @@ export default class VictoryScene extends Phaser.Scene {
             });
         }
 
-        // Painel RPG
-        const panel = this.add.nineslice(W/2, H/2 - 10, 'panel_rpg', null, 480, 370, 16, 16, 16, 16)
-            .setAlpha(0).setDepth(5);
+        // Painel RPG (Graphics)
+        const panelW = 480, panelH = 370;
+        const cx = W/2 - panelW/2;
+        const cy = (H/2 - 10) - panelH/2;
+
+        const panel = this.add.graphics().setAlpha(0).setDepth(5);
+        // Sombra
+        panel.fillStyle(0x000000, 0.35);
+        panel.fillRoundedRect(cx + 4, cy + 4, panelW, panelH, 6);
+        // Fundo castanho escuro
+        panel.fillStyle(0x160a00, 0.92);
+        panel.fillRoundedRect(cx, cy, panelW, panelH, 6);
+        // Borda dourada
+        panel.lineStyle(1.5, 0xc8901a, 0.72);
+        panel.strokeRoundedRect(cx, cy, panelW, panelH, 6);
 
         const titulo = this.add.text(W/2, H/2 - 130, I18n.t('victory.title'), {
             fontFamily: 'Georgia, serif', fontSize: '44px', fill: '#f0c030', fontStyle: 'bold',
