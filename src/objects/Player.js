@@ -191,6 +191,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             }
         });
 
+        // Árvores cortáveis (EPIC da jangada) — mesma deteção de alcance dos goblins
+        const trees = this.scene.trees?.getChildren() ?? [];
+        trees.forEach(t => {
+            if (!t.dead) {
+                const d = Phaser.Math.Distance.Between(hitX, hitY, t.x, t.y);
+                if (d < this.attackRange + 20) t.chop();
+            }
+        });
+
         // Efeito visual
         const ring = this.scene.add.circle(hitX, hitY, 18, 0xffff88, 0.55).setDepth(10);
         this.scene.tweens.add({

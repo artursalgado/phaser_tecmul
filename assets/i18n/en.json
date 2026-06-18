@@ -17,8 +17,8 @@
     "menu": "← Main Menu"
   },
   "victory": {
-    "title": "🏆 VICTORY!",
-    "subtitle": "You survived the island!",
+    "title": "⛵ YOU ESCAPED!",
+    "subtitle": "The raft is complete. The island is behind you.",
     "restart": "↺  Play Again",
     "menu": "← Main Menu"
   },
