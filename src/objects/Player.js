@@ -3,6 +3,16 @@
  * Frame: 96×64px, setScale(1) → personagem vísivel com zoom 2.5
  * Camadas hair + tools são sprites separados que copiam a posição
  */
+
+// Tabela de stats por arma/ferramenta equipada
+const WEAPON_STATS = {
+    axe:     { damage: 25, range: 52, cooldown: 700 }, // Machado: forte e lento, bom para madeira
+    pickaxe: { damage: 15, range: 44, cooldown: 500 }, // Picareta: fraca e rápida, para mineração
+    sword:   { damage: 20, range: 60, cooldown: 550 }, // Espada: equilibrada e com maior alcance
+    hammer:  { damage: 35, range: 40, cooldown: 900 }, // Martelo: muito forte e lento
+    none:    { damage: 10, range: 36, cooldown: 600 }  // Sem arma: soco base
+};
+
 export default class Player extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y) {
         super(scene, x, y, 'player_base_idle', 0);
@@ -128,6 +138,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this._syncLayers();
 
         if (this.isBusy) return;
+
+        // Atualizar stats com base no item atualmente selecionado no inventário
+        const slot = this.scene.inventory?.getSelectedItem();
+        const itemId = slot?.itemId;
+        const stats = WEAPON_STATS[itemId] || WEAPON_STATS.none;
+        this.attackDamage = stats.damage;
+        this.attackRange = stats.range;
+        this.attackCooldown = stats.cooldown;
 
         // Ataque (cooldown escala ao contrário baseado na energia)
         const effectiveCooldown = this.attackCooldown / this._energyMult();
