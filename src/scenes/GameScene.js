@@ -380,8 +380,10 @@ export default class GameScene extends Phaser.Scene {
     // ── Usar item selecionado ─────────────────────────────────────────────
     _useSelectedItem() {
         const slot = this.inventory.getSelectedItem();
+        console.log('[E] slot selecionado:', slot);
         if (!slot) return;
         if (slot.itemId === 'book') {
+            console.log('[E] a abrir livro...');
             this.events.emit('openBook');
             return;
         }
