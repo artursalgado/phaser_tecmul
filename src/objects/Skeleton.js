@@ -1,3 +1,5 @@
+import { burst } from '../systems/Particles.js';
+
 /**
  * Skeleton — segundo tipo de inimigo
  * Mais rápido que o goblin mas menos HP.
@@ -195,6 +197,7 @@ export default class Skeleton extends Phaser.Physics.Arcade.Sprite {
         this.body.enable = false;
         this.clearTint();
         this.play('skeleton_death', true);
+        burst(this.scene, this.x, this.y - 16, { color: 0xaaddff, count: 10, speed: 110, lifespan: 500, scale: 0.7 });
         this.once('animationcomplete', () => {
             this.scene.events.emit('enemyDied', this.x, this.y);
             this.destroy();

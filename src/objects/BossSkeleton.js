@@ -1,5 +1,6 @@
 import Skeleton from './Skeleton.js';
 import CollectibleItem from './CollectibleItem.js';
+import { burst } from '../systems/Particles.js';
 
 export default class BossSkeleton extends Skeleton {
     constructor(scene, x, y) {
@@ -92,8 +93,10 @@ export default class BossSkeleton extends Skeleton {
         this.clearTint();
         this.play('skeleton_death', true);
 
-        // Shake forte na morte
+        // Shake forte + explosão de partículas na morte do boss
         this.scene.cameras.main.shake(500, 0.012);
+        burst(this.scene, this.x, this.y - 20, { color: 0xff6622, count: 20, speed: 180, lifespan: 700, scale: 1.0, gravity: 200 });
+        burst(this.scene, this.x, this.y - 20, { color: 0xffdd44, count: 10, speed: 100, lifespan: 500, scale: 0.5 });
 
         // Remove barra do boss do ecrã
         this._bossBar?.destroy();

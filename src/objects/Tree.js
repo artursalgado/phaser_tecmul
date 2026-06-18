@@ -1,3 +1,5 @@
+import { burst } from '../systems/Particles.js';
+
 // Árvore que pode ser cortada com o ataque (ESPAÇO).
 // É bem simples: leva 3 machadadas, depois desaparece e dá madeira ao jogador.
 export default class Tree extends Phaser.Physics.Arcade.Sprite {
@@ -17,7 +19,9 @@ export default class Tree extends Phaser.Physics.Arcade.Sprite {
         if (this.dead) return;
         this.hitsLeft--;
 
-        // Feedback visual simples: tremer um pouco
+        // Partículas de folhas ao cortar
+        burst(this.scene, this.x, this.y - 20, { color: 0x66cc44, count: 5, speed: 90, lifespan: 400, scale: 0.5 });
+
         this.setTint(0xddaa66);
         this.scene.time.delayedCall(120, () => { if (!this.dead) this.clearTint(); });
 
@@ -43,7 +47,10 @@ export default class Tree extends Phaser.Physics.Arcade.Sprite {
             duration: 900, onComplete: () => txt.destroy()
         });
 
-        // A árvore desaparece com um pequeno fade
+        // Explosão de madeira/folhas ao cair
+        burst(this.scene, this.x, this.y - 16, { color: 0x88cc44, count: 14, speed: 150, lifespan: 600, scale: 0.8, gravity: 220 });
+        burst(this.scene, this.x, this.y - 16, { color: 0xaa7733, count: 6,  speed: 80,  lifespan: 400, scale: 0.5 });
+
         this.scene.tweens.add({
             targets: this, alpha: 0, duration: 300,
             onComplete: () => this.destroy()
