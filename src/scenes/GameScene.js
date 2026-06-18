@@ -1,4 +1,4 @@
-import Inventory, { ITEM_DB } from '../systems/Inventory.js';
+﻿import Inventory, { ITEM_DB } from '../systems/Inventory.js';
 import PlayerStats from '../systems/PlayerStats.js';
 import Player from '../objects/Player.js';
 import CollectibleItem from '../objects/CollectibleItem.js';
@@ -215,19 +215,17 @@ export default class GameScene extends Phaser.Scene {
         // Um circulo visivel no chao -- quando o jogador esta dentro e preme F,
         // os recursos do inventario (wood/rope/sail) sao entregues ao QuestManager.
         const docaPos = spawns.poi.doca || { x: mapW / 2 + 80, y: mapH / 2 + 40 };
-        this.raftZone = { x: docaPos.x, y: docaPos.y, radius: 56 };
+        this.raftZone = { x: docaPos.x, y: docaPos.y, radius: 36 };
 
-        // Destrocos da jangada -- visiveis desde o inicio (premissa: "destrocos
-        // visiveis, slots vazios da jangada"). Por cima da areia, abaixo do jogador.
-        this.add.image(this.raftZone.x, this.raftZone.y + 6, 'spr_deco_coracle_land')
-            .setDepth(1).setScale(1.4);
-
+        // Destrocos da jangada -- scale 0.7 para caber na zona de areia.
+        // depth 3: acima da areia (0-2), abaixo do jogador (5).
+        this.add.image(this.raftZone.x, this.raftZone.y, 'spr_deco_coracle_land')
+            .setDepth(3).setScale(0.7);
         this.raftMarker = this.add.circle(this.raftZone.x, this.raftZone.y, this.raftZone.radius, 0xffdd66, 0.18).setDepth(1);
-        this.raftLabel = this.add.text(this.raftZone.x, this.raftZone.y - this.raftZone.radius - 12, 'JANGADA [F]', {
+        this.raftLabel = this.add.text(this.raftZone.x, this.raftZone.y - this.raftZone.radius - 8, 'JANGADA [F]', {
             fontSize: '10px', fill: '#ffdd66', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 2
-        }).setOrigin(0.5).setDepth(1);
-
+        }).setOrigin(0.5).setDepth(9);
         // ── EVENTOS ───────────────────────────────────────────────────────────
         this.events.on('enemyDied', (x, y) => {
             this._killCount++;
