@@ -1,6 +1,74 @@
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
 
+// ─── Helper: botão desenhado com Graphics (sem texturas) ──────────────────────
+function makeBtn(scene, x, y, w, h, label, depth = 2) {
+    const BG_IDLE  = 0x3d2008;
+    const BG_HOVER = 0x6b3810;
+    const BORDER   = 0x9a6030;
+    const RADIUS   = 8;
+
+    const gfx = scene.add.graphics().setDepth(depth);
+    const txt = scene.add.text(x, y, label, {
+        fontFamily: 'Georgia, serif', fontSize: '18px',
+        fill: '#f0ddb8', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(depth + 1);
+
+    const draw = (hover) => {
+        gfx.clear();
+        gfx.fillStyle(hover ? BG_HOVER : BG_IDLE, 1);
+        gfx.fillRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
+        gfx.lineStyle(2, BORDER, 1);
+        gfx.strokeRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
+    };
+
+    draw(false);
+
+    // Hit zone invisível
+    const zone = scene.add.zone(x, y, w, h)
+        .setInteractive({ useHandCursor: true }).setDepth(depth + 2);
+
+    zone.on('pointerover',  () => { draw(true);  txt.setStyle({ fill: '#ffffff' }); });
+    zone.on('pointerout',   () => { draw(false); txt.setStyle({ fill: '#f0ddb8' }); });
+
+    return { gfx, txt, zone, setLabel: (s) => txt.setText(s) };
+}
+
+// ─── Helper: botão pequeno de língua ──────────────────────────────────────────
+function makeLangBtn(scene, x, y, label, depth = 2) {
+    const w = 90, h = 34;
+    const BG_IDLE   = 0x2a1505;
+    const BG_ACTIVE = 0x6b3810;
+    const BORDER    = 0x7a4a1a;
+    const RADIUS    = 6;
+
+    const gfx = scene.add.graphics().setDepth(depth);
+    const txt = scene.add.text(x, y, label, {
+        fontFamily: 'Georgia, serif', fontSize: '13px',
+        fill: '#c8a070', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(depth + 1);
+
+    let _active = false;
+
+    const draw = () => {
+        gfx.clear();
+        gfx.fillStyle(_active ? BG_ACTIVE : BG_IDLE, 1);
+        gfx.fillRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
+        gfx.lineStyle(2, BORDER, 1);
+        gfx.strokeRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
+    };
+
+    draw();
+
+    const zone = scene.add.zone(x, y, w, h)
+        .setInteractive({ useHandCursor: true }).setDepth(depth + 2);
+
+    return {
+        gfx, txt, zone,
+        setActive: (v) => { _active = v; draw(); txt.setStyle({ fill: v ? '#ffffff' : '#c8a070' }); },
+    };
+}
+
 export default class MenuScene extends Phaser.Scene {
     constructor() {
         super('MenuScene');
@@ -46,77 +114,35 @@ export default class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(2);
 
         // Linha decorativa
-        const divider = this.add.rectangle(W/2, H/2 - 60, 320, 2, 0x5c3d24, 0.4).setDepth(2);
+        this.add.rectangle(W/2, H/2 - 60, 320, 2, 0x5c3d24, 0.4).setDepth(2);
 
-        // Botão Jogar
-        const botaoJogarBg = this.add.nineslice(W/2, H/2 + 10, 'button_normal', null, 240, 52, 10, 10, 10, 10)
-            .setDepth(2).setInteractive({ useHandCursor: true });
-        const botaoJogarTxt = this.add.text(W/2, H/2 + 10, I18n.t('menu.play'), {
-            fontFamily: 'Georgia, serif', fontSize: '22px', fill: '#ffffff', fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(3);
-
-        botaoJogarBg.on('pointerover', () => {
-            botaoJogarBg.setTexture('button_hover');
-            this.tweens.add({ targets: [botaoJogarBg, botaoJogarTxt], scaleX: 1.05, scaleY: 1.05, duration: 100 });
-        });
-        botaoJogarBg.on('pointerout', () => {
-            botaoJogarBg.setTexture('button_normal');
-            this.tweens.add({ targets: [botaoJogarBg, botaoJogarTxt], scaleX: 1, scaleY: 1, duration: 100 });
-        });
-        botaoJogarBg.on('pointerdown', () => {
+        // ── BOTÃO JOGAR ───────────────────────────────────────────────────────
+        const btnJogar = makeBtn(this, W/2, H/2 + 10, 240, 50, I18n.t('menu.play'), 2);
+        btnJogar.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
             SoundManager.resume();
             SoundManager.stopBgMusic();
             this.time.delayedCall(120, () => this.scene.start('IntroScene'));
         });
 
-        const botaoJogar = botaoJogarTxt;
-
-        // ── SELETOR DE LÍNGUA ──────────────────────────────────────────────
-        const langBtnPTBg = this.add.nineslice(W/2 - 70, H/2 + 100, 'button_normal', null, 110, 42, 10, 10, 10, 10)
-            .setDepth(2).setInteractive({ useHandCursor: true });
-        const langBtnPTTxt = this.add.text(W/2 - 70, H/2 + 100, '🇵🇹 PT', {
-            fontFamily: 'Georgia, serif', fontSize: '14px', fill: '#ffffff', fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(3);
-
-        const langBtnENBg = this.add.nineslice(W/2 + 70, H/2 + 100, 'button_normal', null, 110, 42, 10, 10, 10, 10)
-            .setDepth(2).setInteractive({ useHandCursor: true });
-        const langBtnENTxt = this.add.text(W/2 + 70, H/2 + 100, '🇬🇧 EN', {
-            fontFamily: 'Georgia, serif', fontSize: '14px', fill: '#ffffff', fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(3);
+        // ── SELETOR DE LÍNGUA ─────────────────────────────────────────────────
+        const langPT = makeLangBtn(this, W/2 - 60, H/2 + 100, '🇵🇹 PT', 2);
+        const langEN = makeLangBtn(this, W/2 + 60, H/2 + 100, '🇬🇧 EN', 2);
 
         const refreshLang = () => {
             titulo.setText(I18n.t('menu.title'));
             subtitulo.setText(I18n.t('menu.subtitle'));
-            botaoJogar.setText(I18n.t('menu.play'));
+            btnJogar.setLabel(I18n.t('menu.play'));
             creditos.setText(I18n.t('menu.credits'));
             muteBtn.setTexture(SoundManager.muted ? 'sound_off' : 'sound_on');
-            
-            if (I18n.lang === 'pt') {
-                langBtnPTBg.setTexture('button_hover').clearTint();
-                langBtnPTTxt.setStyle({ fill: '#ffffff' });
-                langBtnENBg.setTexture('button_normal').setTint(0x888888);
-                langBtnENTxt.setStyle({ fill: '#cccccc' });
-            } else {
-                langBtnENBg.setTexture('button_hover').clearTint();
-                langBtnENTxt.setStyle({ fill: '#ffffff' });
-                langBtnPTBg.setTexture('button_normal').setTint(0x888888);
-                langBtnPTTxt.setStyle({ fill: '#cccccc' });
-            }
+            langPT.setActive(I18n.lang === 'pt');
+            langEN.setActive(I18n.lang === 'en');
         };
 
-        langBtnPTBg.on('pointerdown', () => {
-            SoundManager.play('menu_click');
-            I18n.setLang('pt');
-            refreshLang();
-        });
-        langBtnENBg.on('pointerdown', () => {
-            SoundManager.play('menu_click');
-            I18n.setLang('en');
-            refreshLang();
-        });
+        langPT.zone.on('pointerdown', () => { SoundManager.play('menu_click'); I18n.setLang('pt'); refreshLang(); });
+        langEN.zone.on('pointerdown', () => { SoundManager.play('menu_click'); I18n.setLang('en'); refreshLang(); });
 
-        // ── BOTÃO MUTE ────────────────────────────────────────────────────
+        // ── BOTÃO MUTE ────────────────────────────────────────────────────────
         const muteBtn = this.add.image(W - 36, 36, SoundManager.muted ? 'sound_off' : 'sound_on')
             .setScale(1.5)
             .setInteractive({ useHandCursor: true });
@@ -133,13 +159,10 @@ export default class MenuScene extends Phaser.Scene {
             fontFamily: 'Georgia, serif', fontSize: '11px', fill: '#5c3d24', fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(2);
 
-        // Initialize language button states
         refreshLang();
 
         // Versão
-        this.add.text(16, H - 16, 'v0.3', {
-            fontSize: '11px', fill: '#333355'
-        });
+        this.add.text(16, H - 16, 'v0.3', { fontSize: '11px', fill: '#333355' });
 
         // Animação de pulsar no título
         this.tweens.add({
@@ -148,7 +171,6 @@ export default class MenuScene extends Phaser.Scene {
             ease: 'Sine.easeInOut'
         });
 
-        // Música de fundo no menu
         SoundManager.resume();
         SoundManager.startBgMusic();
     }

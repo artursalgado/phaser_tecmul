@@ -371,86 +371,192 @@ export default class HUDScene extends Phaser.Scene {
     }
 
     //----------------------------------------------------------------
-    // LIVRO / DIÁRIO DO NÁUFRAGO — UI estilo Minecraft
+    // LIVRO / DIÁRIO DO NÁUFRAGO
     //----------------------------------------------------------------
     _buildBook(W, H) {
         this._bookOpen = false;
         this._bookPage = 0;
         this.bookGroup = this.add.group();
 
-        const bookW = 520, bookH = 360;
+        const bookW = 580, bookH = 380;
         const cx = W / 2, cy = H / 2;
-        const pageW = bookW / 2 - 30;
+        const D = 80;  // profundidade base
 
-        // Dimming overlay
-        this._bookDim = this.add.rectangle(cx, cy, W, H, 0x000000, 0.6)
-            .setDepth(70).setVisible(false);
+        // ── Dim overlay ──────────────────────────────────────────────
+        this._bookDim = this.add.rectangle(cx, cy, W, H, 0x000000, 0.72)
+            .setDepth(D).setVisible(false);
 
-        // Book background image
-        this.bookBg = this.add.image(cx, cy, 'book_bg')
-            .setDisplaySize(bookW, bookH)
-            .setDepth(71).setVisible(false);
+        // ── Canvas do livro (Graphics) ───────────────────────────────
+        this._bookGfx = this.add.graphics().setDepth(D + 1).setVisible(false);
+        this._drawBookGraphics(cx, cy, bookW, bookH);
 
-        // Book frame border using NineSlice
-        this.bookFrame = this.add.nineslice(cx, cy, 'panel_brown', null, bookW + 20, bookH + 20, 16, 16, 16, 16)
-            .setDepth(72).setVisible(false);
+        // ── Título ───────────────────────────────────────────────────
+        this._bookTitle = this.add.text(cx, cy - bookH / 2 + 26, '', {
+            fontFamily: 'Georgia, serif', fontSize: '17px',
+            color: '#3a1f05', fontStyle: 'bold italic', align: 'center',
+            stroke: '#c8a060', strokeThickness: 0,
+        }).setOrigin(0.5).setDepth(D + 2).setVisible(false);
 
-        // Title
-        this._bookTitle = this.add.text(cx, cy - bookH / 2 + 22, '', {
-            fontFamily: 'Georgia, serif', fontSize: '16px',
-            color: '#5a3e1b', fontStyle: 'bold', align: 'center',
-        }).setOrigin(0.5).setDepth(73).setVisible(false);
+        // Linha separadora sob o título
+        this._bookDivGfx = this.add.graphics().setDepth(D + 2).setVisible(false);
 
-        // Left page text
-        this._bookLeftTxt = this.add.text(cx - bookW / 2 + 28, cy - bookH / 2 + 44, '', {
-            fontFamily: 'Georgia, serif', fontSize: '13px',
-            color: '#3a2a10', lineSpacing: 4, wordWrap: { width: pageW },
-        }).setDepth(73).setVisible(false);
+        // ── Página esquerda ──────────────────────────────────────────
+        const pageW  = bookW / 2 - 52;
+        const textY  = cy - bookH / 2 + 54;
+        const leftX  = cx - bookW / 2 + 36;
+        const rightX = cx + 18;
 
-        // Right page text
-        this._bookRightTxt = this.add.text(cx + 18, cy - bookH / 2 + 44, '', {
-            fontFamily: 'Georgia, serif', fontSize: '13px',
-            color: '#3a2a10', lineSpacing: 4, wordWrap: { width: pageW },
-        }).setDepth(73).setVisible(false);
+        this._bookLeftTxt = this.add.text(leftX, textY, '', {
+            fontFamily: 'Georgia, serif', fontSize: '12.5px',
+            color: '#2e1c06', lineSpacing: 5,
+            wordWrap: { width: pageW },
+        }).setDepth(D + 2).setVisible(false);
 
-        // Page number
-        this._bookPageNum = this.add.text(cx, cy + bookH / 2 - 20, '', {
+        // ── Página direita ───────────────────────────────────────────
+        this._bookRightTxt = this.add.text(rightX, textY, '', {
+            fontFamily: 'Georgia, serif', fontSize: '12.5px',
+            color: '#2e1c06', lineSpacing: 5,
+            wordWrap: { width: pageW },
+        }).setDepth(D + 2).setVisible(false);
+
+        // ── Número de página ─────────────────────────────────────────
+        this._bookPageNum = this.add.text(cx, cy + bookH / 2 - 22, '', {
             fontFamily: 'Georgia, serif', fontSize: '11px',
-            color: '#8b7355', align: 'center',
-        }).setOrigin(0.5).setDepth(73).setVisible(false);
+            color: '#8b6e3a', align: 'center', fontStyle: 'italic',
+        }).setOrigin(0.5).setDepth(D + 2).setVisible(false);
 
-        // Navigation arrows using sprites (frame 28 is left arrow, frame 29 is right arrow)
-        this._bookPrevBtn = this.add.sprite(cx - bookW / 2 + 30, cy + bookH / 2 - 25, 'icons', 28)
-            .setScale(2.5)
-            .setDepth(73).setVisible(false).setInteractive({ useHandCursor: true });
-        this._bookPrevBtn.on('pointerdown', () => this._bookFlipPage(-1));
-        this._bookPrevBtn.on('pointerover', () => this._bookPrevBtn.setTint(0xddaa44));
-        this._bookPrevBtn.on('pointerout',  () => this._bookPrevBtn.clearTint());
+        // ── Botão anterior ◀ ─────────────────────────────────────────
+        const navY   = cy + bookH / 2 - 22;
+        const navBtnW = 48, navBtnH = 24;
+        const prevX  = cx - bookW / 2 + 38;
+        const nextX  = cx + bookW / 2 - 38;
 
-        this._bookNextBtn = this.add.sprite(cx + bookW / 2 - 30, cy + bookH / 2 - 25, 'icons', 29)
-            .setScale(2.5)
-            .setDepth(73).setVisible(false).setInteractive({ useHandCursor: true });
-        this._bookNextBtn.on('pointerdown', () => this._bookFlipPage(1));
-        this._bookNextBtn.on('pointerover', () => this._bookNextBtn.setTint(0xddaa44));
-        this._bookNextBtn.on('pointerout',  () => this._bookNextBtn.clearTint());
+        this._bookPrevGfx = this.add.graphics().setDepth(D + 2).setVisible(false);
+        this._bookPrevTxt = this.add.text(prevX, navY, '◀', {
+            fontFamily: 'Georgia, serif', fontSize: '14px', color: '#6b4010',
+        }).setOrigin(0.5).setDepth(D + 3).setVisible(false);
+        this._bookPrevZone = this.add.zone(prevX, navY, navBtnW, navBtnH)
+            .setInteractive({ useHandCursor: true }).setDepth(D + 4).setVisible(false);
+        this._bookPrevZone.on('pointerover',  () => this._bookNavHover('prev', true));
+        this._bookPrevZone.on('pointerout',   () => this._bookNavHover('prev', false));
+        this._bookPrevZone.on('pointerdown',  () => this._bookFlipPage(-1));
 
-        // Close hint
-        this._bookCloseHint = this.add.text(cx, cy + bookH / 2 + 14, '', {
-            fontFamily: 'monospace', fontSize: '10px', color: '#888888',
-        }).setOrigin(0.5).setDepth(73).setVisible(false);
+        // ── Botão seguinte ▶ ─────────────────────────────────────────
+        this._bookNextGfx = this.add.graphics().setDepth(D + 2).setVisible(false);
+        this._bookNextTxt = this.add.text(nextX, navY, '▶', {
+            fontFamily: 'Georgia, serif', fontSize: '14px', color: '#6b4010',
+        }).setOrigin(0.5).setDepth(D + 3).setVisible(false);
+        this._bookNextZone = this.add.zone(nextX, navY, navBtnW, navBtnH)
+            .setInteractive({ useHandCursor: true }).setDepth(D + 4).setVisible(false);
+        this._bookNextZone.on('pointerover',  () => this._bookNavHover('next', true));
+        this._bookNextZone.on('pointerout',   () => this._bookNavHover('next', false));
+        this._bookNextZone.on('pointerdown',  () => this._bookFlipPage(1));
 
-        // Gather all elements
+        // ── Dica fechar ──────────────────────────────────────────────
+        this._bookCloseHint = this.add.text(cx, cy + bookH / 2 + 16, '', {
+            fontFamily: 'Georgia, serif', fontSize: '10px',
+            color: '#7a6040', fontStyle: 'italic',
+        }).setOrigin(0.5).setDepth(D + 2).setVisible(false);
+
         this.bookGroup.addMultiple([
-            this._bookDim, this.bookBg, this.bookFrame,
+            this._bookDim, this._bookGfx, this._bookDivGfx,
             this._bookTitle, this._bookLeftTxt, this._bookRightTxt,
-            this._bookPageNum, this._bookPrevBtn, this._bookNextBtn,
+            this._bookPageNum,
+            this._bookPrevGfx, this._bookPrevTxt, this._bookPrevZone,
+            this._bookNextGfx, this._bookNextTxt, this._bookNextZone,
             this._bookCloseHint,
         ]);
 
-        // Close on ESC
         this.input.keyboard.on('keydown-ESC', () => {
             if (this._bookOpen) this._toggleBook();
         });
+    }
+
+    _drawBookGraphics(cx, cy, bookW, bookH) {
+        const g = this._bookGfx;
+        g.clear();
+
+        const r = 10; // raio cantos
+
+        // Sombra exterior
+        g.fillStyle(0x000000, 0.45);
+        g.fillRoundedRect(cx - bookW/2 + 8, cy - bookH/2 + 8, bookW, bookH, r);
+
+        // Capa exterior castanha (borda do livro)
+        g.fillStyle(0x5c2e00, 1);
+        g.fillRoundedRect(cx - bookW/2, cy - bookH/2, bookW, bookH, r);
+
+        // Lombada central (sombra)
+        g.fillStyle(0x3a1a00, 0.7);
+        g.fillRect(cx - 10, cy - bookH/2, 20, bookH);
+
+        // Página esquerda (pergaminho)
+        g.fillStyle(0xf5e9c8, 1);
+        g.fillRoundedRect(cx - bookW/2 + 12, cy - bookH/2 + 10, bookW/2 - 18, bookH - 20, { tl: r - 2, bl: r - 2, tr: 0, br: 0 });
+
+        // Página esquerda — gradiente simulado (borda interior)
+        g.fillStyle(0xe8d5a8, 0.5);
+        g.fillRect(cx - bookW/2 + 12, cy - bookH/2 + 10, 6, bookH - 20);
+
+        // Página direita (pergaminho ligeiramente diferente)
+        g.fillStyle(0xf2e6c0, 1);
+        g.fillRoundedRect(cx + 6, cy - bookH/2 + 10, bookW/2 - 18, bookH - 20, { tl: 0, bl: 0, tr: r - 2, br: r - 2 });
+
+        // Linha da lombada visível
+        g.lineStyle(1, 0x8b5010, 0.6);
+        g.lineBetween(cx - 2, cy - bookH/2 + 14, cx - 2, cy + bookH/2 - 14);
+        g.lineBetween(cx + 2, cy - bookH/2 + 14, cx + 2, cy + bookH/2 - 14);
+
+        // Ornamento no topo da lombada
+        g.fillStyle(0xc8800a, 1);
+        g.fillRect(cx - 6, cy - bookH/2 + 10, 12, 4);
+        g.fillRect(cx - 6, cy + bookH/2 - 14, 12, 4);
+
+        // Borda interior das páginas (linha subtil)
+        g.lineStyle(1, 0xc8a060, 0.4);
+        g.strokeRoundedRect(cx - bookW/2 + 12, cy - bookH/2 + 10, bookW/2 - 18, bookH - 20, { tl: r - 2, bl: r - 2, tr: 0, br: 0 });
+        g.strokeRoundedRect(cx + 6, cy - bookH/2 + 10, bookW/2 - 18, bookH - 20, { tl: 0, bl: 0, tr: r - 2, br: r - 2 });
+
+        // Linhas de texto decorativas (página esquerda)
+        g.lineStyle(1, 0xd4b880, 0.25);
+        const lineStartX = cx - bookW/2 + 26;
+        const lineEndX   = cx - 18;
+        const lineStart  = cy - bookH/2 + 58;
+        for (let i = 0; i < 14; i++) {
+            const ly = lineStart + i * 20;
+            if (ly < cy + bookH/2 - 28) {
+                g.lineBetween(lineStartX, ly, lineEndX, ly);
+            }
+        }
+        // Linhas de texto decorativas (página direita)
+        const rLineStartX = cx + 18;
+        const rLineEndX   = cx + bookW/2 - 26;
+        for (let i = 0; i < 14; i++) {
+            const ly = lineStart + i * 20;
+            if (ly < cy + bookH/2 - 28) {
+                g.lineBetween(rLineStartX, ly, rLineEndX, ly);
+            }
+        }
+    }
+
+    _drawNavBtn(gfx, x, y, w, h, hover) {
+        gfx.clear();
+        gfx.fillStyle(hover ? 0x7a4820 : 0x5a3010, 0.85);
+        gfx.fillRoundedRect(x - w/2, y - h/2, w, h, 5);
+        gfx.lineStyle(1, hover ? 0xd4a050 : 0x9a6030, 1);
+        gfx.strokeRoundedRect(x - w/2, y - h/2, w, h, 5);
+    }
+
+    _bookNavHover(side, on) {
+        if (side === 'prev') {
+            this._drawNavBtn(this._bookPrevGfx,
+                this._bookPrevTxt.x, this._bookPrevTxt.y, 48, 24, on);
+            this._bookPrevTxt.setStyle({ color: on ? '#f0c060' : '#6b4010' });
+        } else {
+            this._drawNavBtn(this._bookNextGfx,
+                this._bookNextTxt.x, this._bookNextTxt.y, 48, 24, on);
+            this._bookNextTxt.setStyle({ color: on ? '#f0c060' : '#6b4010' });
+        }
     }
 
     _toggleBook() {
@@ -480,21 +586,56 @@ export default class HUDScene extends Phaser.Scene {
     _refreshBookPage() {
         const data = this.cache.json.get(I18n.lang === 'pt' ? 'i18n_pt' : 'i18n_en');
         if (!data || !data.book) return;
-        const pages = data.book.pages;
+        const pages  = data.book.pages;
         const spread = pages[this._bookPage];
         if (!spread) return;
 
+        const bookW  = 580, bookH = 380;
+        const cx = 960 / 2, cy = 640 / 2;
+
         this._bookTitle.setText(data.book.title);
+
+        // Redesenha a linha decorativa sob o título
+        const d = this._bookDivGfx;
+        d.clear();
+        d.lineStyle(1, 0xa07040, 0.6);
+        d.lineBetween(cx - bookW/2 + 28, cy - bookH/2 + 44, cx + bookW/2 - 28, cy - bookH/2 + 44);
+        // Ornamentos da linha
+        d.fillStyle(0xa07040, 0.7);
+        d.fillTriangle(
+            cx - 20, cy - bookH/2 + 44,
+            cx,      cy - bookH/2 + 40,
+            cx + 20, cy - bookH/2 + 44
+        );
+
         this._bookLeftTxt.setText(spread[0] || '');
         this._bookRightTxt.setText(spread[1] || '');
-        this._bookPageNum.setText(`${data.book.page} ${this._bookPage * 2 + 1}-${this._bookPage * 2 + 2} / ${pages.length * 2}`);
+        this._bookPageNum.setText(
+            `— ${data.book.page} ${this._bookPage * 2 + 1}–${this._bookPage * 2 + 2} —`
+        );
         this._bookCloseHint.setText(data.book.close);
     }
 
     _updateBookNav() {
         const pages = this._getBookPages();
-        this._bookPrevBtn.setVisible(this._bookOpen && this._bookPage > 0);
-        this._bookNextBtn.setVisible(this._bookOpen && this._bookPage < pages.length - 1);
+        const cx = 960 / 2;
+        const bookW = 580, bookH = 380;
+        const cy = 640 / 2;
+        const navY = cy + bookH / 2 - 22;
+        const prevX = cx - bookW / 2 + 38;
+        const nextX = cx + bookW / 2 - 38;
+        const hasPrev = this._bookPage > 0;
+        const hasNext = this._bookPage < pages.length - 1;
+
+        this._bookPrevGfx.setVisible(this._bookOpen && hasPrev);
+        this._bookPrevTxt.setVisible(this._bookOpen && hasPrev);
+        this._bookPrevZone.setVisible(this._bookOpen && hasPrev);
+        this._bookNextGfx.setVisible(this._bookOpen && hasNext);
+        this._bookNextTxt.setVisible(this._bookOpen && hasNext);
+        this._bookNextZone.setVisible(this._bookOpen && hasNext);
+
+        if (hasPrev) this._drawNavBtn(this._bookPrevGfx, prevX, navY, 48, 24, false);
+        if (hasNext) this._drawNavBtn(this._bookNextGfx, nextX, navY, 48, 24, false);
     }
 }
 

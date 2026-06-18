@@ -1,6 +1,38 @@
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
 
+// ─── Helper: botão desenhado com Graphics (sem texturas) ──────────────────────
+function makeBtn(scene, x, y, w, h, label, depth = 6) {
+    const BG_IDLE  = 0x3d2008;
+    const BG_HOVER = 0x6b3810;
+    const BORDER   = 0x9a6030;
+    const RADIUS   = 8;
+
+    const gfx = scene.add.graphics().setDepth(depth).setAlpha(0);
+    const txt = scene.add.text(x, y, label, {
+        fontFamily: 'Georgia, serif', fontSize: '16px',
+        fill: '#f0ddb8', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(depth + 1).setAlpha(0);
+
+    const draw = (hover) => {
+        gfx.clear();
+        gfx.fillStyle(hover ? BG_HOVER : BG_IDLE, 1);
+        gfx.fillRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
+        gfx.lineStyle(2, BORDER, 1);
+        gfx.strokeRoundedRect(x - w/2, y - h/2, w, h, RADIUS);
+    };
+
+    draw(false);
+
+    const zone = scene.add.zone(x, y, w, h)
+        .setInteractive({ useHandCursor: true }).setDepth(depth + 2).setAlpha(0);
+
+    zone.on('pointerover',  () => { draw(true);  txt.setStyle({ fill: '#ffffff' }); });
+    zone.on('pointerout',   () => { draw(false); txt.setStyle({ fill: '#f0ddb8' }); });
+
+    return { gfx, txt, zone };
+}
+
 export default class GameOverScene extends Phaser.Scene {
     constructor() {
         super('GameOverScene');
@@ -58,49 +90,27 @@ export default class GameOverScene extends Phaser.Scene {
             fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#3d2314', fontStyle: 'bold'
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
-        const btnRestartBg = this.add.nineslice(W/2, H/2 + 65, 'button_normal', null, 240, 44, 10, 10, 10, 10)
-            .setAlpha(0).setDepth(6).setInteractive({ useHandCursor: true });
-        const btnRestartTxt = this.add.text(W/2, H/2 + 65, I18n.t('gameover.restart'), {
-            fontFamily: 'Georgia, serif', fontSize: '16px', fill: '#ffffff', fontStyle: 'bold'
-        }).setOrigin(0.5).setAlpha(0).setDepth(7);
-
-        btnRestartBg.on('pointerover', () => {
-            btnRestartBg.setTexture('button_hover');
-            this.tweens.add({ targets: [btnRestartBg, btnRestartTxt], scaleX: 1.05, scaleY: 1.05, duration: 100 });
-        });
-        btnRestartBg.on('pointerout', () => {
-            btnRestartBg.setTexture('button_normal');
-            this.tweens.add({ targets: [btnRestartBg, btnRestartTxt], scaleX: 1, scaleY: 1, duration: 100 });
-        });
-        btnRestartBg.on('pointerdown', () => {
+        const btnRestart = makeBtn(this, W/2, H/2 + 65, 240, 44, I18n.t('gameover.restart'));
+        btnRestart.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
             this.scene.stop('GameOverScene');
             this.scene.start('GameScene');
             this.scene.launch('HUDScene');
         });
 
-        const btnMenuBg = this.add.nineslice(W/2, H/2 + 120, 'button_normal', null, 240, 44, 10, 10, 10, 10)
-            .setAlpha(0).setDepth(6).setInteractive({ useHandCursor: true });
-        const btnMenuTxt = this.add.text(W/2, H/2 + 120, I18n.t('gameover.menu'), {
-            fontFamily: 'Georgia, serif', fontSize: '16px', fill: '#ffffff', fontStyle: 'bold'
-        }).setOrigin(0.5).setAlpha(0).setDepth(7);
-
-        btnMenuBg.on('pointerover', () => {
-            btnMenuBg.setTexture('button_hover');
-            this.tweens.add({ targets: [btnMenuBg, btnMenuTxt], scaleX: 1.05, scaleY: 1.05, duration: 100 });
-        });
-        btnMenuBg.on('pointerout', () => {
-            btnMenuBg.setTexture('button_normal');
-            this.tweens.add({ targets: [btnMenuBg, btnMenuTxt], scaleX: 1, scaleY: 1, duration: 100 });
-        });
-        btnMenuBg.on('pointerdown', () => {
+        const btnMenu = makeBtn(this, W/2, H/2 + 120, 240, 44, I18n.t('gameover.menu'));
+        btnMenu.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
             this.scene.stop('GameOverScene');
             this.scene.start('MenuScene');
         });
 
         this.tweens.add({
-            targets: [panel, titulo, sub, statsText, btnRestartBg, btnRestartTxt, btnMenuBg, btnMenuTxt],
+            targets: [
+                panel, titulo, sub, statsText,
+                btnRestart.gfx, btnRestart.txt,
+                btnMenu.gfx, btnMenu.txt,
+            ],
             alpha: 1,
             duration: 900,
             delay: 400
