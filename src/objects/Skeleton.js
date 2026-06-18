@@ -196,19 +196,6 @@ export default class Skeleton extends Phaser.Physics.Arcade.Sprite {
         this.clearTint();
         this.play('skeleton_death', true);
         this.once('animationcomplete', () => {
-            // Boss da EPIC da jangada: dropa a vela diretamente no inventario
-            if (this.scene.inventory) {
-                this.scene.inventory.addItem('sail', 1);
-                const txt = this.scene.add.text(this.x, this.y - 40, '+1 Vela', {
-                    fontSize: '12px', fill: '#ffffff', fontStyle: 'bold',
-                    stroke: '#000000', strokeThickness: 2
-                }).setOrigin(0.5).setDepth(20);
-                this.scene.tweens.add({
-                    targets: txt, y: txt.y - 30, alpha: 0,
-                    duration: 1000, onComplete: () => txt.destroy()
-                });
-            }
-
             this.scene.events.emit('enemyDied', this.x, this.y);
             this.destroy();
         });
