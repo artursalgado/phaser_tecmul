@@ -128,6 +128,7 @@ export default class GameScene extends Phaser.Scene {
         this.inventory = new Inventory(8);
         this.stats     = new PlayerStats();
         this.quest     = new QuestManager();
+        this.quest.init(this);   // connect global event bus for quest:updated / quest:complete
 
         this.stats.on('died', () => {
             this.quest.applyDeathPenalty(); // perde 90% do progresso da jangada ao morrer
