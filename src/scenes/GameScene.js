@@ -1,4 +1,4 @@
-﻿import Inventory, { ITEM_DB } from '../systems/Inventory.js';
+import Inventory, { ITEM_DB } from '../systems/Inventory.js';
 import PlayerStats from '../systems/PlayerStats.js';
 import Player from '../objects/Player.js';
 import CollectibleItem from '../objects/CollectibleItem.js';
