@@ -172,6 +172,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             }
         });
 
+        // Cortar árvores próximas (dá madeira) — mesma lógica dos goblins, mas para árvores
+        (this.scene.trees?.getChildren() ?? []).forEach(tree => {
+            const d = Phaser.Math.Distance.Between(hitX, hitY, tree.x, tree.y);
+            if (d < this.attackRange + 20) {
+                tree.chop();
+            }
+        });
+
         // Efeito visual
         const ring = this.scene.add.circle(hitX, hitY, 18, 0xffff88, 0.55).setDepth(10);
         this.scene.tweens.add({

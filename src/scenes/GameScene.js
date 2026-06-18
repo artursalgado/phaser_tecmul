@@ -3,6 +3,7 @@ import PlayerStats from '../systems/PlayerStats.js';
 import Player from '../objects/Player.js';
 import CollectibleItem from '../objects/CollectibleItem.js';
 import Goblin from '../objects/Goblin.js';
+import Tree from '../objects/Tree.js';
 
 // Centro da ilha: tile (40,30) × 16px = pixel (640, 480)
 const CX = 640, CY = 480;
@@ -32,6 +33,14 @@ const GOBLIN_SPAWNS = [
     { x: CX,       y: CY - 200 },
     { x: CX - 250, y: CY },
     { x: CX + 250, y: CY },
+];
+
+// Arvores da floresta (zona sudoeste da ilha)
+// Cortar com ESPACO da madeira -- ver Tree.js
+const TREE_SPAWNS = [
+    { x: CX - 280, y: CY + 220 },
+    { x: CX - 320, y: CY + 180 },
+    { x: CX - 250, y: CY + 260 },
 ];
 
 const FOOD_VALUES = {
@@ -143,6 +152,10 @@ export default class GameScene extends Phaser.Scene {
         if (colisao) {
             this.physics.add.collider(this.goblins, colisao);
         }
+
+        // -- ARVORES (cortar com ESPACO da madeira) --------------------------
+        this.trees = this.physics.add.group();
+        TREE_SPAWNS.forEach(s => this.trees.add(new Tree(this, s.x, s.y)));
 
         this.events.on('enemyDied', (x, y) => {
             const opts = ['wood','rock','wood','rock','carrot','fish','egg'];

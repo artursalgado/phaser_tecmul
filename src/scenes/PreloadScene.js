@@ -78,6 +78,17 @@ export default class PreloadScene extends Phaser.Scene {
             this.load.image(k, `assets/images/${k}.png`));
         ['greenbar_00','greenbar_06','redbar_00','redbar_06','bluebar_00','bluebar_05'].forEach(k =>
             this.load.image(k, `assets/images/${k}.png`));
+
+        // ── JANGADA (EPIC de fuga) ───────────────────────────────────────────
+        // Árvore para cortar (spritesheet com 4 frames, usamos só o frame 0)
+        this.load.spritesheet('spr_deco_tree_01_strip4', 'assets/images/spr_deco_tree_01_strip4.png', {frameWidth: 32, frameHeight: 34});
+        // Destroços/jangada encalhada (imagem única, sem animação)
+        this.load.image('spr_deco_coracle_land', 'assets/images/spr_deco_coracle_land.png');
+        // Ícones placeholder para os itens novos (corda e vela ainda não têm arte própria)
+        this.load.image('rope', 'assets/images/basket.png');
+        this.load.image('sail', 'assets/images/crate_top.png');
+        // Baú de destroços na praia oposta (usa a mesma imagem do crate normal)
+        this.load.image('crate_base', 'assets/images/crate_base.png');
     }
 
     create() {
