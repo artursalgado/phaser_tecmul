@@ -110,14 +110,29 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.toolSprite.setFlipX(this.flipX);
     }
 
+    _energyMult() {
+        // Verifica se o scene tem stats para evitar erros
+        if (!this.scene.stats) return 1;
+
+        const pct = this.scene.stats.energyPct;
+        if (pct > 0.30) {
+            return 1.0; // Normal
+        } else if (pct >= 0.10) {
+            return 0.70; // Cansado
+        } else {
+            return 0.50; // Exausto
+        }
+    }
+
     update(cursors, wasd, time, delta) {
         this._syncLayers();
 
         if (this.isBusy) return;
 
-        // Ataque
+        // Ataque (cooldown escala ao contrário baseado na energia)
+        const effectiveCooldown = this.attackCooldown / this._energyMult();
         if (Phaser.Input.Keyboard.JustDown(this.attackKey) &&
-            time > this.lastAttackTime + this.attackCooldown) {
+            time > this.lastAttackTime + effectiveCooldown) {
             this._doAttack(time);
             return;
         }
@@ -133,10 +148,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         // Normalizar diagonal
         if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
 
-        // Sprint apenas se tiver energia (>0)
-        const hasEnergy = this.scene.stats ? this.scene.stats.energy > 0 : true;
+        // Sprint apenas se tiver energia (>0) e não estiver exausto (energia >= 10%)
+        const hasEnergy = this.scene.stats ? (this.scene.stats.energy > 0 && this.scene.stats.energyPct >= 0.10) : true;
         const running = this.shiftKey.isDown && (dx !== 0 || dy !== 0) && hasEnergy;
-        const speed   = running ? this.speedRun : this.speedWalk;
+        
+        // Velocidade de andar afetada pelo multiplicador de energia
+        const speed   = running ? this.speedRun : this.speedWalk * this._energyMult();
 
         // Consumir energia ao correr
         if (running && this.scene.stats) {
@@ -163,6 +180,19 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             this._stepTimer = 0;
             this.playAnim('idle');
         }
+
+        // Tint visual com base no cansaço (energia abaixo de 30%)
+        if (this.scene.stats) {
+            if (this.scene.stats.energyPct < 0.30) {
+                this.setTint(0xaaaacc);
+                this.hairSprite.setTint(0xaaaacc);
+                this.toolSprite.setTint(0xaaaacc);
+            } else {
+                this.clearTint();
+                this.hairSprite.clearTint();
+                this.toolSprite.clearTint();
+            }
+        }
     }
 
     _doAttack(time) {
@@ -180,12 +210,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         const hitX = this.x + offX;
         const hitY = this.y;
 
+        const mult = this._energyMult();
+
         const goblins = this.scene.goblins?.getChildren() ?? [];
         goblins.forEach(g => {
             if (!g.dead) {
                 const d = Phaser.Math.Distance.Between(hitX, hitY, g.x, g.y);
                 if (d < this.attackRange + 20) {
-                    g.takeDamage(this.attackDamage, this.flipX ? 'left' : 'right');
+                    // Dano de ataque reduzido pelo cansaço
+                    g.takeDamage(this.attackDamage * mult, this.flipX ? 'left' : 'right');
                     this.scene.events.emit('enemyHurt');
                 }
             }
@@ -196,7 +229,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         trees.forEach(t => {
             if (!t.dead) {
                 const d = Phaser.Math.Distance.Between(hitX, hitY, t.x, t.y);
-                if (d < this.attackRange + 20) t.chop();
+                if (d < this.attackRange + 20) {
+                    // Escala a resistência da árvore baseando-se no multiplicador de energia
+                    t.hitsLeft += (1 - mult);
+                    t.chop();
+                }
             }
         });
 
