@@ -170,9 +170,12 @@ export default class IntroScene extends Phaser.Scene {
             },
         });
 
-        this.input.keyboard.on('keydown-ESC',   goToGame);
-        this.input.keyboard.on('keydown-SPACE', goToGame);
-        this.input.once('pointerdown', goToGame);
+        // Delay skip inputs so the menu click doesn't propagate
+        this.time.delayedCall(500, () => {
+            this.input.keyboard.on('keydown-ESC',   goToGame);
+            this.input.keyboard.on('keydown-SPACE', goToGame);
+            this.input.on('pointerdown', goToGame);
+        });
     }
 
     createVignette(W, H) {
