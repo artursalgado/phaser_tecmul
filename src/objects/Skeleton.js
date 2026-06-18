@@ -20,9 +20,9 @@ export default class Skeleton extends Phaser.Physics.Arcade.Sprite {
 
         this.setScale(0.75);
         this.setDepth(4);
-        this.setOrigin(0.5, 0.75);
+        this.setOrigin(0.5, 39 / 64);
         this.body.setSize(18, 16);
-        this.body.setOffset(39, 48);
+        this.body.setOffset(39, 23);
         this.body.setCollideWorldBounds(true);
 
         // Stats do skeleton
@@ -72,7 +72,7 @@ export default class Skeleton extends Phaser.Physics.Arcade.Sprite {
 
     _updateHpBar() {
         const pct = Math.max(0, this.health / this.maxHealth);
-        const by  = this.y - 28 * this.scaleY;
+        const by  = this.y - 17 * this.scaleY;
         this.hpBarBg.setPosition(this.x, by);
         this.hpBar.setPosition(this.x - 11, by);
         this.hpBar.setDisplaySize(22 * pct, 4);
@@ -176,7 +176,7 @@ export default class Skeleton extends Phaser.Physics.Arcade.Sprite {
         });
 
         // Texto de dano
-        const txt = this.scene.add.text(this.x, this.y - 24, `-${amount}`, {
+        const txt = this.scene.add.text(this.x, this.y - 15, `-${amount}`, {
             fontSize: '14px', fill: '#4499ff', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 3
         }).setOrigin(0.5).setDepth(20);
@@ -197,7 +197,7 @@ export default class Skeleton extends Phaser.Physics.Arcade.Sprite {
         this.body.enable = false;
         this.clearTint();
         this.play('skeleton_death', true);
-        burst(this.scene, this.x, this.y - 16, { color: 0xaaddff, count: 10, speed: 110, lifespan: 500, scale: 0.7 });
+        burst(this.scene, this.x, this.y - 7, { color: 0xaaddff, count: 10, speed: 110, lifespan: 500, scale: 0.7 });
         this.once('animationcomplete', () => {
             this.scene.events.emit('enemyDied', this.x, this.y);
             this.destroy();

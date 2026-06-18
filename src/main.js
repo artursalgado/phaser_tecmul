@@ -4,6 +4,7 @@ import IntroScene from './scenes/IntroScene.js';
 import MenuScene from './scenes/MenuScene.js';
 import GameScene from './scenes/GameScene.js';
 import HUDScene from './scenes/HUDScene.js';
+import InventoryScene from './scenes/InventoryScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
 import VictoryScene from './scenes/VictoryScene.js';
 import PauseScene from './scenes/PauseScene.js';
@@ -31,6 +32,7 @@ const config = {
         MenuScene,
         GameScene,
         HUDScene,
+        InventoryScene,
         GameOverScene,
         VictoryScene,
         PauseScene

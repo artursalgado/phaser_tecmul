@@ -28,21 +28,21 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         // Escala 1 = frame 96×64 no mapa. Com zoom 2.5 fica 240×160px no ecrã
         this.setScale(1);
         this.setDepth(5);
-        this.setOrigin(0.5, 0.8);
+        this.setOrigin(0.5, 38 / 64);
 
-        // Hitbox centrada nos pés: frame 96 wide → offset x=40; frame 64 high → offset y=46
+        // Hitbox centrada nos pés: frame 96 wide → offset x=40; frame 64 high → offset y=24
         this.body.setSize(16, 14);
-        this.body.setOffset(40, 46);
+        this.body.setOffset(40, 24);
         this.body.setCollideWorldBounds(true);
 
         // ── Sombra ───────────────────────────────────────────────────────────
-        this.shadow = scene.add.ellipse(x, y + 4, 20, 7, 0x000000, 0.3).setDepth(4);
+        this.shadow = scene.add.ellipse(x, y + 1, 20, 7, 0x000000, 0.3).setDepth(4);
 
         // ── Camadas visuais (sem physics — só seguem a posição) ──────────────
         this.hairSprite = scene.add.sprite(x, y, 'player_hair_idle', 0)
-            .setScale(1).setOrigin(0.5, 0.8).setDepth(6);
+            .setScale(1).setOrigin(0.5, 38 / 64).setDepth(6);
         this.toolSprite = scene.add.sprite(x, y, 'player_tools_idle', 0)
-            .setScale(1).setOrigin(0.5, 0.8).setDepth(7).setVisible(false);
+            .setScale(1).setOrigin(0.5, 38 / 64).setDepth(7).setVisible(false);
 
         // ── Animações ────────────────────────────────────────────────────────
         this._buildAnimations(scene);
@@ -105,7 +105,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     _syncLayers() {
         this.hairSprite.setPosition(this.x, this.y);
         this.toolSprite.setPosition(this.x, this.y);
-        this.shadow.setPosition(this.x, this.y + 6);
+        this.shadow.setPosition(this.x, this.y + 1);
         this.hairSprite.setFlipX(this.flipX);
         this.toolSprite.setFlipX(this.flipX);
     }

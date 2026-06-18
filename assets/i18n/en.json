@@ -3,12 +3,42 @@
     "title": "STRANDED",
     "subtitle": "One island. No way out. Find a path.",
     "play": "▶  PLAY",
-    "credits": "Controls: WASD/Arrows · SHIFT sprint · SPACE attack · E use · 1-8 hotbar"
+    "credits": "Controls: WASD/Arrows · SHIFT sprint · SPACE attack · E use · I inventory · 1-8 hotbar"
   },
   "hud": {
     "use_item": "[E] use item",
-    "hint": "WASD/arrows move  ·  SHIFT sprint  ·  SPACE attack  ·  E use  ·  1-8 hotbar",
+    "hint": "WASD move  ·  SHIFT sprint  ·  SPACE attack  ·  I inventory  ·  1-8 hotbar",
     "inventory_full": "Inventory full!"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "filter_all": "All",
+    "filter_tool": "Tools",
+    "filter_resource": "Resources",
+    "filter_food": "Food",
+    "filter_quest": "Quest",
+    "drop": "Drop",
+    "hint": "[I / ESC] close",
+    "empty": "Click a slot\nto see details"
+  },
+  "item_desc": {
+    "wood":    "Chopped tree logs.\nNeeded to build the raft.",
+    "rock":    "Rocks collected from the island.",
+    "fish":    "Fresh fish. [E] eat:\nRestores hunger and health.",
+    "egg":     "Egg. [E] eat:\nRestores hunger.",
+    "milk":    "Fresh milk. [E] drink:\nRestores thirst and health.",
+    "water":   "Drinkable water. [E] drink:\nRestores thirst.",
+    "carrot":  "Vegetable. [E] eat:\nRestores hunger.",
+    "potato":  "Nutritious potato. [E] eat:\nRestores a lot of hunger.",
+    "wheat":   "Wheat grain. [E] eat:\nRestores some hunger.",
+    "axe":     "Chop trees in the forest.\nEquip in hotbar and use SPACE.",
+    "pickaxe": "Mining tool.",
+    "hammer":  "Construction tool.",
+    "shovel":  "Digs the soil.",
+    "sword":   "Weapon. Increases combat damage.",
+    "rope":    "Needed for the raft.\nFound in crates on the far beach.",
+    "sail":    "Sail for the raft.\nDropped by the skeleton boss.",
+    "book":    "The castaway's journal.\n[E] to read. Contains objectives."
   },
   "gameover": {
     "title": "💀 GAME OVER",
@@ -40,6 +70,8 @@
     "hammer":  "Hammer",
     "shovel":  "Shovel",
     "sword":   "Sword",
+    "rope":    "Rope",
+    "sail":    "Sail",
     "book":    "Journal"
   },
   "book": {
@@ -53,7 +85,7 @@
       ],
       [
         "WHERE TO FIND\n\n🪵 Wood\nChop trees in the forest\nwith SPACE\n\n🪢 Rope\nOpen crates on the\nopposite beach\n\n⛵ Sail\nDefeat the skeleton boss\nin the rocky zone",
-        "CONTROLS\n\nWASD / Arrows — Move\nSHIFT — Sprint\nSPACE — Attack\nE — Use item\nF — Deliver to raft\nQ — Raft log\n1-8 — Hotbar\nESC — Pause"
+        "CONTROLS\n\nWASD / Arrows — Move\nSHIFT — Sprint\nSPACE — Attack\nE — Use item\nF — Deliver to raft\nI — Inventory\nQ — Raft log\n1-8 — Hotbar\nESC — Pause"
       ],
       [
         "TIPS\n\nEat food to restore\nhunger. Drink water\nfor thirst. Sprinting\ncosts energy.\n\nDying loses 90% of\nmaterials. You get 1\nextra life per run.",

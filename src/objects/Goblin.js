@@ -18,11 +18,11 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
 
         this.setScale(1);
         this.setDepth(4);
-        this.setOrigin(0.5, 0.8);
+        this.setOrigin(0.5, 38 / 64);
 
-        // Hitbox igual ao player (frameW=96 → offset x=40; frameH=64 → offset y=46)
+        // Hitbox igual ao player (frameW=96 → offset x=40; frameH=64 → offset y=24)
         this.body.setSize(16, 14);
-        this.body.setOffset(40, 46);
+        this.body.setOffset(40, 24);
         this.body.setCollideWorldBounds(true);
 
         // Tier — define stats e cor
@@ -84,7 +84,7 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
 
     _syncHpBar() {
         const pct = Math.max(0, this.health / this.maxHealth);
-        const by  = this.y - 28;
+        const by  = this.y - 15;
         this.hpBg.setPosition(this.x, by);
         this.hpBar.setPosition(this.x - 12, by);
         this.hpBar.setDisplaySize(24 * pct, 4);
@@ -194,7 +194,7 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
         });
 
         // Texto de dano flutuante
-        const t = this.scene.add.text(this.x, this.y - 24, `-${amount}`, {
+        const t = this.scene.add.text(this.x, this.y - 12, `-${amount}`, {
             fontSize: '14px', fill: '#ff4444', fontStyle: 'bold',
             stroke: '#000', strokeThickness: 3
         }).setOrigin(0.5).setDepth(20);
@@ -213,7 +213,7 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
         this.body.enable = false;
         this.clearTint();
         this.play('goblin_death', true);
-        burst(this.scene, this.x, this.y - 16, { color: 0xcc3322, count: 10, speed: 110, lifespan: 500, scale: 0.7 });
+        burst(this.scene, this.x, this.y - 4, { color: 0xcc3322, count: 10, speed: 110, lifespan: 500, scale: 0.7 });
         this.once('animationcomplete', () => {
             this.scene.events.emit('enemyDied', this.x, this.y);
             this.destroy();

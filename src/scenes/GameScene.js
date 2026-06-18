@@ -73,6 +73,8 @@ export default class GameScene extends Phaser.Scene {
         this._score        = 0;
         this._killCount    = 0;
         this._paused       = false;
+        this._enemiesUnlocked = false; // inimigos só aparecem quando o jogador apanha arma ou 10 madeiras
+        this._pendingEnemySpawns = []; // spawns guardados até ao desbloqueio
     }
 
     create() {
@@ -182,6 +184,7 @@ export default class GameScene extends Phaser.Scene {
             }
             if (e.key === 'f' || e.key === 'F') this._tryBuildRaft();
             if (e.key === 'q' || e.key === 'Q') this.events.emit('toggleQuestLog');
+            if (e.key === 'i' || e.key === 'I') this._toggleInventory();
             if (e.key === 'Escape') this._togglePause();
         });
 
@@ -197,12 +200,10 @@ export default class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.player, this.pickups, this._pickupItem, null, this);
 
         // ── INIMIGOS ──────────────────────────────────────────────────────────
+        // Os inimigos só são criados quando o jogador apanha a primeira arma
+        // OU acumula ≥10 madeiras. Até lá os dados ficam guardados.
         this.goblins = this.physics.add.group();
-        spawns.enemies.forEach(s => {
-            if (s.kind === 'boss')     this._spawnBoss(s.x, s.y);
-            else if (s.kind === 'skeleton') this._spawnSkeleton(s.x, s.y);
-            else                            this._spawnGoblin(s.x, s.y, s.tier);
-        });
+        this._pendingEnemySpawns = spawns.enemies.slice(); // cópia
         if (colisao) this.physics.add.collider(this.goblins, colisao);
         this.physics.add.collider(this.goblins, this.goblins);
 
@@ -331,6 +332,18 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
+    // ── Inventário ────────────────────────────────────────────────────────
+    _toggleInventory() {
+        if (this._paused) return;
+        this._paused = true;
+        this.scene.pause('GameScene');
+        this.scene.launch('InventoryScene');
+        this.scene.get('InventoryScene').events.once('shutdown', () => {
+            this._paused = false;
+            this.scene.resume('GameScene');
+        });
+    }
+
     // ── Spawn goblin ──────────────────────────────────────────────────────
     _spawnGoblin(x, y, tier = 1) {
         const g = new Goblin(this, x, y, tier);
@@ -363,6 +376,8 @@ export default class GameScene extends Phaser.Scene {
         if (added) {
             SoundManager.play('pickup');
             this._score += 10;
+            // Verificar condições de desbloqueio de inimigos
+            this._tryUnlockEnemies(item.itemId);
         }
         const txt = this.add.text(item.x, item.y - 20,
             added ? `+${item.quantity} ${nome}` : I18n.t('hud.inventory_full'),
@@ -372,6 +387,51 @@ export default class GameScene extends Phaser.Scene {
         this.tweens.add({ targets: txt, y: txt.y - 28, alpha: 0,
             duration: 900, onComplete: () => txt.destroy() });
         if (added) item.destroy();
+    }
+
+    // ── Desbloquear inimigos (chamado após cada pickup) ──────────────────
+    _tryUnlockEnemies(lastItemId) {
+        if (this._enemiesUnlocked) return;
+
+        const WEAPONS = ['axe', 'pickaxe', 'sword', 'hammer'];
+        const hasWeapon = WEAPONS.includes(lastItemId);
+        const woodCount = this.quest
+            ? (this.quest.getProgress().find(p => p.id === 'wood')?.current ?? 0)
+            : (this.inventory.slots.reduce((sum, s) => s && s.itemId === 'wood' ? sum + s.qty : sum, 0));
+
+        if (!hasWeapon && woodCount < 10) return;
+
+        // ── Desbloquear! ──────────────────────────────────────────────────
+        this._enemiesUnlocked = true;
+
+        // Mensagem de aviso na tela
+        const W = this.scale.width, H = this.scale.height;
+        const reason = hasWeapon
+            ? (I18n.lang === 'en' ? '⚔ Danger approaches...' : '⚔ O perigo aproxima-se...')
+            : (I18n.lang === 'en' ? '🪵 Your activity draws attention...' : '🪵 A tua atividade chama atenção...');
+        const warn = this.add.text(W / 2, H / 2 - 60, reason, {
+            fontFamily: 'Georgia, serif', fontSize: '18px',
+            fill: '#ff4444', fontStyle: 'bold italic',
+            stroke: '#000000', strokeThickness: 3,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0);
+        this.tweens.add({
+            targets: warn, alpha: 1, duration: 400,
+            yoyo: true, hold: 1800,
+            onComplete: () => warn.destroy()
+        });
+
+        // Camera shake suave
+        this.cameras.main.shake(300, 0.004);
+
+        // Criar todos os inimigos pendentes com pequeno delay
+        this.time.delayedCall(600, () => {
+            this._pendingEnemySpawns.forEach(s => {
+                if (s.kind === 'boss')         this._spawnBoss(s.x, s.y);
+                else if (s.kind === 'skeleton') this._spawnSkeleton(s.x, s.y);
+                else                            this._spawnGoblin(s.x, s.y, s.tier);
+            });
+            this._pendingEnemySpawns = [];
+        });
     }
 
     // ── Usar item selecionado ─────────────────────────────────────────────

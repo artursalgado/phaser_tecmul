@@ -49,53 +49,60 @@ export default class HUDScene extends Phaser.Scene {
             this.slotTexts.push(text);
         }
 
-        // Dica "E para usar"
-        this.add.text(W / 2, hotbarY + 32, '[E] usar item   ·   [Q] registo da jangada', {
+        // Nome do item selecionado (acima do hotbar)
+        this._selectedItemLabel = this.add.text(W / 2, hotbarY - 44, '', {
+            fontSize: '10px', fill: '#f5e0b0', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(3);
+
+        // Dica de controlos
+        this.add.text(W / 2, hotbarY + 32, '[E] usar   ·   [Q] jangada   ·   [I] inventário', {
             fontSize: '9px', fill: '#888888'
         }).setOrigin(0.5).setDepth(3);
 
         //------------------------------------------------------------
         // BARRAS DE STATS (canto superior esquerdo)
         //------------------------------------------------------------
-        const barW = 120;
-        const barH = 10;
-        const barX = 16;
-        const labelX = barX + barW + 6;
-        let barY = 20;
-        const gap = 20;
+        this._SL = {
+            barX: 28, barW: 112, barH: 8,
+            textX: 144,
+            iconX: 16,
+            rows: [16, 35, 54, 73],
+        };
+        const SL = this._SL;
 
-        // Painél de fundo
-        this.add.rectangle(barX + barW / 2, barY + gap * 1.5, barW + 50, 90, 0x000000, 0.4).setDepth(0);
+        // Painel de fundo (estático, desenhado uma vez)
+        const sbg = this.add.graphics().setDepth(1);
+        sbg.fillStyle(0x000000, 0.35);
+        sbg.fillRoundedRect(10, 10, 178, 90, 6);
+        sbg.fillStyle(0x160a00, 0.92);
+        sbg.fillRoundedRect(6, 6, 178, 90, 6);
+        sbg.lineStyle(1.5, 0xc8901a, 0.72);
+        sbg.strokeRoundedRect(6, 6, 178, 90, 6);
+        SL.rows.forEach(y => {
+            sbg.fillStyle(0x070300, 0.9);
+            sbg.fillRoundedRect(SL.barX, y, SL.barW, SL.barH, 4);
+        });
 
-        // VIDA — vermelho
-        this.add.text(barX, barY, '❤', { fontSize: '10px', fill: '#ff4444' }).setDepth(3);
-        this.healthBg  = this.add.rectangle(barX + 14 + barW / 2, barY + 4, barW, barH, 0x550000).setDepth(1);
-        this.healthBar = this.add.rectangle(barX + 14, barY + 4, barW, barH, 0xff4444).setDepth(2).setOrigin(0, 0.5);
-        this.healthTxt = this.add.text(labelX + 14, barY - 1, '', { fontSize: '9px', fill: '#ffaaaa' }).setDepth(3);
+        // Preenchimento dinâmico das barras
+        this._statFillGfx = this.add.graphics().setDepth(2);
 
-        barY += gap;
+        // Ícones canvas
+        [
+            { key: 'stat_health', y: SL.rows[0] },
+            { key: 'stat_hunger', y: SL.rows[1] },
+            { key: 'stat_thirst', y: SL.rows[2] },
+            { key: 'stat_energy', y: SL.rows[3] },
+        ].forEach(({ key, y }) => {
+            this.add.image(SL.iconX, y + SL.barH / 2, key)
+                .setDisplaySize(12, 12).setOrigin(0.5).setDepth(3);
+        });
 
-        // FOME — laranja
-        this.add.text(barX, barY, '🍖', { fontSize: '10px', fill: '#ffaa00' }).setDepth(3);
-        this.hungerBg  = this.add.rectangle(barX + 14 + barW / 2, barY + 4, barW, barH, 0x553300).setDepth(1);
-        this.hungerBar = this.add.rectangle(barX + 14, barY + 4, barW, barH, 0xffaa00).setDepth(2).setOrigin(0, 0.5);
-        this.hungerTxt = this.add.text(labelX + 14, barY - 1, '', { fontSize: '9px', fill: '#ffddaa' }).setDepth(3);
-
-        barY += gap;
-
-        // SEDE — azul
-        this.add.text(barX, barY, '💧', { fontSize: '10px', fill: '#44aaff' }).setDepth(3);
-        this.thirstBg  = this.add.rectangle(barX + 14 + barW / 2, barY + 4, barW, barH, 0x003355).setDepth(1);
-        this.thirstBar = this.add.rectangle(barX + 14, barY + 4, barW, barH, 0x44aaff).setDepth(2).setOrigin(0, 0.5);
-        this.thirstTxt = this.add.text(labelX + 14, barY - 1, '', { fontSize: '9px', fill: '#aaddff' }).setDepth(3);
-
-        barY += gap;
-
-        // ENERGIA — verde
-        this.add.text(barX, barY, '⚡', { fontSize: '10px', fill: '#88ff44' }).setDepth(3);
-        this.energyBg  = this.add.rectangle(barX + 14 + barW / 2, barY + 4, barW, barH, 0x223300).setDepth(1);
-        this.energyBar = this.add.rectangle(barX + 14, barY + 4, barW, barH, 0x88ff44).setDepth(2).setOrigin(0, 0.5);
-        this.energyTxt = this.add.text(labelX + 14, barY - 1, '', { fontSize: '9px', fill: '#ccffaa' }).setDepth(3);
+        // Labels de valor
+        this.healthTxt = this.add.text(SL.textX, SL.rows[0] - 1, '', { fontSize: '9px', fill: '#ffaaaa' }).setDepth(3);
+        this.hungerTxt = this.add.text(SL.textX, SL.rows[1] - 1, '', { fontSize: '9px', fill: '#ffddaa' }).setDepth(3);
+        this.thirstTxt = this.add.text(SL.textX, SL.rows[2] - 1, '', { fontSize: '9px', fill: '#aaddff' }).setDepth(3);
+        this.energyTxt = this.add.text(SL.textX, SL.rows[3] - 1, '', { fontSize: '9px', fill: '#ccffaa' }).setDepth(3);
 
         //------------------------------------------------------------
         // OUVIR EVENTOS
@@ -123,48 +130,62 @@ export default class HUDScene extends Phaser.Scene {
         }).setOrigin(1, 0).setDepth(3);
 
         //------------------------------------------------------------
-        // PAINEL DE OBJETIVOS DA JANGADA (canto superior direito, abaixo dos kills)
+        // PAINEL DE OBJETIVOS DA JANGADA (canto superior direito)
         //------------------------------------------------------------
-        const questY0  = 76;
-        const panelH2  = 72;
-        const panelW2  = 152;
-        this.add.rectangle(W - 8 - panelW2 / 2, questY0 + panelH2 / 2 - 4, panelW2, panelH2, 0x000000, 0.45)
-            .setDepth(2);
-        this.add.text(W - 16, questY0 - 4, 'JANGADA [F]', {
-            fontSize: '9px', fill: '#ffdd66', fontStyle: 'bold'
-        }).setOrigin(1, 0).setDepth(3);
+        const QPX  = W - 8 - 168;
+        const QPY  = 68;
+        const QPW  = 168;
+        const QPH  = 92;
+        const QPHH = 22;
 
-        // Slots visuais por recurso
-        // Configuração: cor preenchido, cor vazio, n slots
+        const qg = this.add.graphics().setDepth(2);
+        qg.fillStyle(0x000000, 0.35);
+        qg.fillRoundedRect(QPX + 4, QPY + 4, QPW, QPH, 6);
+        qg.fillStyle(0x160a00, 0.92);
+        qg.fillRoundedRect(QPX, QPY, QPW, QPH, 6);
+        qg.lineStyle(1.5, 0xc8901a, 0.72);
+        qg.strokeRoundedRect(QPX, QPY, QPW, QPH, 6);
+        qg.fillStyle(0x3d1a00, 1);
+        qg.fillRoundedRect(QPX, QPY, QPW, QPHH, { tl: 6, tr: 6, bl: 0, br: 0 });
+        qg.lineStyle(1, 0xc8901a, 0.6);
+        qg.lineBetween(QPX + 8, QPY + QPHH, QPX + QPW - 8, QPY + QPHH);
+
+        this.add.text(QPX + QPW / 2, QPY + QPHH / 2, 'JANGADA  [F]', {
+            fontSize: '9px', fill: '#f5c070', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(3);
+
         const SLOT_CFG = {
             wood: { color: 0x88cc44, emptyColor: 0x334411, slots: 5 },
             rope: { color: 0xddaa44, emptyColor: 0x443311, slots: 3 },
             sail: { color: 0x44bbff, emptyColor: 0x112233, slots: 1 },
         };
-        const SLOT_SIZE  = 10;
+        const SLOT_SIZE  = 11;
         const SLOT_GAP   = 3;
-        const SLOT_RIGHT = W - 16;
+        const SLOT_RIGHT = QPX + QPW - 8;
 
-        this._raftSlots = {};  // { wood: [rect, ...], rope: [...], sail: [...] }
+        this._raftSlots = {};
 
         if (this.quest) {
             this.quest.getProgress().forEach((p, i) => {
-                const rowY  = questY0 + 10 + i * 22;
+                const rowCY = QPY + QPHH + 11 + i * 22;
                 const cfg   = SLOT_CFG[p.id] || { color: 0xffffff, emptyColor: 0x333333, slots: 1 };
                 const total = cfg.slots;
-                const rowW  = total * SLOT_SIZE + (total - 1) * SLOT_GAP;
 
-                // Label (ícone + nome)
-                this.add.text(SLOT_RIGHT - rowW - 6, rowY + SLOT_SIZE / 2,
-                    `${p.icon} ${p.label}`, { fontSize: '9px', fill: '#aaaaaa' }
-                ).setOrigin(1, 0.5).setDepth(3);
+                // Ícone real do item (sem emoji)
+                this.add.image(QPX + 10, rowCY, p.id)
+                    .setDisplaySize(14, 14).setOrigin(0, 0.5).setDepth(3);
 
-                // Slots (da direita para a esquerda)
+                // Label
+                this.add.text(QPX + 28, rowCY, p.label, {
+                    fontSize: '9px', fill: '#ccbb88'
+                }).setOrigin(0, 0.5).setDepth(3);
+
+                // Slots de progresso
                 const rects = [];
                 for (let s = 0; s < total; s++) {
                     const sx = SLOT_RIGHT - (total - 1 - s) * (SLOT_SIZE + SLOT_GAP);
-                    const r  = this.add.rectangle(sx, rowY + SLOT_SIZE / 2, SLOT_SIZE, SLOT_SIZE, cfg.emptyColor)
-                        .setStrokeStyle(1, 0x555555).setDepth(3);
+                    const r  = this.add.rectangle(sx, rowCY, SLOT_SIZE, SLOT_SIZE, cfg.emptyColor)
+                        .setStrokeStyle(1, 0x665533).setDepth(3);
                     rects.push(r);
                 }
                 this._raftSlots[p.id] = { rects, cfg };
@@ -251,30 +272,41 @@ export default class HUDScene extends Phaser.Scene {
 
             bg.setTexture(i === this.inventory.selectedSlot ? 'itemdisc_02' : 'itemdisc_01');
         });
+
+        // Atualizar label com nome do item selecionado
+        if (this._selectedItemLabel) {
+            const sel    = this.inventory.slots[this.inventory.selectedSlot];
+            const selDef = sel ? ITEM_DB[sel.itemId] : null;
+            this._selectedItemLabel.setText(selDef ? selDef.name : '');
+        }
     }
 
     //----------------------------------------------------------------
     // ATUALIZAR BARRAS DE STATS
     //----------------------------------------------------------------
     _refreshBars() {
-        const s = this.stats;
-        const barW = 120;
+        const s   = this.stats;
+        const SL  = this._SL;
+        const gfx = this._statFillGfx;
+        gfx.clear();
 
-        this.healthBar.setDisplaySize(Math.max(0, barW * s.healthPct), 10);
-        this.hungerBar.setDisplaySize(Math.max(0, barW * s.hungerPct), 10);
-        this.thirstBar.setDisplaySize(Math.max(0, barW * s.thirstPct), 10);
-        this.energyBar.setDisplaySize(Math.max(0, barW * s.energyPct), 10);
+        const fills = [
+            { pct: s.healthPct, color: s.healthPct < 0.25 ? 0xff0000 : 0xff4444 },
+            { pct: s.hungerPct, color: s.hungerPct < 0.20 ? 0xff6600 : 0xffaa00 },
+            { pct: s.thirstPct, color: s.thirstPct < 0.20 ? 0x0066ff : 0x44aaff },
+            { pct: s.energyPct, color: 0x88ff44 },
+        ];
+
+        SL.rows.forEach((y, i) => {
+            const fw = Math.max(8, SL.barW * fills[i].pct);
+            gfx.fillStyle(fills[i].color, 1);
+            gfx.fillRoundedRect(SL.barX, y, fw, SL.barH, 4);
+        });
 
         this.healthTxt.setText(Math.ceil(s.health)  + '/' + s.maxHealth);
         this.hungerTxt.setText(Math.ceil(s.hunger)  + '/' + s.maxHunger);
         this.thirstTxt.setText(Math.ceil(s.thirst)  + '/' + s.maxThirst);
         this.energyTxt.setText(Math.ceil(s.energy)  + '/' + s.maxEnergy);
-
-        // Piscar vermelho quando crítico
-        const pct = s.healthPct;
-        this.healthBar.setFillStyle(pct < 0.25 ? 0xff0000 : 0xff4444);
-        this.hungerBar.setFillStyle(s.hungerPct < 0.2 ? 0xff6600 : 0xffaa00);
-        this.thirstBar.setFillStyle(s.thirstPct < 0.2 ? 0x0066ff : 0x44aaff);
     }
 
     //----------------------------------------------------------------

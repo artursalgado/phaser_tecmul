@@ -3,12 +3,42 @@
     "title": "STRANDED",
     "subtitle": "Uma ilha. Sem saída. Encontra um caminho.",
     "play": "▶  JOGAR",
-    "credits": "Controlos: WASD/Setas · SHIFT correr · ESPAÇO atacar · E usar · 1-8 hotbar"
+    "credits": "Controlos: WASD/Setas · SHIFT correr · ESPAÇO atacar · E usar · I inventário · 1-8 hotbar"
   },
   "hud": {
     "use_item": "[E] usar item",
-    "hint": "WASD/setas mover  ·  SHIFT correr  ·  ESPAÇO atacar  ·  E usar  ·  1-8 hotbar",
+    "hint": "WASD mover  ·  SHIFT correr  ·  ESPAÇO atacar  ·  I inventário  ·  1-8 hotbar",
     "inventory_full": "Inventário cheio!"
+  },
+  "inventory": {
+    "title": "Inventário",
+    "filter_all": "Tudo",
+    "filter_tool": "Ferram.",
+    "filter_resource": "Recursos",
+    "filter_food": "Comida",
+    "filter_quest": "Quest",
+    "drop": "Largar",
+    "hint": "[I / ESC] fechar",
+    "empty": "Clica num slot\npara ver detalhes"
+  },
+  "item_desc": {
+    "wood":    "Troncos cortados de árvore.\nUsado para construir a jangada.",
+    "rock":    "Pedras recolhidas da ilha.",
+    "fish":    "Peixe fresco. [E] comer:\nRestaura fome e vida.",
+    "egg":     "Ovo. [E] comer:\nRestaura fome.",
+    "milk":    "Leite. [E] beber:\nRestaura sede e vida.",
+    "water":   "Água potável. [E] beber:\nRestaura sede.",
+    "carrot":  "Legume. [E] comer:\nRestaura fome.",
+    "potato":  "Batata nutritiva. [E] comer:\nRestaura bastante fome.",
+    "wheat":   "Grão de trigo. [E] comer:\nRestaura alguma fome.",
+    "axe":     "Corta árvores na floresta.\nEquipa no hotbar e usa ESPAÇO.",
+    "pickaxe": "Ferramenta de mina.",
+    "hammer":  "Ferramenta de construção.",
+    "shovel":  "Escava o solo.",
+    "sword":   "Arma. Aumenta dano no combate.",
+    "rope":    "Necessária para a jangada.\nEncontra nos baús da praia oposta.",
+    "sail":    "Vela da jangada.\nDrop do boss skeleton.",
+    "book":    "O diário do náufrago.\n[E] para ler. Contém objetivos."
   },
   "gameover": {
     "title": "💀 GAME OVER",
@@ -40,6 +70,8 @@
     "hammer":  "Martelo",
     "shovel":  "Pá",
     "sword":   "Espada",
+    "rope":    "Corda",
+    "sail":    "Vela",
     "book":    "Diário"
   },
   "book": {
@@ -53,7 +85,7 @@
       ],
       [
         "ONDE ENCONTRAR\n\n🪵 Madeira\nCorta árvores na floresta\ncom ESPAÇO\n\n🪢 Corda\nAbre baús na praia\noposta\n\n⛵ Vela\nDerrota o boss skeleton\nna zona rochosa",
-        "CONTROLOS\n\nWASD / Setas — Mover\nSHIFT — Correr\nESPAÇO — Atacar\nE — Usar item\nF — Entregar à jangada\nQ — Registo da jangada\n1-8 — Hotbar\nESC — Pausa"
+        "CONTROLOS\n\nWASD / Setas — Mover\nSHIFT — Correr\nESPAÇO — Atacar\nE — Usar item\nF — Entregar à jangada\nI — Inventário\nQ — Registo da jangada\n1-8 — Hotbar\nESC — Pausa"
       ],
       [
         "DICAS\n\nCome para repor fome.\nBebe água para a sede.\nCorrer gasta energia.\n\nSe morreres perdes 90%\ndos materiais. Tens 1\nvida extra por tentativa.",

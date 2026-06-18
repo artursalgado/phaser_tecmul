@@ -1,32 +1,27 @@
-// Base de dados de itens do jogo
 export const ITEM_DB = {
-    wood:    { name: 'Madeira',  icon: 'wood',    maxStack: 99 },
-    rock:    { name: 'Pedra',    icon: 'rock',    maxStack: 99 },
-    fish:    { name: 'Peixe',    icon: 'fish',    maxStack: 99 },
-    egg:     { name: 'Ovo',      icon: 'egg',     maxStack: 99 },
-    milk:    { name: 'Leite',    icon: 'milk',    maxStack: 99 },
-    water:   { name: 'Água',     icon: 'water',   maxStack: 99 },
-    // Vegetais — carregados com a key sem "_00" no PreloadScene
-    carrot:  { name: 'Cenoura',  icon: 'carrot',  maxStack: 99 },
-    potato:  { name: 'Batata',   icon: 'potato',  maxStack: 99 },
-    wheat:   { name: 'Trigo',    icon: 'wheat',   maxStack: 99 },
-    // Ferramentas
-    axe:     { name: 'Machado',  icon: 'axe',     maxStack: 1  },
-    pickaxe: { name: 'Picareta', icon: 'pickaxe', maxStack: 1  },
-    hammer:  { name: 'Martelo',  icon: 'hammer',  maxStack: 1  },
-    shovel:  { name: 'Pá',       icon: 'shovel',  maxStack: 1  },
-    sword:   { name: 'Espada',   icon: 'sword',   maxStack: 1  },
-    // Recursos da jangada (commit 2 da EPIC de fuga)
-    rope:    { name: 'Corda',    icon: 'rope',    maxStack: 99 },
-    sail:    { name: 'Vela',     icon: 'sail',    maxStack: 99 },
-    // Diário do náufrago
-    book:    { name: 'Diário',   icon: 'book',    maxStack: 1  },
+    wood:    { name: 'Madeira',  icon: 'wood',    maxStack: 99, category: 'resource', rarity: 'common' },
+    rock:    { name: 'Pedra',    icon: 'rock',    maxStack: 99, category: 'resource', rarity: 'common' },
+    fish:    { name: 'Peixe',    icon: 'fish',    maxStack: 99, category: 'food',     rarity: 'common' },
+    egg:     { name: 'Ovo',      icon: 'egg',     maxStack: 99, category: 'food',     rarity: 'common' },
+    milk:    { name: 'Leite',    icon: 'milk',    maxStack: 99, category: 'food',     rarity: 'common' },
+    water:   { name: 'Água',     icon: 'water',   maxStack: 99, category: 'food',     rarity: 'common' },
+    carrot:  { name: 'Cenoura',  icon: 'carrot',  maxStack: 99, category: 'food',     rarity: 'common' },
+    potato:  { name: 'Batata',   icon: 'potato',  maxStack: 99, category: 'food',     rarity: 'common' },
+    wheat:   { name: 'Trigo',    icon: 'wheat',   maxStack: 99, category: 'food',     rarity: 'common' },
+    axe:     { name: 'Machado',  icon: 'axe',     maxStack: 1,  category: 'tool',     rarity: 'common' },
+    pickaxe: { name: 'Picareta', icon: 'pickaxe', maxStack: 1,  category: 'tool',     rarity: 'common' },
+    hammer:  { name: 'Martelo',  icon: 'hammer',  maxStack: 1,  category: 'tool',     rarity: 'common' },
+    shovel:  { name: 'Pá',       icon: 'shovel',  maxStack: 1,  category: 'tool',     rarity: 'common' },
+    sword:   { name: 'Espada',   icon: 'sword',   maxStack: 1,  category: 'tool',     rarity: 'rare'   },
+    rope:    { name: 'Corda',    icon: 'rope',    maxStack: 99, category: 'resource', rarity: 'rare'   },
+    sail:    { name: 'Vela',     icon: 'sail',    maxStack: 99, category: 'resource', rarity: 'rare'   },
+    book:    { name: 'Diário',   icon: 'book',    maxStack: 1,  category: 'quest',    rarity: 'quest'  },
 };
 
 export default class Inventory extends Phaser.Events.EventEmitter {
     constructor(size = 8) {
         super();
-        this.size = size;
+        this.size  = size;
         this.slots = new Array(size).fill(null);
         this.selectedSlot = 0;
     }
@@ -48,9 +43,9 @@ export default class Inventory extends Phaser.Events.EventEmitter {
         while (remaining > 0) {
             const idx = this.slots.findIndex(s => s === null);
             if (idx === -1) { this.emit('full', itemId, remaining); break; }
-            const toAdd       = Math.min(maxStack, remaining);
-            this.slots[idx]   = { itemId, qty: toAdd };
-            remaining        -= toAdd;
+            const toAdd     = Math.min(maxStack, remaining);
+            this.slots[idx] = { itemId, qty: toAdd };
+            remaining      -= toAdd;
         }
 
         const added = qty - remaining;
@@ -73,6 +68,22 @@ export default class Inventory extends Phaser.Events.EventEmitter {
         }
         this.emit('changed', this.slots);
         return remaining === 0;
+    }
+
+    dropItem(idx) {
+        if (idx < 0 || idx >= this.slots.length || !this.slots[idx]) return;
+        this.slots[idx] = null;
+        this.emit('changed', this.slots);
+    }
+
+    moveSlot(fromIdx, toIdx) {
+        if (fromIdx === toIdx) return;
+        if (fromIdx < 0 || toIdx < 0) return;
+        if (fromIdx >= this.slots.length || toIdx >= this.slots.length) return;
+        const tmp          = this.slots[fromIdx];
+        this.slots[fromIdx] = this.slots[toIdx];
+        this.slots[toIdx]  = tmp;
+        this.emit('changed', this.slots);
     }
 
     getQuantity(itemId) {

@@ -76,26 +76,11 @@ export default class MenuScene extends Phaser.Scene {
 
         const W = 960, H = 640;
 
-        // ── Fundo noite com gradiente ─────────────────────────────────────────
-        this.add.rectangle(W/2, H/2, W, H, 0x060812);
-        // Gradiente simulado (overlay escuro em baixo)
-        this.add.rectangle(W/2, H * 0.78, W, H * 0.44, 0x020408, 0.8);
+        // ── Imagem de Fundo (intro_praia) ─────────────────────────────────────
+        this.add.image(W/2, H/2, 'intro_praia').setDisplaySize(W, H);
 
-        // ── Estrelas ──────────────────────────────────────────────────────────
-        for (let i = 0; i < 70; i++) {
-            const size = Phaser.Math.Between(1, 2);
-            const s = this.add.circle(
-                Phaser.Math.Between(0, W),
-                Phaser.Math.Between(0, H * 0.65),
-                size, 0xffffff, Phaser.Math.FloatBetween(0.3, 0.9)
-            );
-            this.tweens.add({
-                targets: s, alpha: Phaser.Math.FloatBetween(0.05, 0.3),
-                duration: Phaser.Math.Between(1200, 3500),
-                yoyo: true, repeat: -1,
-                delay: Phaser.Math.Between(0, 2500)
-            });
-        }
+        // Overlay escuro suave para dar contraste ao menu
+        this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.45);
 
         // ── Painel scroll RPG (NineSlice com scroll_rpg 128×176, bordas 16px) ─
         const scrollH = 480;
