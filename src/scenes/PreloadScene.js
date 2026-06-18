@@ -101,6 +101,17 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('book', 'assets/images/plan alt.png');
         // Baú de destroços na praia oposta (usa a mesma imagem do crate normal)
         this.load.image('crate_base', 'assets/images/crate_base.png');
+
+        // ── NOVOS ASSETS UI (RPG UI / Books) ──────────────────────────────────
+        this.load.image('book_bg', 'assets/images/ui/book_bg.png');
+        this.load.image('panel_brown', 'assets/images/ui/panel_brown.png');
+        this.load.spritesheet('icons', 'assets/images/ui/icons.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.image('menu_scroll', 'assets/images/ui/menu_scroll.png');
+        this.load.image('button_normal', 'assets/images/ui/button_normal.png');
+        this.load.image('button_hover', 'assets/images/ui/button_hover.png');
+        this.load.image('panel_win_loose', 'assets/images/ui/panel_win_loose.png');
+        this.load.image('sound_on', 'assets/images/ui/sound_on.png');
+        this.load.image('sound_off', 'assets/images/ui/sound_off.png');
     }
 
     create() {

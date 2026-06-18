@@ -386,26 +386,14 @@ export default class HUDScene extends Phaser.Scene {
         this._bookDim = this.add.rectangle(cx, cy, W, H, 0x000000, 0.6)
             .setDepth(70).setVisible(false);
 
-        // Book cover (two-tone pages)
-        const coverL = this.add.rectangle(cx - bookW / 4, cy, bookW / 2, bookH, 0xf5e6c8)
-            .setStrokeStyle(3, 0x8b6914).setDepth(71).setVisible(false);
-        const coverR = this.add.rectangle(cx + bookW / 4, cy, bookW / 2, bookH, 0xede0c8)
-            .setStrokeStyle(3, 0x8b6914).setDepth(71).setVisible(false);
+        // Book background image
+        this.bookBg = this.add.image(cx, cy, 'book_bg')
+            .setDisplaySize(bookW, bookH)
+            .setDepth(71).setVisible(false);
 
-        // Spine
-        const spine = this.add.rectangle(cx, cy, 6, bookH - 8, 0x6b4c12)
+        // Book frame border using NineSlice
+        this.bookFrame = this.add.nineslice(cx, cy, 'panel_brown', null, bookW + 20, bookH + 20, 16, 16, 16, 16)
             .setDepth(72).setVisible(false);
-
-        // Decorative lines (page texture)
-        const lineGroup = [];
-        for (let i = 0; i < 14; i++) {
-            const y = cy - bookH / 2 + 50 + i * 22;
-            const ll = this.add.rectangle(cx - bookW / 4, y, pageW, 1, 0xd4c4a0, 0.3)
-                .setDepth(72).setVisible(false);
-            const lr = this.add.rectangle(cx + bookW / 4, y, pageW, 1, 0xd4c4a0, 0.3)
-                .setDepth(72).setVisible(false);
-            lineGroup.push(ll, lr);
-        }
 
         // Title
         this._bookTitle = this.add.text(cx, cy - bookH / 2 + 22, '', {
@@ -431,20 +419,20 @@ export default class HUDScene extends Phaser.Scene {
             color: '#8b7355', align: 'center',
         }).setOrigin(0.5).setDepth(73).setVisible(false);
 
-        // Navigation arrows
-        this._bookPrevBtn = this.add.text(cx - bookW / 2 + 16, cy + bookH / 2 - 22, '◀', {
-            fontSize: '18px', color: '#6b4c12',
-        }).setDepth(73).setVisible(false).setInteractive({ useHandCursor: true });
+        // Navigation arrows using sprites (frame 28 is left arrow, frame 29 is right arrow)
+        this._bookPrevBtn = this.add.sprite(cx - bookW / 2 + 30, cy + bookH / 2 - 25, 'icons', 28)
+            .setScale(2.5)
+            .setDepth(73).setVisible(false).setInteractive({ useHandCursor: true });
         this._bookPrevBtn.on('pointerdown', () => this._bookFlipPage(-1));
-        this._bookPrevBtn.on('pointerover', () => this._bookPrevBtn.setColor('#aa7722'));
-        this._bookPrevBtn.on('pointerout',  () => this._bookPrevBtn.setColor('#6b4c12'));
+        this._bookPrevBtn.on('pointerover', () => this._bookPrevBtn.setTint(0xddaa44));
+        this._bookPrevBtn.on('pointerout',  () => this._bookPrevBtn.clearTint());
 
-        this._bookNextBtn = this.add.text(cx + bookW / 2 - 16, cy + bookH / 2 - 22, '▶', {
-            fontSize: '18px', color: '#6b4c12',
-        }).setOrigin(1, 0).setDepth(73).setVisible(false).setInteractive({ useHandCursor: true });
+        this._bookNextBtn = this.add.sprite(cx + bookW / 2 - 30, cy + bookH / 2 - 25, 'icons', 29)
+            .setScale(2.5)
+            .setDepth(73).setVisible(false).setInteractive({ useHandCursor: true });
         this._bookNextBtn.on('pointerdown', () => this._bookFlipPage(1));
-        this._bookNextBtn.on('pointerover', () => this._bookNextBtn.setColor('#aa7722'));
-        this._bookNextBtn.on('pointerout',  () => this._bookNextBtn.setColor('#6b4c12'));
+        this._bookNextBtn.on('pointerover', () => this._bookNextBtn.setTint(0xddaa44));
+        this._bookNextBtn.on('pointerout',  () => this._bookNextBtn.clearTint());
 
         // Close hint
         this._bookCloseHint = this.add.text(cx, cy + bookH / 2 + 14, '', {
@@ -453,8 +441,7 @@ export default class HUDScene extends Phaser.Scene {
 
         // Gather all elements
         this.bookGroup.addMultiple([
-            this._bookDim, coverL, coverR, spine,
-            ...lineGroup,
+            this._bookDim, this.bookBg, this.bookFrame,
             this._bookTitle, this._bookLeftTxt, this._bookRightTxt,
             this._bookPageNum, this._bookPrevBtn, this._bookNextBtn,
             this._bookCloseHint,

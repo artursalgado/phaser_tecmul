@@ -35,41 +35,63 @@ export default class VictoryScene extends Phaser.Scene {
             });
         }
 
-        const titulo = this.add.text(W/2, H/2 - 160, I18n.t('victory.title'), {
-            fontSize: '64px', fill: '#f0e68c', fontStyle: 'bold'
-        }).setOrigin(0.5).setAlpha(0);
+        // Moldura/Painel de fundo usando NineSlice
+        const panel = this.add.nineslice(W/2, H/2 - 20, 'panel_win_loose', null, 500, 360, 16, 16, 16, 16)
+            .setAlpha(0).setDepth(5);
 
-        const sub = this.add.text(W/2, H/2 - 80, I18n.t('victory.subtitle'), {
-            fontSize: '22px', fill: '#ddddaa', fontStyle: 'italic'
-        }).setOrigin(0.5).setAlpha(0);
+        const titulo = this.add.text(W/2, H/2 - 120, I18n.t('victory.title'), {
+            fontFamily: 'Georgia, serif', fontSize: '56px', fill: '#6e4c13', fontStyle: 'bold'
+        }).setOrigin(0.5).setAlpha(0).setDepth(6);
+
+        const sub = this.add.text(W/2, H/2 - 55, I18n.t('victory.subtitle'), {
+            fontFamily: 'Georgia, serif', fontSize: '18px', fill: '#5c3d24', fontStyle: 'italic'
+        }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
         const mm = Math.floor(time / 60), ss = String(time % 60).padStart(2,'0');
         const statsLabel = I18n.lang === 'en'
             ? ('Time: ' + mm + ':' + ss + '  |  Kills: ' + kills + '  |  Score: ' + score)
             : ('Tempo: ' + mm + ':' + ss + '  |  Abates: ' + kills + '  |  Pontos: ' + score);
 
-        const statsText = this.add.text(W/2, H/2 - 30, statsLabel, {
-            fontSize: '18px', fill: '#ffffff', fontStyle: 'bold'
-        }).setOrigin(0.5).setAlpha(0);
+        const statsText = this.add.text(W/2, H/2 - 10, statsLabel, {
+            fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#3d2314', fontStyle: 'bold'
+        }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
-        const btnRestart = this.add.text(W/2, H/2 + 60, I18n.t('victory.restart'), {
-            fontSize: '28px', fill: '#f0e68c', fontStyle: 'bold'
-        }).setOrigin(0.5).setAlpha(0).setInteractive({ useHandCursor: true });
-        btnRestart.on('pointerover', () => btnRestart.setStyle({ fill: '#ffffff' }));
-        btnRestart.on('pointerout',  () => btnRestart.setStyle({ fill: '#f0e68c' }));
-        btnRestart.on('pointerdown', () => {
+        const btnRestartBg = this.add.nineslice(W/2, H/2 + 55, 'button_normal', null, 240, 44, 10, 10, 10, 10)
+            .setAlpha(0).setDepth(6).setInteractive({ useHandCursor: true });
+        const btnRestartTxt = this.add.text(W/2, H/2 + 55, I18n.t('victory.restart'), {
+            fontFamily: 'Georgia, serif', fontSize: '16px', fill: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(0.5).setAlpha(0).setDepth(7);
+
+        btnRestartBg.on('pointerover', () => {
+            btnRestartBg.setTexture('button_hover');
+            this.tweens.add({ targets: [btnRestartBg, btnRestartTxt], scaleX: 1.05, scaleY: 1.05, duration: 100 });
+        });
+        btnRestartBg.on('pointerout', () => {
+            btnRestartBg.setTexture('button_normal');
+            this.tweens.add({ targets: [btnRestartBg, btnRestartTxt], scaleX: 1, scaleY: 1, duration: 100 });
+        });
+        btnRestartBg.on('pointerdown', () => {
             SoundManager.play('menu_click');
             this.scene.stop('VictoryScene');
             this.scene.start('GameScene');
             this.scene.launch('HUDScene');
         });
 
-        const btnMenu = this.add.text(W/2, H/2 + 110, I18n.t('victory.menu'), {
-            fontSize: '20px', fill: '#888888'
-        }).setOrigin(0.5).setAlpha(0).setInteractive({ useHandCursor: true });
-        btnMenu.on('pointerover', () => btnMenu.setStyle({ fill: '#cccccc' }));
-        btnMenu.on('pointerout',  () => btnMenu.setStyle({ fill: '#888888' }));
-        btnMenu.on('pointerdown', () => {
+        const btnMenuBg = this.add.nineslice(W/2, H/2 + 110, 'button_normal', null, 240, 44, 10, 10, 10, 10)
+            .setAlpha(0).setDepth(6).setInteractive({ useHandCursor: true });
+        const btnMenuTxt = this.add.text(W/2, H/2 + 110, I18n.t('victory.menu'), {
+            fontFamily: 'Georgia, serif', fontSize: '16px', fill: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(0.5).setAlpha(0).setDepth(7);
+
+        btnMenuBg.on('pointerover', () => {
+            btnMenuBg.setTexture('button_hover');
+            this.tweens.add({ targets: [btnMenuBg, btnMenuTxt], scaleX: 1.05, scaleY: 1.05, duration: 100 });
+        });
+        btnMenuBg.on('pointerout', () => {
+            btnMenuBg.setTexture('button_normal');
+            this.tweens.add({ targets: [btnMenuBg, btnMenuTxt], scaleX: 1, scaleY: 1, duration: 100 });
+        });
+        btnMenuBg.on('pointerdown', () => {
             SoundManager.play('menu_click');
             this.scene.stop('VictoryScene');
             this.scene.start('MenuScene');
@@ -102,7 +124,7 @@ export default class VictoryScene extends Phaser.Scene {
             if (i >= linhas.length) {
                 cutsceneText.destroy();
                 this.tweens.add({
-                    targets: [titulo, sub, statsText, btnRestart, btnMenu],
+                    targets: [panel, titulo, sub, statsText, btnRestartBg, btnRestartTxt, btnMenuBg, btnMenuTxt],
                     alpha: 1, duration: 600
                 });
                 return;

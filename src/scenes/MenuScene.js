@@ -31,93 +31,110 @@ export default class MenuScene extends Phaser.Scene {
             });
         }
 
+        // Fundo do menu - pergaminho scroll
+        this.menuBg = this.add.nineslice(W/2, H/2 - 10, 'menu_scroll', null, 500, 480, 24, 24, 32, 32).setDepth(1);
+
         // Título
-        const titulo = this.add.text(W/2, 170, I18n.t('menu.title'), {
-            fontSize: '80px', fill: '#ffffff', fontStyle: 'bold',
-            stroke: '#3399ff', strokeThickness: 2
-        }).setOrigin(0.5);
+        const titulo = this.add.text(W/2, H/2 - 160, I18n.t('menu.title'), {
+            fontFamily: 'Georgia, serif', fontSize: '56px', fill: '#3d2314', fontStyle: 'bold',
+            align: 'center'
+        }).setOrigin(0.5).setDepth(2);
 
         // Subtítulo
-        const subtitulo = this.add.text(W/2, 268, I18n.t('menu.subtitle'), {
-            fontSize: '18px', fill: '#aaaacc', fontStyle: 'italic'
-        }).setOrigin(0.5);
+        const subtitulo = this.add.text(W/2, H/2 - 90, I18n.t('menu.subtitle'), {
+            fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#5c3d24', fontStyle: 'italic'
+        }).setOrigin(0.5).setDepth(2);
 
         // Linha decorativa
-        this.add.rectangle(W/2, 310, 300, 2, 0x3366aa, 0.6);
+        const divider = this.add.rectangle(W/2, H/2 - 60, 320, 2, 0x5c3d24, 0.4).setDepth(2);
 
         // Botão Jogar
-        const botaoJogar = this.add.text(W/2, 380, I18n.t('menu.play'), {
-            fontSize: '38px', fill: '#f0e68c', fontStyle: 'bold'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const botaoJogarBg = this.add.nineslice(W/2, H/2 + 10, 'button_normal', null, 240, 52, 10, 10, 10, 10)
+            .setDepth(2).setInteractive({ useHandCursor: true });
+        const botaoJogarTxt = this.add.text(W/2, H/2 + 10, I18n.t('menu.play'), {
+            fontFamily: 'Georgia, serif', fontSize: '22px', fill: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(3);
 
-        botaoJogar.on('pointerover', () => {
-            botaoJogar.setStyle({ fill: '#ffffff' });
-            this.tweens.add({ targets: botaoJogar, scaleX: 1.08, scaleY: 1.08, duration: 120 });
+        botaoJogarBg.on('pointerover', () => {
+            botaoJogarBg.setTexture('button_hover');
+            this.tweens.add({ targets: [botaoJogarBg, botaoJogarTxt], scaleX: 1.05, scaleY: 1.05, duration: 100 });
         });
-        botaoJogar.on('pointerout', () => {
-            botaoJogar.setStyle({ fill: '#f0e68c' });
-            this.tweens.add({ targets: botaoJogar, scaleX: 1, scaleY: 1, duration: 120 });
+        botaoJogarBg.on('pointerout', () => {
+            botaoJogarBg.setTexture('button_normal');
+            this.tweens.add({ targets: [botaoJogarBg, botaoJogarTxt], scaleX: 1, scaleY: 1, duration: 100 });
         });
-        botaoJogar.on('pointerdown', () => {
+        botaoJogarBg.on('pointerdown', () => {
             SoundManager.play('menu_click');
             SoundManager.resume();
             SoundManager.stopBgMusic();
             this.time.delayedCall(120, () => this.scene.start('IntroScene'));
         });
 
+        const botaoJogar = botaoJogarTxt;
+
         // ── SELETOR DE LÍNGUA ──────────────────────────────────────────────
-        const langBtnPT = this.add.text(W/2 - 70, H - 52, '🇵🇹 PT', {
-            fontSize: '20px',
-            fill: I18n.lang === 'pt' ? '#ffffff' : '#444466'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const langBtnPTBg = this.add.nineslice(W/2 - 70, H/2 + 100, 'button_normal', null, 110, 42, 10, 10, 10, 10)
+            .setDepth(2).setInteractive({ useHandCursor: true });
+        const langBtnPTTxt = this.add.text(W/2 - 70, H/2 + 100, '🇵🇹 PT', {
+            fontFamily: 'Georgia, serif', fontSize: '14px', fill: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(3);
 
-        const langBtnEN = this.add.text(W/2 + 70, H - 52, '🇬🇧 EN', {
-            fontSize: '20px',
-            fill: I18n.lang === 'en' ? '#ffffff' : '#444466'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-        // Separador entre botões de língua
-        this.add.text(W/2, H - 52, '|', {
-            fontSize: '20px', fill: '#333355'
-        }).setOrigin(0.5);
+        const langBtnENBg = this.add.nineslice(W/2 + 70, H/2 + 100, 'button_normal', null, 110, 42, 10, 10, 10, 10)
+            .setDepth(2).setInteractive({ useHandCursor: true });
+        const langBtnENTxt = this.add.text(W/2 + 70, H/2 + 100, '🇬🇧 EN', {
+            fontFamily: 'Georgia, serif', fontSize: '14px', fill: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(3);
 
         const refreshLang = () => {
             titulo.setText(I18n.t('menu.title'));
             subtitulo.setText(I18n.t('menu.subtitle'));
             botaoJogar.setText(I18n.t('menu.play'));
             creditos.setText(I18n.t('menu.credits'));
-            muteBtn.setText(SoundManager.muted ? '🔇' : '🔊');
-            langBtnPT.setStyle({ fill: I18n.lang === 'pt' ? '#ffffff' : '#444466' });
-            langBtnEN.setStyle({ fill: I18n.lang === 'en' ? '#ffffff' : '#444466' });
+            muteBtn.setTexture(SoundManager.muted ? 'sound_off' : 'sound_on');
+            
+            if (I18n.lang === 'pt') {
+                langBtnPTBg.setTexture('button_hover').clearTint();
+                langBtnPTTxt.setStyle({ fill: '#ffffff' });
+                langBtnENBg.setTexture('button_normal').setTint(0x888888);
+                langBtnENTxt.setStyle({ fill: '#cccccc' });
+            } else {
+                langBtnENBg.setTexture('button_hover').clearTint();
+                langBtnENTxt.setStyle({ fill: '#ffffff' });
+                langBtnPTBg.setTexture('button_normal').setTint(0x888888);
+                langBtnPTTxt.setStyle({ fill: '#cccccc' });
+            }
         };
 
-        langBtnPT.on('pointerdown', () => {
+        langBtnPTBg.on('pointerdown', () => {
             SoundManager.play('menu_click');
             I18n.setLang('pt');
             refreshLang();
         });
-        langBtnEN.on('pointerdown', () => {
+        langBtnENBg.on('pointerdown', () => {
             SoundManager.play('menu_click');
             I18n.setLang('en');
             refreshLang();
         });
 
         // ── BOTÃO MUTE ────────────────────────────────────────────────────
-        const muteBtn = this.add.text(W - 24, 16, SoundManager.muted ? '🔇' : '🔊', {
-            fontSize: '22px'
-        }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+        const muteBtn = this.add.image(W - 36, 36, SoundManager.muted ? 'sound_off' : 'sound_on')
+            .setScale(1.5)
+            .setInteractive({ useHandCursor: true });
 
         muteBtn.on('pointerdown', () => {
             SoundManager.toggleMute();
-            muteBtn.setText(SoundManager.muted ? '🔇' : '🔊');
+            muteBtn.setTexture(SoundManager.muted ? 'sound_off' : 'sound_on');
         });
         muteBtn.on('pointerover', () => muteBtn.setAlpha(0.7));
         muteBtn.on('pointerout',  () => muteBtn.setAlpha(1));
 
         // Dica de controlos
-        const creditos = this.add.text(W/2, H - 22, I18n.t('menu.credits'), {
-            fontSize: '11px', fill: '#444466'
-        }).setOrigin(0.5);
+        const creditos = this.add.text(W/2, H/2 + 180, I18n.t('menu.credits'), {
+            fontFamily: 'Georgia, serif', fontSize: '11px', fill: '#5c3d24', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(2);
+
+        // Initialize language button states
+        refreshLang();
 
         // Versão
         this.add.text(16, H - 16, 'v0.3', {
