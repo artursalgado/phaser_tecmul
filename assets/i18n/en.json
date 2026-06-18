@@ -39,6 +39,26 @@
     "pickaxe": "Pickaxe",
     "hammer":  "Hammer",
     "shovel":  "Shovel",
-    "sword":   "Sword"
+    "sword":   "Sword",
+    "book":    "Journal"
+  },
+  "book": {
+    "title": "Castaway's Journal",
+    "close": "[ESC] close",
+    "page": "Pg.",
+    "pages": [
+      [
+        "I woke up on the beach\nwith no memory of how\nI got here. My raft\nis in pieces.\n\nI need to rebuild it\nto escape this island.",
+        "OBJECTIVE\n\nRebuild the raft by\ncollecting 3 resources:\n\n🪵 Wood ×5\n🪢 Rope ×3\n⛵ Sail ×1\n\nThen return to the\nwreckage and escape!"
+      ],
+      [
+        "WHERE TO FIND\n\n🪵 Wood\nChop trees in the forest\nwith SPACE\n\n🪢 Rope\nOpen crates on the\nopposite beach\n\n⛵ Sail\nDefeat the skeleton boss\nin the rocky zone",
+        "CONTROLS\n\nWASD / Arrows — Move\nSHIFT — Sprint\nSPACE — Attack\nE — Use item\nF — Deliver to raft\nQ — Raft log\n1-8 — Hotbar\nESC — Pause"
+      ],
+      [
+        "TIPS\n\nEat food to restore\nhunger. Drink water\nfor thirst. Sprinting\ncosts energy.\n\nDying loses 90% of\nmaterials. You get 1\nextra life per run.",
+        "DELIVERY\n\nWhen you have the\nresources, return to\nthe raft (at the dock)\nand press F to deliver.\n\nWhen everything is\ncomplete, press E\nnext to the raft\nto ESCAPE!"
+      ]
+    ]
   }
 }

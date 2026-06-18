@@ -157,6 +157,7 @@ export default class GameScene extends Phaser.Scene {
         // ── JOGADOR ───────────────────────────────────────────────────────────
         this.player = new Player(this, spawns.player.x, spawns.player.y);
         if (colisao) this.physics.add.collider(this.player, colisao);
+        this.inventory.addItem('book', 1);
 
         // ── CÂMERA ────────────────────────────────────────────────────────────
         this.cameras.main.setBounds(0, 0, mapW, mapH);
@@ -380,6 +381,10 @@ export default class GameScene extends Phaser.Scene {
     _useSelectedItem() {
         const slot = this.inventory.getSelectedItem();
         if (!slot) return;
+        if (slot.itemId === 'book') {
+            this.events.emit('openBook');
+            return;
+        }
         const effect = FOOD_VALUES[slot.itemId];
         if (!effect) return;
         if (effect.hunger) this.stats.eat(effect.hunger);

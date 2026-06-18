@@ -39,6 +39,26 @@
     "pickaxe": "Picareta",
     "hammer":  "Martelo",
     "shovel":  "Pá",
-    "sword":   "Espada"
+    "sword":   "Espada",
+    "book":    "Diário"
+  },
+  "book": {
+    "title": "Diário do Náufrago",
+    "close": "[ESC] fechar",
+    "page": "Pág.",
+    "pages": [
+      [
+        "Acordei na praia sem\nmemórias de como cheguei\naqui. A minha jangada\nestá em pedaços.\n\nPreciso de a reconstruir\npara fugir desta ilha.",
+        "OBJETIVO\n\nReconstruir a jangada\njuntando 3 recursos:\n\n🪵 Madeira ×5\n🪢 Corda ×3\n⛵ Vela ×1\n\nDepois, volta aos\ndestroços e foge!"
+      ],
+      [
+        "ONDE ENCONTRAR\n\n🪵 Madeira\nCorta árvores na floresta\ncom ESPAÇO\n\n🪢 Corda\nAbre baús na praia\noposta\n\n⛵ Vela\nDerrota o boss skeleton\nna zona rochosa",
+        "CONTROLOS\n\nWASD / Setas — Mover\nSHIFT — Correr\nESPAÇO — Atacar\nE — Usar item\nF — Entregar à jangada\nQ — Registo da jangada\n1-8 — Hotbar\nESC — Pausa"
+      ],
+      [
+        "DICAS\n\nCome para repor fome.\nBebe água para a sede.\nCorrer gasta energia.\n\nSe morreres perdes 90%\ndos materiais. Tens 1\nvida extra por tentativa.",
+        "ENTREGA\n\nQuando tiveres os\nrecursos, volta à\njangada (na doca) e\nprime F para entregar.\n\nQuando tudo estiver\ncompleto, prime E\njunto à jangada\npara FUGIR!"
+      ]
+    ]
   }
 }

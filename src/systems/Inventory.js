@@ -19,6 +19,8 @@ export const ITEM_DB = {
     // Recursos da jangada (commit 2 da EPIC de fuga)
     rope:    { name: 'Corda',    icon: 'rope',    maxStack: 99 },
     sail:    { name: 'Vela',     icon: 'sail',    maxStack: 99 },
+    // Diário do náufrago
+    book:    { name: 'Diário',   icon: 'book',    maxStack: 1  },
 };
 
 export default class Inventory extends Phaser.Events.EventEmitter {

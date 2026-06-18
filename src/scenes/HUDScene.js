@@ -1,4 +1,5 @@
 import { ITEM_DB } from '../systems/Inventory.js';
+import I18n from '../systems/I18n.js';
 
 export default class HUDScene extends Phaser.Scene {
     constructor() {
@@ -182,6 +183,12 @@ export default class HUDScene extends Phaser.Scene {
         this.gameScene.events.on('toggleQuestLog', () => this._toggleQuestLog());
 
         //------------------------------------------------------------
+        // LIVRO / DIÁRIO DO NÁUFRAGO
+        //------------------------------------------------------------
+        this._buildBook(W, H);
+        this.gameScene.events.on('openBook', () => this._toggleBook());
+
+        //------------------------------------------------------------
         // AVISO DE VIDA CRÍTICA (overlay de tela cheia, escondido por defeito)
         //------------------------------------------------------------
         this.criticalOverlay = this.add.rectangle(W / 2, H / 2, W, H, 0xff0000, 0).setDepth(50);
@@ -361,6 +368,146 @@ export default class HUDScene extends Phaser.Scene {
             row.prog.setText(`${p.current}/${p.required}`);
             row.prog.setColor(p.done ? '#88ff88' : '#ffaa88');
         });
+    }
+
+    //----------------------------------------------------------------
+    // LIVRO / DIÁRIO DO NÁUFRAGO — UI estilo Minecraft
+    //----------------------------------------------------------------
+    _buildBook(W, H) {
+        this._bookOpen = false;
+        this._bookPage = 0;
+        this.bookGroup = this.add.group();
+
+        const bookW = 520, bookH = 360;
+        const cx = W / 2, cy = H / 2;
+        const pageW = bookW / 2 - 30;
+
+        // Dimming overlay
+        this._bookDim = this.add.rectangle(cx, cy, W, H, 0x000000, 0.6)
+            .setDepth(70).setVisible(false);
+
+        // Book cover (two-tone pages)
+        const coverL = this.add.rectangle(cx - bookW / 4, cy, bookW / 2, bookH, 0xf5e6c8)
+            .setStrokeStyle(3, 0x8b6914).setDepth(71).setVisible(false);
+        const coverR = this.add.rectangle(cx + bookW / 4, cy, bookW / 2, bookH, 0xede0c8)
+            .setStrokeStyle(3, 0x8b6914).setDepth(71).setVisible(false);
+
+        // Spine
+        const spine = this.add.rectangle(cx, cy, 6, bookH - 8, 0x6b4c12)
+            .setDepth(72).setVisible(false);
+
+        // Decorative lines (page texture)
+        const lineGroup = [];
+        for (let i = 0; i < 14; i++) {
+            const y = cy - bookH / 2 + 50 + i * 22;
+            const ll = this.add.rectangle(cx - bookW / 4, y, pageW, 1, 0xd4c4a0, 0.3)
+                .setDepth(72).setVisible(false);
+            const lr = this.add.rectangle(cx + bookW / 4, y, pageW, 1, 0xd4c4a0, 0.3)
+                .setDepth(72).setVisible(false);
+            lineGroup.push(ll, lr);
+        }
+
+        // Title
+        this._bookTitle = this.add.text(cx, cy - bookH / 2 + 22, '', {
+            fontFamily: 'Georgia, serif', fontSize: '16px',
+            color: '#5a3e1b', fontStyle: 'bold', align: 'center',
+        }).setOrigin(0.5).setDepth(73).setVisible(false);
+
+        // Left page text
+        this._bookLeftTxt = this.add.text(cx - bookW / 2 + 28, cy - bookH / 2 + 44, '', {
+            fontFamily: 'Georgia, serif', fontSize: '13px',
+            color: '#3a2a10', lineSpacing: 4, wordWrap: { width: pageW },
+        }).setDepth(73).setVisible(false);
+
+        // Right page text
+        this._bookRightTxt = this.add.text(cx + 18, cy - bookH / 2 + 44, '', {
+            fontFamily: 'Georgia, serif', fontSize: '13px',
+            color: '#3a2a10', lineSpacing: 4, wordWrap: { width: pageW },
+        }).setDepth(73).setVisible(false);
+
+        // Page number
+        this._bookPageNum = this.add.text(cx, cy + bookH / 2 - 20, '', {
+            fontFamily: 'Georgia, serif', fontSize: '11px',
+            color: '#8b7355', align: 'center',
+        }).setOrigin(0.5).setDepth(73).setVisible(false);
+
+        // Navigation arrows
+        this._bookPrevBtn = this.add.text(cx - bookW / 2 + 16, cy + bookH / 2 - 22, '◀', {
+            fontSize: '18px', color: '#6b4c12',
+        }).setDepth(73).setVisible(false).setInteractive({ useHandCursor: true });
+        this._bookPrevBtn.on('pointerdown', () => this._bookFlipPage(-1));
+        this._bookPrevBtn.on('pointerover', () => this._bookPrevBtn.setColor('#aa7722'));
+        this._bookPrevBtn.on('pointerout',  () => this._bookPrevBtn.setColor('#6b4c12'));
+
+        this._bookNextBtn = this.add.text(cx + bookW / 2 - 16, cy + bookH / 2 - 22, '▶', {
+            fontSize: '18px', color: '#6b4c12',
+        }).setOrigin(1, 0).setDepth(73).setVisible(false).setInteractive({ useHandCursor: true });
+        this._bookNextBtn.on('pointerdown', () => this._bookFlipPage(1));
+        this._bookNextBtn.on('pointerover', () => this._bookNextBtn.setColor('#aa7722'));
+        this._bookNextBtn.on('pointerout',  () => this._bookNextBtn.setColor('#6b4c12'));
+
+        // Close hint
+        this._bookCloseHint = this.add.text(cx, cy + bookH / 2 + 14, '', {
+            fontFamily: 'monospace', fontSize: '10px', color: '#888888',
+        }).setOrigin(0.5).setDepth(73).setVisible(false);
+
+        // Gather all elements
+        this.bookGroup.addMultiple([
+            this._bookDim, coverL, coverR, spine,
+            ...lineGroup,
+            this._bookTitle, this._bookLeftTxt, this._bookRightTxt,
+            this._bookPageNum, this._bookPrevBtn, this._bookNextBtn,
+            this._bookCloseHint,
+        ]);
+
+        // Close on ESC
+        this.input.keyboard.on('keydown-ESC', () => {
+            if (this._bookOpen) this._toggleBook();
+        });
+    }
+
+    _toggleBook() {
+        this._bookOpen = !this._bookOpen;
+        if (this._bookOpen) {
+            this._bookPage = 0;
+            this._refreshBookPage();
+        }
+        this.bookGroup.getChildren().forEach(c => c.setVisible(this._bookOpen));
+        if (this._bookOpen) this._updateBookNav();
+    }
+
+    _bookFlipPage(dir) {
+        const pages = this._getBookPages();
+        const next = this._bookPage + dir;
+        if (next < 0 || next >= pages.length) return;
+        this._bookPage = next;
+        this._refreshBookPage();
+        this._updateBookNav();
+    }
+
+    _getBookPages() {
+        const data = this.cache.json.get(I18n.lang === 'pt' ? 'i18n_pt' : 'i18n_en');
+        return (data && data.book && data.book.pages) || [];
+    }
+
+    _refreshBookPage() {
+        const data = this.cache.json.get(I18n.lang === 'pt' ? 'i18n_pt' : 'i18n_en');
+        if (!data || !data.book) return;
+        const pages = data.book.pages;
+        const spread = pages[this._bookPage];
+        if (!spread) return;
+
+        this._bookTitle.setText(data.book.title);
+        this._bookLeftTxt.setText(spread[0] || '');
+        this._bookRightTxt.setText(spread[1] || '');
+        this._bookPageNum.setText(`${data.book.page} ${this._bookPage * 2 + 1}-${this._bookPage * 2 + 2} / ${pages.length * 2}`);
+        this._bookCloseHint.setText(data.book.close);
+    }
+
+    _updateBookNav() {
+        const pages = this._getBookPages();
+        this._bookPrevBtn.setVisible(this._bookOpen && this._bookPage > 0);
+        this._bookNextBtn.setVisible(this._bookOpen && this._bookPage < pages.length - 1);
     }
 }
 
