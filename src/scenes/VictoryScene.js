@@ -1,7 +1,6 @@
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
 
-// ─── Helper: botão desenhado com Graphics (sem texturas) ──────────────────────
 function makeBtn(scene, x, y, w, h, label, depth = 6) {
     const BG_IDLE  = 0x3d2008;
     const BG_HOVER = 0x6b3810;
@@ -52,6 +51,7 @@ export default class VictoryScene extends Phaser.Scene {
         const overlay = this.add.rectangle(W/2, H/2, W, H, 0x1a1000, 0);
         this.tweens.add({ targets: overlay, alpha: 0.9, duration: 600 });
 
+        // Estrelas animadas
         for (let i = 0; i < 30; i++) {
             const star = this.add.text(
                 Phaser.Math.Between(50, W - 50),
@@ -67,36 +67,41 @@ export default class VictoryScene extends Phaser.Scene {
             });
         }
 
-        // Moldura/Painel de fundo usando NineSlice
-        const panel = this.add.nineslice(W/2, H/2 - 20, 'panel_win_loose', null, 500, 360, 16, 16, 16, 16)
+        // Painel RPG
+        const panel = this.add.nineslice(W/2, H/2 - 10, 'panel_rpg', null, 480, 370, 16, 16, 16, 16)
             .setAlpha(0).setDepth(5);
 
-        const titulo = this.add.text(W/2, H/2 - 120, I18n.t('victory.title'), {
-            fontFamily: 'Georgia, serif', fontSize: '56px', fill: '#6e4c13', fontStyle: 'bold'
+        const titulo = this.add.text(W/2, H/2 - 130, I18n.t('victory.title'), {
+            fontFamily: 'Georgia, serif', fontSize: '44px', fill: '#f0c030', fontStyle: 'bold',
+            stroke: '#3a2000', strokeThickness: 4,
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
-        const sub = this.add.text(W/2, H/2 - 55, I18n.t('victory.subtitle'), {
-            fontFamily: 'Georgia, serif', fontSize: '18px', fill: '#5c3d24', fontStyle: 'italic'
+        const sub = this.add.text(W/2, H/2 - 68, I18n.t('victory.subtitle'), {
+            fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#c8a878', fontStyle: 'italic',
+            wordWrap: { width: 420 }, align: 'center',
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
+
+        // Linha decorativa
+        const divGfx = this.add.graphics().setAlpha(0).setDepth(6);
+        divGfx.lineStyle(1, 0xc8901a, 0.7);
+        divGfx.lineBetween(W/2 - 180, H/2 - 26, W/2 + 180, H/2 - 26);
 
         const mm = Math.floor(time / 60), ss = String(time % 60).padStart(2,'0');
-        const statsLabel = I18n.lang === 'en'
-            ? ('Time: ' + mm + ':' + ss + '  |  Kills: ' + kills + '  |  Score: ' + score)
-            : ('Tempo: ' + mm + ':' + ss + '  |  Abates: ' + kills + '  |  Pontos: ' + score);
+        const statsLabel = `⏱  ${mm}:${ss}     ☠  ${kills}     ★  ${score} pts`;
 
-        const statsText = this.add.text(W/2, H/2 - 10, statsLabel, {
-            fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#3d2314', fontStyle: 'bold'
+        const statsText = this.add.text(W/2, H/2 - 4, statsLabel, {
+            fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#c8a878', fontStyle: 'bold'
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
-        const btnRestart = makeBtn(this, W/2, H/2 + 55, 240, 44, I18n.t('victory.restart'));
+        const btnRestart = makeBtn(this, W/2, H/2 + 55, 260, 46, I18n.t('victory.restart'));
+        const btnMenu    = makeBtn(this, W/2, H/2 + 111, 260, 46, I18n.t('victory.menu'));
+
         btnRestart.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
             this.scene.stop('VictoryScene');
             this.scene.start('GameScene');
             this.scene.launch('HUDScene');
         });
-
-        const btnMenu = makeBtn(this, W/2, H/2 + 110, 240, 44, I18n.t('victory.menu'));
         btnMenu.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
             this.scene.stop('VictoryScene');
@@ -131,7 +136,7 @@ export default class VictoryScene extends Phaser.Scene {
                 cutsceneText.destroy();
                 this.tweens.add({
                     targets: [
-                        panel, titulo, sub, statsText,
+                        panel, titulo, sub, divGfx, statsText,
                         btnRestart.gfx, btnRestart.txt,
                         btnMenu.gfx, btnMenu.txt,
                     ],

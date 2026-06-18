@@ -107,8 +107,9 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('panel_brown', 'assets/images/ui/panel_brown.png');
         this.load.spritesheet('icons', 'assets/images/ui/icons.png', { frameWidth: 16, frameHeight: 16 });
         this.load.image('menu_scroll', 'assets/images/ui/menu_scroll.png');
-        this.load.image('button_normal', 'assets/images/ui/button_normal.png');
-        this.load.image('button_hover', 'assets/images/ui/button_hover.png');
+        this.load.image('panel_rpg', 'assets/images/ui/panel_rpg.png');
+        this.load.image('scroll_rpg', 'assets/images/ui/scroll_rpg.png');
+        this.load.image('parchment_rpg', 'assets/images/ui/parchment_rpg.png');
         this.load.image('panel_win_loose', 'assets/images/ui/panel_win_loose.png');
         this.load.image('sound_on', 'assets/images/ui/sound_on.png');
         this.load.image('sound_off', 'assets/images/ui/sound_off.png');

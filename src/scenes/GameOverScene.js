@@ -51,7 +51,7 @@ export default class GameOverScene extends Phaser.Scene {
         const overlay = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0);
         this.tweens.add({ targets: overlay, alpha: 0.88, duration: 700 });
 
-        // Partículas de sangue (círculos vermelhos a cair)
+        // Partículas de sangue
         for (let i = 0; i < 18; i++) {
             const drop = this.add.circle(
                 Phaser.Math.Between(80, W - 80),
@@ -68,37 +68,42 @@ export default class GameOverScene extends Phaser.Scene {
             });
         }
 
-        // Moldura/Painel de fundo usando NineSlice
-        const panel = this.add.nineslice(W/2, H/2 - 20, 'panel_win_loose', null, 500, 360, 16, 16, 16, 16)
+        // Painel RPG (NineSlice com panel_rpg 96×96, bordas 16px)
+        const panel = this.add.nineslice(W/2, H/2 - 10, 'panel_rpg', null, 480, 370, 16, 16, 16, 16)
             .setAlpha(0).setDepth(5);
 
-        const titulo = this.add.text(W/2, H/2 - 120, I18n.t('gameover.title'), {
-            fontFamily: 'Georgia, serif', fontSize: '56px', fill: '#880000', fontStyle: 'bold'
+        const titulo = this.add.text(W/2, H/2 - 130, I18n.t('gameover.title'), {
+            fontFamily: 'Georgia, serif', fontSize: '52px', fill: '#cc2200', fontStyle: 'bold',
+            stroke: '#330000', strokeThickness: 4,
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
-        const sub = this.add.text(W/2, H/2 - 50, I18n.t('gameover.subtitle'), {
-            fontFamily: 'Georgia, serif', fontSize: '18px', fill: '#5c3d24', fontStyle: 'italic'
+        const sub = this.add.text(W/2, H/2 - 60, I18n.t('gameover.subtitle'), {
+            fontFamily: 'Georgia, serif', fontSize: '17px', fill: '#c8a878', fontStyle: 'italic'
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
-        // Estatísticas
+        // Linha decorativa
+        const divGfx = this.add.graphics().setAlpha(0).setDepth(6);
+        divGfx.lineStyle(1, 0x9a6030, 0.7);
+        divGfx.lineBetween(W/2 - 180, H/2 - 34, W/2 + 180, H/2 - 34);
+
         const mm = Math.floor(time / 60), ss = String(time % 60).padStart(2, '0');
         const statsLabel = I18n.lang === 'en'
-            ? `Time: ${mm}:${ss}   |   Kills: ${kills}   |   Score: ${score}`
-            : `Tempo: ${mm}:${ss}   |   Abates: ${kills}   |   Pontos: ${score}`;
+            ? `⏱  ${mm}:${ss}     ☠  ${kills}     ★  ${score} pts`
+            : `⏱  ${mm}:${ss}     ☠  ${kills}     ★  ${score} pts`;
 
-        const statsText = this.add.text(W/2, H/2, statsLabel, {
-            fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#3d2314', fontStyle: 'bold'
+        const statsText = this.add.text(W/2, H/2 - 14, statsLabel, {
+            fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#c8a878', fontStyle: 'bold'
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
-        const btnRestart = makeBtn(this, W/2, H/2 + 65, 240, 44, I18n.t('gameover.restart'));
+        const btnRestart = makeBtn(this, W/2, H/2 + 60, 260, 46, I18n.t('gameover.restart'));
+        const btnMenu    = makeBtn(this, W/2, H/2 + 116, 260, 46, I18n.t('gameover.menu'));
+
         btnRestart.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
             this.scene.stop('GameOverScene');
             this.scene.start('GameScene');
             this.scene.launch('HUDScene');
         });
-
-        const btnMenu = makeBtn(this, W/2, H/2 + 120, 240, 44, I18n.t('gameover.menu'));
         btnMenu.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
             this.scene.stop('GameOverScene');
@@ -107,16 +112,13 @@ export default class GameOverScene extends Phaser.Scene {
 
         this.tweens.add({
             targets: [
-                panel, titulo, sub, statsText,
+                panel, titulo, sub, divGfx, statsText,
                 btnRestart.gfx, btnRestart.txt,
                 btnMenu.gfx, btnMenu.txt,
             ],
-            alpha: 1,
-            duration: 900,
-            delay: 400
+            alpha: 1, duration: 900, delay: 400
         });
 
-        // Teclas rápidas
         this.input.keyboard.once('keydown-R', () => {
             this.scene.stop('GameOverScene');
             this.scene.start('GameScene');
@@ -127,7 +129,6 @@ export default class GameOverScene extends Phaser.Scene {
             this.scene.start('MenuScene');
         });
 
-        // Dica teclas
         this.add.text(W/2, H - 24,
             I18n.lang === 'en' ? '[R] Retry  ·  [M] Menu' : '[R] Tentar de novo  ·  [M] Menu',
             { fontSize: '11px', fill: '#555555' }

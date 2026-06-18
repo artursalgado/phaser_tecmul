@@ -378,9 +378,11 @@ export default class HUDScene extends Phaser.Scene {
         this._bookPage = 0;
         this.bookGroup = this.add.group();
 
-        const bookW = 580, bookH = 380;
+        const bookW = 600, bookH = 400;
         const cx = W / 2, cy = H / 2;
         const D = 80;  // profundidade base
+        // Header castanho no topo do livro (acima das páginas)
+        const HEADER_H = 44;
 
         // ── Dim overlay ──────────────────────────────────────────────
         this._bookDim = this.add.rectangle(cx, cy, W, H, 0x000000, 0.72)
@@ -388,23 +390,24 @@ export default class HUDScene extends Phaser.Scene {
 
         // ── Canvas do livro (Graphics) ───────────────────────────────
         this._bookGfx = this.add.graphics().setDepth(D + 1).setVisible(false);
-        this._drawBookGraphics(cx, cy, bookW, bookH);
+        this._drawBookGraphics(cx, cy, bookW, bookH, HEADER_H);
 
-        // ── Título ───────────────────────────────────────────────────
-        this._bookTitle = this.add.text(cx, cy - bookH / 2 + 26, '', {
-            fontFamily: 'Georgia, serif', fontSize: '17px',
-            color: '#3a1f05', fontStyle: 'bold italic', align: 'center',
-            stroke: '#c8a060', strokeThickness: 0,
+        // ── Título — fica na banda castanha do header ─────────────────
+        // Header vai de cy-bookH/2 a cy-bookH/2+HEADER_H
+        // Centramos o título verticalmente nessa banda
+        this._bookTitle = this.add.text(cx, cy - bookH / 2 + HEADER_H / 2 + 2, '', {
+            fontFamily: 'Georgia, serif', fontSize: '18px',
+            color: '#f5e0b0', fontStyle: 'bold italic', align: 'center',
         }).setOrigin(0.5).setDepth(D + 2).setVisible(false);
 
-        // Linha separadora sob o título
+        // Linha separadora (entre header e páginas)
         this._bookDivGfx = this.add.graphics().setDepth(D + 2).setVisible(false);
 
         // ── Página esquerda ──────────────────────────────────────────
-        const pageW  = bookW / 2 - 52;
-        const textY  = cy - bookH / 2 + 54;
-        const leftX  = cx - bookW / 2 + 36;
-        const rightX = cx + 18;
+        const pageW  = bookW / 2 - 50;
+        const textY  = cy - bookH / 2 + HEADER_H + 16;
+        const leftX  = cx - bookW / 2 + 28;
+        const rightX = cx + 14;
 
         this._bookLeftTxt = this.add.text(leftX, textY, '', {
             fontFamily: 'Georgia, serif', fontSize: '12.5px',
@@ -420,13 +423,13 @@ export default class HUDScene extends Phaser.Scene {
         }).setDepth(D + 2).setVisible(false);
 
         // ── Número de página ─────────────────────────────────────────
-        this._bookPageNum = this.add.text(cx, cy + bookH / 2 - 22, '', {
+        this._bookPageNum = this.add.text(cx, cy + bookH / 2 - 18, '', {
             fontFamily: 'Georgia, serif', fontSize: '11px',
             color: '#8b6e3a', align: 'center', fontStyle: 'italic',
         }).setOrigin(0.5).setDepth(D + 2).setVisible(false);
 
         // ── Botão anterior ◀ ─────────────────────────────────────────
-        const navY   = cy + bookH / 2 - 22;
+        const navY   = cy + bookH / 2 - 18;
         const navBtnW = 48, navBtnH = 24;
         const prevX  = cx - bookW / 2 + 38;
         const nextX  = cx + bookW / 2 - 38;
@@ -472,69 +475,83 @@ export default class HUDScene extends Phaser.Scene {
         });
     }
 
-    _drawBookGraphics(cx, cy, bookW, bookH) {
+    _drawBookGraphics(cx, cy, bookW, bookH, headerH) {
         const g = this._bookGfx;
         g.clear();
-
-        const r = 10; // raio cantos
+        const r = 10;
 
         // Sombra exterior
-        g.fillStyle(0x000000, 0.45);
-        g.fillRoundedRect(cx - bookW/2 + 8, cy - bookH/2 + 8, bookW, bookH, r);
+        g.fillStyle(0x000000, 0.5);
+        g.fillRoundedRect(cx - bookW/2 + 10, cy - bookH/2 + 10, bookW, bookH, r);
 
-        // Capa exterior castanha (borda do livro)
+        // Capa exterior castanha (todo o livro)
         g.fillStyle(0x5c2e00, 1);
         g.fillRoundedRect(cx - bookW/2, cy - bookH/2, bookW, bookH, r);
 
-        // Lombada central (sombra)
-        g.fillStyle(0x3a1a00, 0.7);
-        g.fillRect(cx - 10, cy - bookH/2, 20, bookH);
+        // Borda exterior dourada
+        g.lineStyle(2, 0xc8901a, 0.7);
+        g.strokeRoundedRect(cx - bookW/2 + 1, cy - bookH/2 + 1, bookW - 2, bookH - 2, r);
+
+        // Banda do header (castanho mais escuro)
+        g.fillStyle(0x3d1a00, 0.9);
+        g.fillRoundedRect(cx - bookW/2, cy - bookH/2, bookW, headerH, { tl: r, tr: r, bl: 0, br: 0 });
+
+        // Linha divisória entre header e páginas
+        g.lineStyle(3, 0xc8901a, 0.9);
+        g.lineBetween(cx - bookW/2, cy - bookH/2 + headerH, cx + bookW/2, cy - bookH/2 + headerH);
+
+        // Ornamentos da linha (triângulos centrais)
+        g.fillStyle(0xc8901a, 1);
+        g.fillTriangle(
+            cx - 16, cy - bookH/2 + headerH,
+            cx,      cy - bookH/2 + headerH - 8,
+            cx + 16, cy - bookH/2 + headerH
+        );
+        g.fillTriangle(
+            cx - 16, cy - bookH/2 + headerH,
+            cx,      cy - bookH/2 + headerH + 8,
+            cx + 16, cy - bookH/2 + headerH
+        );
+
+        // Lombada central (abaixo do header)
+        const spineTop = cy - bookH/2 + headerH;
+        g.fillStyle(0x3a1a00, 0.6);
+        g.fillRect(cx - 8, spineTop, 16, bookH - headerH);
 
         // Página esquerda (pergaminho)
+        const pageTop = spineTop + 6;
+        const pageBot = bookH - headerH - 16;
         g.fillStyle(0xf5e9c8, 1);
-        g.fillRoundedRect(cx - bookW/2 + 12, cy - bookH/2 + 10, bookW/2 - 18, bookH - 20, { tl: r - 2, bl: r - 2, tr: 0, br: 0 });
+        g.fillRoundedRect(cx - bookW/2 + 10, pageTop, bookW/2 - 16, pageBot, { tl: 0, bl: r - 2, tr: 0, br: 0 });
 
-        // Página esquerda — gradiente simulado (borda interior)
-        g.fillStyle(0xe8d5a8, 0.5);
-        g.fillRect(cx - bookW/2 + 12, cy - bookH/2 + 10, 6, bookH - 20);
+        // Borda interior esquerda (sombra lombada)
+        g.fillStyle(0xd4b880, 0.3);
+        g.fillRect(cx - bookW/2 + 10, pageTop, 8, pageBot);
 
-        // Página direita (pergaminho ligeiramente diferente)
-        g.fillStyle(0xf2e6c0, 1);
-        g.fillRoundedRect(cx + 6, cy - bookH/2 + 10, bookW/2 - 18, bookH - 20, { tl: 0, bl: 0, tr: r - 2, br: r - 2 });
+        // Página direita (pergaminho)
+        g.fillStyle(0xf0e4bc, 1);
+        g.fillRoundedRect(cx + 6, pageTop, bookW/2 - 16, pageBot, { tl: 0, bl: 0, tr: 0, br: r - 2 });
 
-        // Linha da lombada visível
-        g.lineStyle(1, 0x8b5010, 0.6);
-        g.lineBetween(cx - 2, cy - bookH/2 + 14, cx - 2, cy + bookH/2 - 14);
-        g.lineBetween(cx + 2, cy - bookH/2 + 14, cx + 2, cy + bookH/2 - 14);
+        // Ornamentos lombada (nós)
+        g.fillStyle(0xc8901a, 1);
+        g.fillRect(cx - 5, spineTop + 10, 10, 5);
+        g.fillRect(cx - 5, cy + bookH/2 - 20, 10, 5);
+        g.fillRect(cx - 5, cy, 10, 4);
 
-        // Ornamento no topo da lombada
-        g.fillStyle(0xc8800a, 1);
-        g.fillRect(cx - 6, cy - bookH/2 + 10, 12, 4);
-        g.fillRect(cx - 6, cy + bookH/2 - 14, 12, 4);
+        // Borda interior das páginas
+        g.lineStyle(1, 0xc8a060, 0.3);
+        g.strokeRoundedRect(cx - bookW/2 + 10, pageTop, bookW/2 - 16, pageBot, { tl: 0, bl: r - 2, tr: 0, br: 0 });
+        g.strokeRoundedRect(cx + 6, pageTop, bookW/2 - 16, pageBot, { tl: 0, bl: 0, tr: 0, br: r - 2 });
 
-        // Borda interior das páginas (linha subtil)
-        g.lineStyle(1, 0xc8a060, 0.4);
-        g.strokeRoundedRect(cx - bookW/2 + 12, cy - bookH/2 + 10, bookW/2 - 18, bookH - 20, { tl: r - 2, bl: r - 2, tr: 0, br: 0 });
-        g.strokeRoundedRect(cx + 6, cy - bookH/2 + 10, bookW/2 - 18, bookH - 20, { tl: 0, bl: 0, tr: r - 2, br: r - 2 });
-
-        // Linhas de texto decorativas (página esquerda)
-        g.lineStyle(1, 0xd4b880, 0.25);
-        const lineStartX = cx - bookW/2 + 26;
-        const lineEndX   = cx - 18;
-        const lineStart  = cy - bookH/2 + 58;
-        for (let i = 0; i < 14; i++) {
-            const ly = lineStart + i * 20;
-            if (ly < cy + bookH/2 - 28) {
-                g.lineBetween(lineStartX, ly, lineEndX, ly);
-            }
-        }
-        // Linhas de texto decorativas (página direita)
-        const rLineStartX = cx + 18;
-        const rLineEndX   = cx + bookW/2 - 26;
-        for (let i = 0; i < 14; i++) {
-            const ly = lineStart + i * 20;
-            if (ly < cy + bookH/2 - 28) {
-                g.lineBetween(rLineStartX, ly, rLineEndX, ly);
+        // Linhas de pauta decorativas
+        g.lineStyle(1, 0xd4b880, 0.2);
+        const lineStep = 22;
+        const lineStart = pageTop + 20;
+        for (let i = 0; i < 12; i++) {
+            const ly = lineStart + i * lineStep;
+            if (ly < cy + bookH/2 - 24) {
+                g.lineBetween(cx - bookW/2 + 20, ly, cx - 14, ly);
+                g.lineBetween(cx + 14, ly, cx + bookW/2 - 20, ly);
             }
         }
     }
@@ -590,28 +607,13 @@ export default class HUDScene extends Phaser.Scene {
         const spread = pages[this._bookPage];
         if (!spread) return;
 
-        const bookW  = 580, bookH = 380;
-        const cx = 960 / 2, cy = 640 / 2;
-
         this._bookTitle.setText(data.book.title);
-
-        // Redesenha a linha decorativa sob o título
-        const d = this._bookDivGfx;
-        d.clear();
-        d.lineStyle(1, 0xa07040, 0.6);
-        d.lineBetween(cx - bookW/2 + 28, cy - bookH/2 + 44, cx + bookW/2 - 28, cy - bookH/2 + 44);
-        // Ornamentos da linha
-        d.fillStyle(0xa07040, 0.7);
-        d.fillTriangle(
-            cx - 20, cy - bookH/2 + 44,
-            cx,      cy - bookH/2 + 40,
-            cx + 20, cy - bookH/2 + 44
-        );
-
+        this._bookDivGfx.clear(); // já não é necessário — linha desenhada em _drawBookGraphics
         this._bookLeftTxt.setText(spread[0] || '');
         this._bookRightTxt.setText(spread[1] || '');
+        const total = pages.length * 2;
         this._bookPageNum.setText(
-            `— ${data.book.page} ${this._bookPage * 2 + 1}–${this._bookPage * 2 + 2} —`
+            `— ${data.book.page} ${this._bookPage * 2 + 1}–${this._bookPage * 2 + 2} / ${total} —`
         );
         this._bookCloseHint.setText(data.book.close);
     }
@@ -619,9 +621,9 @@ export default class HUDScene extends Phaser.Scene {
     _updateBookNav() {
         const pages = this._getBookPages();
         const cx = 960 / 2;
-        const bookW = 580, bookH = 380;
+        const bookW = 600, bookH = 400;
         const cy = 640 / 2;
-        const navY = cy + bookH / 2 - 22;
+        const navY = cy + bookH / 2 - 18;
         const prevX = cx - bookW / 2 + 38;
         const nextX = cx + bookW / 2 - 38;
         const hasPrev = this._bookPage > 0;
