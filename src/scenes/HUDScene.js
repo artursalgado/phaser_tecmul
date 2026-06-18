@@ -1,4 +1,4 @@
-import { ITEM_DB } from '../systems/Inventory.js';
+﻿import { ITEM_DB } from '../systems/Inventory.js';
 
 export default class HUDScene extends Phaser.Scene {
     constructor() {
@@ -141,6 +141,8 @@ export default class HUDScene extends Phaser.Scene {
             });
             this.quest.on('partDelivered', () => this._refreshQuest());
             this.quest.on('penaltyApplied', () => this._refreshQuest());
+            // Also listen on the global Phaser event bus (quest:updated covers both cases)
+            this.scene.game.events.on('quest:updated', () => this._refreshQuest(), this);
             this._refreshQuest();
         }
 
