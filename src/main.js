@@ -1,5 +1,6 @@
 import BootScene from './scenes/BootScene.js';
 import PreloadScene from './scenes/PreloadScene.js';
+import IntroScene from './scenes/IntroScene.js';
 import MenuScene from './scenes/MenuScene.js';
 import GameScene from './scenes/GameScene.js';
 import HUDScene from './scenes/HUDScene.js';
@@ -26,6 +27,7 @@ const config = {
     scene: [
         BootScene,
         PreloadScene,
+        IntroScene,
         MenuScene,
         GameScene,
         HUDScene,
