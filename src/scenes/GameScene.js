@@ -3,6 +3,7 @@ import PlayerStats from '../systems/PlayerStats.js';
 import Player from '../objects/Player.js';
 import CollectibleItem from '../objects/CollectibleItem.js';
 import Goblin from '../objects/Goblin.js';
+import Skeleton from '../objects/Skeleton.js';
 import Tree from '../objects/Tree.js';
 
 // Centro da ilha: tile (40,30) × 16px = pixel (640, 480)
@@ -47,6 +48,9 @@ const TREE_SPAWNS = [
     { x: CX - 250, y: CY + 260 },
 ];
 
+// Zona rochosa a norte -- onde fica o boss que guarda a vela
+const BOSS_SPAWN = { x: CX, y: CY - 300 };
+
 const FOOD_VALUES = {
     carrot: { hunger: 20 },
     potato: { hunger: 28 },
@@ -85,6 +89,7 @@ export default class GameScene extends Phaser.Scene {
         const chao      = mapa.createLayer('chao',      tileset, 0, 0);
         const decoracao = mapa.createLayer('Decoracao', tileset, 0, 0);
         const colisao   = mapa.createLayer('colisao',   tileset, 0, 0);
+        this._colisao = colisao; // guardar referencia para _spawnGoblin/_spawnSkeleton poderem usar depois
 
         chao?.setDepth(0);
         decoracao?.setDepth(1);
@@ -160,6 +165,9 @@ export default class GameScene extends Phaser.Scene {
         // -- ARVORES (cortar com ESPACO da madeira) --------------------------
         this.trees = this.physics.add.group();
         TREE_SPAWNS.forEach(s => this.trees.add(new Tree(this, s.x, s.y)));
+
+        // -- BOSS (skeleton na zona rochosa, dropa a vela) ---------------------
+        this._spawnSkeleton(BOSS_SPAWN.x, BOSS_SPAWN.y);
 
         this.events.on('enemyDied', (x, y) => {
             const opts = ['wood','rock','wood','rock','carrot','fish','egg'];

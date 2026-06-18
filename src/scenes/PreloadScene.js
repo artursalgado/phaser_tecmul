@@ -63,6 +63,14 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.spritesheet('goblin_death', pG+'spr_death_strip13.png', {frameWidth:FW,frameHeight:FH});
         this.load.spritesheet('goblin_attack',pG+'spr_attack_strip10.png',{frameWidth:FW,frameHeight:FH});
 
+        // -- SKELETON (boss da zona rochosa) -----------------------------------
+        const pS = 'assets/spritesheets/skeleton/';
+        this.load.spritesheet('skeleton_idle',   pS+'skeleton_idle_strip6.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_walk',   pS+'skeleton_walk_strip8.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_hurt',   pS+'skeleton_hurt_strip7.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_death',  pS+'skeleton_death_strip10.png', {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_attack', pS+'skeleton_attack_strip7.png', {frameWidth:FW,frameHeight:FH});
+
         // ── ITENS ─────────────────────────────────────────────────────────────
         ['wood','rock','fish','egg','milk','water'].forEach(k =>
             this.load.image(k, `assets/images/${k}.png`));
