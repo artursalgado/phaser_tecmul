@@ -99,9 +99,7 @@ export default class GameOverScene extends Phaser.Scene {
         divGfx.lineBetween(W/2 - 180, H/2 - 34, W/2 + 180, H/2 - 34);
 
         const mm = Math.floor(time / 60), ss = String(time % 60).padStart(2, '0');
-        const statsLabel = I18n.lang === 'en'
-            ? `⏱  ${mm}:${ss}     ☠  ${kills}     ★  ${score} pts`
-            : `⏱  ${mm}:${ss}     ☠  ${kills}     ★  ${score} pts`;
+        const statsLabel = `⏱  ${mm}:${ss}     ☠  ${kills}     ★  ${score} pts`;
 
         const statsText = this.add.text(W/2, H/2 - 14, statsLabel, {
             fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#c8a878', fontStyle: 'bold'
@@ -114,7 +112,6 @@ export default class GameOverScene extends Phaser.Scene {
             SoundManager.play('menu_click');
             this.scene.stop('GameOverScene');
             this.scene.start('GameScene');
-            this.scene.launch('HUDScene');
         });
         btnMenu.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
@@ -134,7 +131,6 @@ export default class GameOverScene extends Phaser.Scene {
         this.input.keyboard.once('keydown-R', () => {
             this.scene.stop('GameOverScene');
             this.scene.start('GameScene');
-            this.scene.launch('HUDScene');
         });
         this.input.keyboard.once('keydown-M', () => {
             this.scene.stop('GameOverScene');

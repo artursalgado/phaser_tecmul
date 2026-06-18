@@ -658,6 +658,9 @@ export default class HUDScene extends Phaser.Scene {
         if (this._bookOpen) {
             this._bookPage = 0;
             this._refreshBookPage();
+            if (this.gameScene) this.gameScene._paused = true;
+        } else {
+            if (this.gameScene) this.gameScene._paused = false;
         }
         this.bookGroup.getChildren().forEach(c => c.setVisible(this._bookOpen));
         if (this._bookOpen) this._updateBookNav();

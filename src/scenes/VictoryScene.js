@@ -112,7 +112,6 @@ export default class VictoryScene extends Phaser.Scene {
             SoundManager.play('menu_click');
             this.scene.stop('VictoryScene');
             this.scene.start('GameScene');
-            this.scene.launch('HUDScene');
         });
         btnMenu.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
@@ -123,7 +122,6 @@ export default class VictoryScene extends Phaser.Scene {
         this.input.keyboard.once('keydown-R', () => {
             this.scene.stop('VictoryScene');
             this.scene.start('GameScene');
-            this.scene.launch('HUDScene');
         });
 
         const cutsceneText = this.add.text(W/2, H/2 - 20, '', {

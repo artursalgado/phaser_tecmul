@@ -185,7 +185,10 @@ export default class GameScene extends Phaser.Scene {
             if (e.key === 'f' || e.key === 'F') this._tryBuildRaft();
             if (e.key === 'q' || e.key === 'Q') this.events.emit('toggleQuestLog');
             if (e.key === 'i' || e.key === 'I') this._toggleInventory();
-            if (e.key === 'Escape') this._togglePause();
+            if (e.key === 'Escape') {
+                const hud = this.scene.get('HUDScene');
+                if (!hud?._bookOpen) this._togglePause();
+            }
         });
 
         // ── ITENS ─────────────────────────────────────────────────────────────
