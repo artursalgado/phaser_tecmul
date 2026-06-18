@@ -28,7 +28,7 @@ export default function makeBtn(scene, x, y, w, h, label, {
     draw(false);
 
     const zone = scene.add.zone(x, y, w, h)
-        .setInteractive({ useHandCursor: true }).setDepth(depth + 2).setAlpha(alpha);
+        .setInteractive({ useHandCursor: true }).setDepth(depth + 2);
 
     zone.on('pointerover',  () => { draw(true);  txt.setStyle({ fill: hoverFill }); });
     zone.on('pointerout',   () => { draw(false); txt.setStyle({ fill: idleFill }); });
