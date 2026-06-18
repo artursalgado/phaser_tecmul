@@ -356,47 +356,6 @@ export default class GameScene extends Phaser.Scene {
         return b;
     }
 
-    // ── Spawn de onda de reforço ───────────────────────────────────────────
-    _spawnWave() {
-        const count     = 2 + this._waveNumber;
-        const gobTier   = Math.min(this._waveNumber, 3);
-        const skelRatio = this._waveNumber >= 2 ? 0.5 : 0;
-
-        const waveLabel = I18n.lang === 'en'
-            ? `⚠ Wave ${this._waveNumber}! ${count} enemies incoming!`
-            : `⚠ Vaga ${this._waveNumber}! ${count} inimigos a chegar!`;
-
-        const txt = this.add.text(this.scale.width / 2, 60, waveLabel, {
-            fontSize: '14px', fill: '#ff4444', fontStyle: 'bold',
-            stroke: '#000000', strokeThickness: 3
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
-        this.cameras.main.shake(200, 0.004);
-        this.tweens.add({
-            targets: txt, alpha: 0, delay: 2500, duration: 800,
-            onComplete: () => txt.destroy()
-        });
-
-        const offsets = [
-            { x: -300, y: -200 }, { x: 300, y: -200 },
-            { x: -300, y:  200 }, { x: 300, y:  200 },
-            { x: 0,    y: -350 }, { x: 0,   y:  350 },
-            { x: -350, y: 0    }, { x: 350, y:  0   },
-        ];
-        const px = this.player ? this.player.x : this._mapW / 2;
-        const py = this.player ? this.player.y : this._mapH / 2;
-        for (let i = 0; i < count; i++) {
-            const off = offsets[i % offsets.length];
-            const sx = Phaser.Math.Clamp(px + off.x + Phaser.Math.Between(-40, 40), 64, this._mapW - 64);
-            const sy = Phaser.Math.Clamp(py + off.y + Phaser.Math.Between(-40, 40), 64, this._mapH - 64);
-            if (Math.random() < skelRatio) {
-                this._spawnSkeleton(sx, sy);
-            } else {
-                this._spawnGoblin(sx, sy, gobTier);
-            }
-        }
-    }
-
-
     // ── Apanhar item ──────────────────────────────────────────────────────
     _pickupItem(player, item) {
         const def   = ITEM_DB[item.itemId];
