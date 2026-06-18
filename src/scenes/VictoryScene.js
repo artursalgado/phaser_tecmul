@@ -56,7 +56,7 @@ export default class VictoryScene extends Phaser.Scene {
             fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#3d2314', fontStyle: 'bold'
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
-        const btnRestartBg = this.add.nineslice(W/2, H/2 + 55, 'button_normal', null, 240, 44, 6, 6, 6, 6)
+        const btnRestartBg = this.add.nineslice(W/2, H/2 + 55, 'button_normal', null, 240, 44, 10, 10, 10, 10)
             .setAlpha(0).setDepth(6).setInteractive({ useHandCursor: true });
         const btnRestartTxt = this.add.text(W/2, H/2 + 55, I18n.t('victory.restart'), {
             fontFamily: 'Georgia, serif', fontSize: '16px', fill: '#ffffff', fontStyle: 'bold'
@@ -77,7 +77,7 @@ export default class VictoryScene extends Phaser.Scene {
             this.scene.launch('HUDScene');
         });
 
-        const btnMenuBg = this.add.nineslice(W/2, H/2 + 110, 'button_normal', null, 240, 44, 6, 6, 6, 6)
+        const btnMenuBg = this.add.nineslice(W/2, H/2 + 110, 'button_normal', null, 240, 44, 10, 10, 10, 10)
             .setAlpha(0).setDepth(6).setInteractive({ useHandCursor: true });
         const btnMenuTxt = this.add.text(W/2, H/2 + 110, I18n.t('victory.menu'), {
             fontFamily: 'Georgia, serif', fontSize: '16px', fill: '#ffffff', fontStyle: 'bold'

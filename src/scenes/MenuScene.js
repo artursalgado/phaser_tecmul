@@ -49,7 +49,7 @@ export default class MenuScene extends Phaser.Scene {
         const divider = this.add.rectangle(W/2, H/2 - 60, 320, 2, 0x5c3d24, 0.4).setDepth(2);
 
         // Botão Jogar
-        const botaoJogarBg = this.add.nineslice(W/2, H/2 + 10, 'button_normal', null, 240, 52, 6, 6, 6, 6)
+        const botaoJogarBg = this.add.nineslice(W/2, H/2 + 10, 'button_normal', null, 240, 52, 10, 10, 10, 10)
             .setDepth(2).setInteractive({ useHandCursor: true });
         const botaoJogarTxt = this.add.text(W/2, H/2 + 10, I18n.t('menu.play'), {
             fontFamily: 'Georgia, serif', fontSize: '22px', fill: '#ffffff', fontStyle: 'bold'
@@ -73,13 +73,13 @@ export default class MenuScene extends Phaser.Scene {
         const botaoJogar = botaoJogarTxt;
 
         // ── SELETOR DE LÍNGUA ──────────────────────────────────────────────
-        const langBtnPTBg = this.add.nineslice(W/2 - 70, H/2 + 100, 'button_normal', null, 110, 42, 6, 6, 6, 6)
+        const langBtnPTBg = this.add.nineslice(W/2 - 70, H/2 + 100, 'button_normal', null, 110, 42, 10, 10, 10, 10)
             .setDepth(2).setInteractive({ useHandCursor: true });
         const langBtnPTTxt = this.add.text(W/2 - 70, H/2 + 100, '🇵🇹 PT', {
             fontFamily: 'Georgia, serif', fontSize: '14px', fill: '#ffffff', fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(3);
 
-        const langBtnENBg = this.add.nineslice(W/2 + 70, H/2 + 100, 'button_normal', null, 110, 42, 6, 6, 6, 6)
+        const langBtnENBg = this.add.nineslice(W/2 + 70, H/2 + 100, 'button_normal', null, 110, 42, 10, 10, 10, 10)
             .setDepth(2).setInteractive({ useHandCursor: true });
         const langBtnENTxt = this.add.text(W/2 + 70, H/2 + 100, '🇬🇧 EN', {
             fontFamily: 'Georgia, serif', fontSize: '14px', fill: '#ffffff', fontStyle: 'bold'
