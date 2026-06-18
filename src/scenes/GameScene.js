@@ -22,6 +22,10 @@ const SPAWN_ITEMS = [
     { x: CX - 120, y: CY,      itemId: 'water',   qty: 2 },
     { x: CX,       y: CY-120,  itemId: 'wood',    qty: 2 },
     { x: CX,       y: CY+120,  itemId: 'rock',    qty: 3 },
+    // Bauis de destrocos na praia oposta (dao corda para a jangada)
+    { x: CX + 320, y: CY - 60, itemId: 'rope', qty: 1 },
+    { x: CX + 360, y: CY + 20, itemId: 'rope', qty: 1 },
+    { x: CX + 300, y: CY + 100, itemId: 'rope', qty: 1 },
     { x: CX + 48,  y: CY - 48, itemId: 'sword',   qty: 1 },
 ];
 
