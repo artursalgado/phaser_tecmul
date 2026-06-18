@@ -9,6 +9,7 @@ export default class HUDScene extends Phaser.Scene {
         this.gameScene  = this.scene.get('GameScene');
         this.inventory  = this.gameScene.inventory;
         this.stats      = this.gameScene.stats;
+        this.quest      = this.gameScene.quest;
 
         const W = 960;
         const H = 640;
@@ -121,6 +122,29 @@ export default class HUDScene extends Phaser.Scene {
         }).setOrigin(1, 0).setDepth(3);
 
         //------------------------------------------------------------
+        // PAINEL DE OBJETIVOS DA JANGADA (canto superior direito, abaixo dos kills)
+        //------------------------------------------------------------
+        this.questTxts = {};
+        const questY0 = 76;
+        this.add.rectangle(W - 16 - 75, questY0 + 28, 150, 64, 0x000000, 0.4)
+            .setOrigin(0.5).setDepth(2);
+        this.add.text(W - 16, questY0 - 4, 'JANGADA [F]', {
+            fontSize: '9px', fill: '#ffdd66', fontStyle: 'bold'
+        }).setOrigin(1, 0).setDepth(3);
+
+        if (this.quest) {
+            this.quest.getProgress().forEach((p, i) => {
+                const t = this.add.text(W - 16, questY0 + 12 + i * 16, '', {
+                    fontSize: '11px', fill: '#cccccc'
+                }).setOrigin(1, 0).setDepth(3);
+                this.questTxts[p.id] = t;
+            });
+            this.quest.on('partDelivered', () => this._refreshQuest());
+            this.quest.on('penaltyApplied', () => this._refreshQuest());
+            this._refreshQuest();
+        }
+
+        //------------------------------------------------------------
         // AVISO DE VIDA CRÍTICA (overlay de tela cheia, escondido por defeito)
         //------------------------------------------------------------
         this.criticalOverlay = this.add.rectangle(W / 2, H / 2, W, H, 0xff0000, 0).setDepth(50);
@@ -208,4 +232,18 @@ export default class HUDScene extends Phaser.Scene {
         this.hungerBar.setFillStyle(s.hungerPct < 0.2 ? 0xff6600 : 0xffaa00);
         this.thirstBar.setFillStyle(s.thirstPct < 0.2 ? 0x0066ff : 0x44aaff);
     }
+
+    //----------------------------------------------------------------
+    // ATUALIZAR PAINEL DE OBJETIVOS DA JANGADA
+    //----------------------------------------------------------------
+    _refreshQuest() {
+        if (!this.quest) return;
+        this.quest.getProgress().forEach(p => {
+            const t = this.questTxts[p.id];
+            if (!t) return;
+            t.setText(`${p.icon} ${p.label}: ${p.current}/${p.required}`);
+            t.setColor(p.done ? '#88ff88' : '#cccccc');
+        });
+    }
 }
+

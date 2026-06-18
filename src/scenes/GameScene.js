@@ -4,6 +4,7 @@ import Player from '../objects/Player.js';
 import CollectibleItem from '../objects/CollectibleItem.js';
 import Goblin from '../objects/Goblin.js';
 import Skeleton from '../objects/Skeleton.js';
+import QuestManager, { RAFT_PARTS } from '../systems/QuestManager.js';
 import Tree from '../objects/Tree.js';
 
 // Centro da ilha: tile (40,30) × 16px = pixel (640, 480)
@@ -108,9 +109,15 @@ export default class GameScene extends Phaser.Scene {
         // ── SISTEMAS ──────────────────────────────────────────────────────────
         this.inventory = new Inventory(8);
         this.stats     = new PlayerStats();
+        this.quest     = new QuestManager();
         this.stats.on('died', () => {
+            this.quest.applyDeathPenalty(); // perde 90% do progresso da jangada ao morrer
             this.scene.stop('HUDScene');
             this.scene.start('GameOverScene');
+        });
+        this.quest.on('raftComplete', () => {
+            this.scene.stop('HUDScene');
+            this.scene.start('VictoryScene');
         });
 
         // ── JOGADOR ───────────────────────────────────────────────────────────
@@ -145,6 +152,7 @@ export default class GameScene extends Phaser.Scene {
                 this.inventory.selectSlot(n - 1);
             }
             if (e.key === 'e' || e.key === 'E') this._useSelectedItem();
+            if (e.key === 'f' || e.key === 'F') this._tryBuildRaft();
         });
 
         // ── ITENS ─────────────────────────────────────────────────────────────
@@ -168,6 +176,16 @@ export default class GameScene extends Phaser.Scene {
 
         // -- BOSS (skeleton na zona rochosa, dropa a vela) ---------------------
         this._spawnSkeleton(BOSS_SPAWN.x, BOSS_SPAWN.y);
+
+        // -- JANGADA (zona de construcao no acampamento) -----------------------
+        // Um circulo visivel no chao -- quando o jogador esta dentro e preme F,
+        // os recursos do inventario (wood/rope/sail) sao entregues ao QuestManager.
+        this.raftZone = { x: CX + 80, y: CY + 40, radius: 50 };
+        this.raftMarker = this.add.circle(this.raftZone.x, this.raftZone.y, this.raftZone.radius, 0xffdd66, 0.18).setDepth(1);
+        this.add.text(this.raftZone.x, this.raftZone.y - this.raftZone.radius - 12, 'JANGADA [F]', {
+            fontSize: '10px', fill: '#ffdd66', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 2
+        }).setOrigin(0.5).setDepth(1);
 
         this.events.on('enemyDied', (x, y) => {
             const opts = ['wood','rock','wood','rock','carrot','fish','egg'];
@@ -276,6 +294,36 @@ export default class GameScene extends Phaser.Scene {
         ).setOrigin(0.5).setDepth(20);
 
         this.tweens.add({ targets: txt, y: txt.y - 32, alpha: 0,
+            duration: 900, onComplete: () => txt.destroy() });
+    }
+
+    // Tenta entregar os recursos da jangada (wood/rope/sail) quando o jogador
+    // esta dentro da zona da jangada e preme F.
+    _tryBuildRaft() {
+        const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.raftZone.x, this.raftZone.y);
+        if (d > this.raftZone.radius) {
+            // Jogador esta fora da zona -- nao faz nada (sem mensagem de erro, para nao poluir o ecra)
+            return;
+        }
+
+        let entregouAlgo = false;
+        RAFT_PARTS.forEach(part => {
+            const tenho = this.inventory.getQuantity(part.id); // soma em todos os slots
+            if (tenho > 0) {
+                const aceito = this.quest.deliver(part.id, tenho);
+                if (aceito > 0) {
+                    this.inventory.removeItem(part.id, aceito);
+                    entregouAlgo = true;
+                }
+            }
+        });
+
+        const msg = entregouAlgo ? 'Recursos entregues!' : 'Nada para entregar.';
+        const txt = this.add.text(this.raftZone.x, this.raftZone.y, msg, {
+            fontSize: '11px', fill: entregouAlgo ? '#88ff88' : '#ffaa88', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 2
+        }).setOrigin(0.5).setDepth(20);
+        this.tweens.add({ targets: txt, y: txt.y - 30, alpha: 0,
             duration: 900, onComplete: () => txt.destroy() });
     }
 
