@@ -21,15 +21,16 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.attackCooldown = 600;
         this.lastAttackTime = 0;
 
-        // Escala 1 = frame 96×64 no mapa. Com zoom 2.5 fica 240×160px no ecrã — ótimo
+        // Passo sonoro
+        this._stepTimer = 0;
+        this._stepInterval = 320;
+
+        // Escala 1 = frame 96×64 no mapa. Com zoom 2.5 fica 240×160px no ecrã
         this.setScale(1);
         this.setDepth(5);
-        // Origem no centro horizontal e 80% vertical (pés)
         this.setOrigin(0.5, 0.8);
 
-        // Hitbox pequena centrada nos pés do sprite
-        // Frame 96 wide → offset x = (96-16)/2 = 40; 16px wide
-        // Frame 64 high → pés em ~52px → offset y=46, height=14
+        // Hitbox centrada nos pés: frame 96 wide → offset x=40; frame 64 high → offset y=46
         this.body.setSize(16, 14);
         this.body.setOffset(40, 46);
         this.body.setCollideWorldBounds(true);
@@ -101,17 +102,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.toolSprite.setFlipX(val);
     }
 
-    // Chama-se a cada frame para manter as camadas alinhadas
     _syncLayers() {
         this.hairSprite.setPosition(this.x, this.y);
         this.toolSprite.setPosition(this.x, this.y);
         this.shadow.setPosition(this.x, this.y + 6);
-        // Sincronizar flip — hairSprite e toolSprite podem perder sync
         this.hairSprite.setFlipX(this.flipX);
         this.toolSprite.setFlipX(this.flipX);
     }
 
-    update(cursors, wasd, time) {
+    update(cursors, wasd, time, delta) {
         this._syncLayers();
 
         if (this.isBusy) return;
@@ -134,8 +133,17 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         // Normalizar diagonal
         if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
 
-        const running = this.shiftKey.isDown && (dx !== 0 || dy !== 0);
+        // Sprint apenas se tiver energia (>0)
+        const hasEnergy = this.scene.stats ? this.scene.stats.energy > 0 : true;
+        const running = this.shiftKey.isDown && (dx !== 0 || dy !== 0) && hasEnergy;
         const speed   = running ? this.speedRun : this.speedWalk;
+
+        // Consumir energia ao correr
+        if (running && this.scene.stats) {
+            this.scene.stats.energy = Math.max(0,
+                this.scene.stats.energy - 20 * (delta / 1000)
+            );
+        }
 
         this.body.setVelocityX(dx * speed);
         this.body.setVelocityY(dy * speed);
@@ -144,7 +152,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             if (dx < 0) this._setFlipAll(true);
             else if (dx > 0) this._setFlipAll(false);
             this.playAnim(running ? 'run' : 'walk', running);
+
+            // Som de passo
+            this._stepTimer -= delta || 16;
+            if (this._stepTimer <= 0) {
+                this._stepTimer = running ? this._stepInterval * 0.6 : this._stepInterval;
+                this.scene.events.emit('playerStep');
+            }
         } else {
+            this._stepTimer = 0;
             this.playAnim('idle');
         }
     }
@@ -154,6 +170,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.isBusy = true;
         this.body.setVelocity(0);
 
+        this.scene.events.emit('playerAttack');
+
         const slot = this.scene.inventory?.getSelectedItem();
         const anim = (slot && slot.itemId === 'pickaxe') ? 'mining' : 'axe';
         this.playAnim(anim, true);
@@ -162,21 +180,23 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         const hitX = this.x + offX;
         const hitY = this.y;
 
-        // Dano nos goblins próximos
-        (this.scene.goblins?.getChildren() ?? []).forEach(g => {
+        const goblins = this.scene.goblins?.getChildren() ?? [];
+        goblins.forEach(g => {
             if (!g.dead) {
                 const d = Phaser.Math.Distance.Between(hitX, hitY, g.x, g.y);
                 if (d < this.attackRange + 20) {
                     g.takeDamage(this.attackDamage, this.flipX ? 'left' : 'right');
+                    this.scene.events.emit('enemyHurt');
                 }
             }
         });
 
-        // Cortar árvores próximas (dá madeira) — mesma lógica dos goblins, mas para árvores
-        (this.scene.trees?.getChildren() ?? []).forEach(tree => {
-            const d = Phaser.Math.Distance.Between(hitX, hitY, tree.x, tree.y);
-            if (d < this.attackRange + 20) {
-                tree.chop();
+        // Árvores cortáveis (EPIC da jangada) — mesma deteção de alcance dos goblins
+        const trees = this.scene.trees?.getChildren() ?? [];
+        trees.forEach(t => {
+            if (!t.dead) {
+                const d = Phaser.Math.Distance.Between(hitX, hitY, t.x, t.y);
+                if (d < this.attackRange + 20) t.chop();
             }
         });
 

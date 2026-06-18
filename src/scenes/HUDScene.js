@@ -49,7 +49,7 @@ export default class HUDScene extends Phaser.Scene {
         }
 
         // Dica "E para usar"
-        this.add.text(W / 2, hotbarY + 32, '[E] usar item', {
+        this.add.text(W / 2, hotbarY + 32, '[E] usar item   ·   [Q] registo da jangada', {
             fontSize: '9px', fill: '#888888'
         }).setOrigin(0.5).setDepth(3);
 
@@ -143,6 +143,12 @@ export default class HUDScene extends Phaser.Scene {
             this.quest.on('penaltyApplied', () => this._refreshQuest());
             this._refreshQuest();
         }
+
+        //------------------------------------------------------------
+        // QUEST LOG (painel detalhado, tecla Q)
+        //------------------------------------------------------------
+        this._buildQuestLog(W, H);
+        this.gameScene.events.on('toggleQuestLog', () => this._toggleQuestLog());
 
         //------------------------------------------------------------
         // AVISO DE VIDA CRÍTICA (overlay de tela cheia, escondido por defeito)
@@ -243,6 +249,72 @@ export default class HUDScene extends Phaser.Scene {
             if (!t) return;
             t.setText(`${p.icon} ${p.label}: ${p.current}/${p.required}`);
             t.setColor(p.done ? '#88ff88' : '#cccccc');
+        });
+        if (this._questLogOpen) this._refreshQuestLogPanel();
+    }
+
+    //----------------------------------------------------------------
+    // QUEST LOG -- painel detalhado com fonte/zona de cada recurso (tecla Q)
+    //----------------------------------------------------------------
+    _buildQuestLog(W, H) {
+        // Fonte/zona de cada recurso -- so para texto, nao afeta o QuestManager
+        this._zoneInfo = {
+            wood: { fonte: 'Cortar árvores (ESPAÇO)', zona: 'Floresta' },
+            rope: { fonte: 'Destroços / baús',         zona: 'Praia oposta' },
+            sail: { fonte: 'Drop do boss skeleton',    zona: 'Zona rochosa' },
+        };
+
+        this._questLogOpen = false;
+        this.questLogGroup = this.add.group();
+
+        const panelW = 360, panelH = 220;
+        const bg = this.add.rectangle(W / 2, H / 2, panelW, panelH, 0x0b0b18, 0.92)
+            .setStrokeStyle(2, 0x3366aa).setDepth(60).setScrollFactor(0).setVisible(false);
+        const title = this.add.text(W / 2, H / 2 - panelH / 2 + 18,
+            'REGISTO DA JANGADA', { fontSize: '14px', fill: '#ffdd66', fontStyle: 'bold' }
+        ).setOrigin(0.5).setDepth(61).setScrollFactor(0).setVisible(false);
+        const hint = this.add.text(W / 2, H / 2 + panelH / 2 - 14,
+            '[Q] fechar', { fontSize: '9px', fill: '#888888' }
+        ).setOrigin(0.5).setDepth(61).setScrollFactor(0).setVisible(false);
+
+        this.questLogGroup.addMultiple([bg, title, hint]);
+        this._questLogRows = [];
+
+        if (this.quest) {
+            this.quest.getProgress().forEach((p, i) => {
+                const y = H / 2 - panelH / 2 + 48 + i * 50;
+                const z = this._zoneInfo[p.id] || { fonte: '?', zona: '?' };
+
+                const head = this.add.text(W / 2 - panelW / 2 + 20, y,
+                    `${p.icon} ${p.label}`, { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold' }
+                ).setOrigin(0, 0.5).setDepth(61).setScrollFactor(0).setVisible(false);
+                const prog = this.add.text(W / 2 + panelW / 2 - 20, y,
+                    '', { fontSize: '13px', fill: '#cccccc', fontStyle: 'bold' }
+                ).setOrigin(1, 0.5).setDepth(61).setScrollFactor(0).setVisible(false);
+                const sub = this.add.text(W / 2 - panelW / 2 + 20, y + 18,
+                    `${z.fonte} · ${z.zona}`, { fontSize: '10px', fill: '#8899aa' }
+                ).setOrigin(0, 0.5).setDepth(61).setScrollFactor(0).setVisible(false);
+
+                this.questLogGroup.addMultiple([head, prog, sub]);
+                this._questLogRows.push({ id: p.id, head, prog, sub });
+            });
+        }
+    }
+
+    _toggleQuestLog() {
+        this._questLogOpen = !this._questLogOpen;
+        this.questLogGroup.getChildren().forEach(c => c.setVisible(this._questLogOpen));
+        if (this._questLogOpen) this._refreshQuestLogPanel();
+    }
+
+    _refreshQuestLogPanel() {
+        if (!this.quest) return;
+        const progress = this.quest.getProgress();
+        this._questLogRows.forEach(row => {
+            const p = progress.find(pp => pp.id === row.id);
+            if (!p) return;
+            row.prog.setText(`${p.current}/${p.required}`);
+            row.prog.setColor(p.done ? '#88ff88' : '#ffaa88');
         });
     }
 }
