@@ -23,9 +23,9 @@
  */
 
 export const RAFT_PARTS = [
-    { id: 'wood', label: 'Madeira', icon: '🪵', required: 5 },
-    { id: 'rope', label: 'Corda',   icon: '🪢', required: 3 },
     { id: 'sail', label: 'Vela',    icon: '⛵', required: 1 },
+    { id: 'rope', label: 'Corda',   icon: '🪢', required: 3 },
+    { id: 'wood', label: 'Madeira', icon: '🪵', required: 5 },
 ];
 
 export default class QuestManager extends Phaser.Events.EventEmitter {

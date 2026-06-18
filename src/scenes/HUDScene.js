@@ -26,9 +26,26 @@ export default class HUDScene extends Phaser.Scene {
         const spacing    = 6;
         const totalWidth = this.inventory.size * slotSize + (this.inventory.size - 1) * spacing;
         const hotbarX    = (W - totalWidth) / 2 + slotSize / 2;
-        const hotbarY    = H - 36;
+        const hotbarY    = H - 38;
 
-        this.add.rectangle(W / 2, hotbarY, totalWidth + 16, slotSize + 16, 0x000000, 0.4).setDepth(0);
+        // Painel RPG do hotbar (estende-se para cima para conter o hint)
+        const hbw = totalWidth + 28;
+        const hbg = this.add.graphics().setDepth(0);
+        hbg.fillStyle(0x000000, 0.3);
+        hbg.fillRoundedRect(W / 2 - hbw / 2 + 3, hotbarY - 47, hbw, 82, 8);
+        hbg.fillStyle(0x160a00, 0.92);
+        hbg.fillRoundedRect(W / 2 - hbw / 2, hotbarY - 50, hbw, 82, 8);
+        hbg.lineStyle(1.5, 0xc8901a, 0.72);
+        hbg.strokeRoundedRect(W / 2 - hbw / 2, hotbarY - 50, hbw, 82, 8);
+        // Linha separadora entre hint e slots
+        hbg.lineStyle(1, 0x6b3a1a, 0.5);
+        hbg.lineBetween(W / 2 - hbw / 2 + 12, hotbarY - 30, W / 2 + hbw / 2 - 12, hotbarY - 30);
+
+        // Dica de controlos (TOPO do painel, acima dos slots)
+        this.add.text(W / 2, hotbarY - 40, '[E] usar   ·   [Q] jangada   ·   [I] inventário', {
+            fontSize: '9px', fill: '#c8a870',
+            stroke: '#000000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(3);
 
         for (let i = 0; i < this.inventory.size; i++) {
             const x = hotbarX + i * (slotSize + spacing);
@@ -40,8 +57,9 @@ export default class HUDScene extends Phaser.Scene {
             }).setOrigin(1, 1).setDepth(3);
 
             // Número do slot (1-8)
-            this.add.text(x - 20, hotbarY - 20, String(i + 1), {
-                fontSize: '9px', fill: '#aaaaaa'
+            this.add.text(x - 20, hotbarY - 22, String(i + 1), {
+                fontSize: '9px', fill: '#c8a870',
+                stroke: '#000000', strokeThickness: 2,
             }).setOrigin(0, 0).setDepth(3);
 
             this.slotBgs.push(bg);
@@ -49,15 +67,10 @@ export default class HUDScene extends Phaser.Scene {
             this.slotTexts.push(text);
         }
 
-        // Nome do item selecionado (acima do hotbar)
-        this._selectedItemLabel = this.add.text(W / 2, hotbarY - 44, '', {
-            fontSize: '10px', fill: '#f5e0b0', fontStyle: 'bold',
-            stroke: '#000000', strokeThickness: 2,
-        }).setOrigin(0.5).setDepth(3);
-
-        // Dica de controlos
-        this.add.text(W / 2, hotbarY + 32, '[E] usar   ·   [Q] jangada   ·   [I] inventário', {
-            fontSize: '9px', fill: '#888888'
+        // Nome do item selecionado (flutua acima do painel)
+        this._selectedItemLabel = this.add.text(W / 2, hotbarY - 64, '', {
+            fontSize: '11px', fill: '#f5e0b0', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 3,
         }).setOrigin(0.5).setDepth(3);
 
         //------------------------------------------------------------
@@ -115,28 +128,14 @@ export default class HUDScene extends Phaser.Scene {
         this._refreshBars();
 
         //------------------------------------------------------------
-        // TIMER, SCORE E KILLS (canto superior direito)
-        //------------------------------------------------------------
-        this.timerTxt = this.add.text(W - 16, 16, '0:00', {
-            fontSize: '14px', fill: '#ffffff', fontStyle: 'bold'
-        }).setOrigin(1, 0).setDepth(3);
-
-        this.scoreTxt = this.add.text(W - 16, 36, '0 pts', {
-            fontSize: '11px', fill: '#ffdd44'
-        }).setOrigin(1, 0).setDepth(3);
-
-        this.killsTxt = this.add.text(W - 16, 52, '☠ 0', {
-            fontSize: '11px', fill: '#ff8888'
-        }).setOrigin(1, 0).setDepth(3);
-
-        //------------------------------------------------------------
-        // PAINEL DE OBJETIVOS DA JANGADA (canto superior direito)
+        // PAINEL UNIFICADO — JANGADA + TIMER (canto superior direito)
         //------------------------------------------------------------
         const QPX  = W - 8 - 168;
-        const QPY  = 68;
+        const QPY  = 8;
         const QPW  = 168;
-        const QPH  = 92;
+        const QPH  = 130;
         const QPHH = 22;
+        const QSEP = 96;   // y da linha separadora quest/stats
 
         const qg = this.add.graphics().setDepth(2);
         qg.fillStyle(0x000000, 0.35);
@@ -149,10 +148,25 @@ export default class HUDScene extends Phaser.Scene {
         qg.fillRoundedRect(QPX, QPY, QPW, QPHH, { tl: 6, tr: 6, bl: 0, br: 0 });
         qg.lineStyle(1, 0xc8901a, 0.6);
         qg.lineBetween(QPX + 8, QPY + QPHH, QPX + QPW - 8, QPY + QPHH);
+        qg.lineStyle(1, 0x6b3a1a, 0.5);
+        qg.lineBetween(QPX + 8, QSEP, QPX + QPW - 8, QSEP);
 
         this.add.text(QPX + QPW / 2, QPY + QPHH / 2, 'JANGADA  [F]', {
             fontSize: '9px', fill: '#f5c070', fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(3);
+
+        // Timer (secção inferior do painel)
+        this.timerTxt = this.add.text(QPX + QPW / 2, QSEP + 6, '0:00', {
+            fontSize: '13px', fill: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(0.5, 0).setDepth(3);
+
+        this.scoreTxt = this.add.text(QPX + 10, QSEP + 24, '0 pts', {
+            fontSize: '10px', fill: '#ffdd44'
+        }).setOrigin(0, 0).setDepth(3);
+
+        this.killsTxt = this.add.text(QPX + QPW - 10, QSEP + 24, '☠ 0', {
+            fontSize: '10px', fill: '#ff8888'
+        }).setOrigin(1, 0).setDepth(3);
 
         const SLOT_CFG = {
             wood: { color: 0x88cc44, emptyColor: 0x334411, slots: 5 },
