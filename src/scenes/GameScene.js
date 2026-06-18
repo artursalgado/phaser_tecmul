@@ -77,6 +77,7 @@ export default class GameScene extends Phaser.Scene {
 
     create() {
         SoundManager.resume();
+        SoundManager.startBgMusic();
 
         // Reset estado
         this._elapsedSec   = 0;
