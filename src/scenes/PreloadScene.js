@@ -110,6 +110,6 @@ export default class PreloadScene extends Phaser.Scene {
         g.destroy();
 
         I18n.init(this.cache);
-        this.scene.start('IntroScene');
+        this.scene.start('MenuScene');
     }
 }

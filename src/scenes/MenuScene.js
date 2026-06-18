@@ -62,7 +62,7 @@ export default class MenuScene extends Phaser.Scene {
             SoundManager.play('menu_click');
             SoundManager.resume();
             SoundManager.stopBgMusic();
-            this.time.delayedCall(120, () => this.scene.start('GameScene'));
+            this.time.delayedCall(120, () => this.scene.start('IntroScene'));
         });
 
         // ── SELETOR DE LÍNGUA ──────────────────────────────────────────────
