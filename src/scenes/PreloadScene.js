@@ -103,7 +103,12 @@ export default class PreloadScene extends Phaser.Scene {
     }
 
     create() {
-        // Inicializar o sistema de i18n com os JSONs carregados
+        // Textura 4×4 branca para o sistema de partículas (tintada em runtime)
+        const g = this.add.graphics();
+        g.fillStyle(0xffffff).fillRect(0, 0, 4, 4);
+        g.generateTexture('particle_sq', 4, 4);
+        g.destroy();
+
         I18n.init(this.cache);
         this.scene.start('MenuScene');
     }

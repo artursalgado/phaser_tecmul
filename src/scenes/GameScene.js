@@ -6,10 +6,11 @@ import Goblin from '../objects/Goblin.js';
 import Skeleton from '../objects/Skeleton.js';
 import Tree from '../objects/Tree.js';
 import QuestManager, { RAFT_PARTS } from '../systems/QuestManager.js';
+import BossSkeleton from '../objects/BossSkeleton.js';
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
 
-// Fallback (usado so se o mapa nao tiver object layer "spawns").
+// Fallback (usado só se o mapa não tiver object layer "spawns").
 // Offsets relativos ao centro do mapa, em pixels.
 const ITEM_OFFSETS = [
     { dx: -64,  dy: -48, itemId: 'wood',    qty: 3 },
@@ -76,6 +77,7 @@ export default class GameScene extends Phaser.Scene {
 
     create() {
         SoundManager.resume();
+        SoundManager.startBgMusic();
 
         // Reset estado
         this._elapsedSec   = 0;
@@ -95,7 +97,7 @@ export default class GameScene extends Phaser.Scene {
         }
 
         // Layers v7: chao(0) < transicoes(1) < decoracao(2) < [colisao oculto]
-        //            < objetos(4) < jogador(5) < acima(8 -- copas por cima do jogador)
+        //            < objetos(4) < jogador(5) < acima(8 — copas por cima do jogador)
         const chao       = mapa.createLayer('chao',       tileset, 0, 0);
         const transicoes = mapa.createLayer('transicoes', tileset, 0, 0);
         const decoracao  = mapa.createLayer('decoracao',  tileset, 0, 0);
@@ -195,10 +197,11 @@ export default class GameScene extends Phaser.Scene {
 
         // ── INIMIGOS ──────────────────────────────────────────────────────────
         this.goblins = this.physics.add.group();
-        spawns.enemies.forEach(s =>
-            s.kind === 'skeleton' ? this._spawnSkeleton(s.x, s.y)
-                                  : this._spawnGoblin(s.x, s.y, s.tier)
-        );
+        spawns.enemies.forEach(s => {
+            if (s.kind === 'boss')     this._spawnBoss(s.x, s.y);
+            else if (s.kind === 'skeleton') this._spawnSkeleton(s.x, s.y);
+            else                            this._spawnGoblin(s.x, s.y, s.tier);
+        });
         if (colisao) this.physics.add.collider(this.goblins, colisao);
         this.physics.add.collider(this.goblins, this.goblins);
 
@@ -344,6 +347,14 @@ export default class GameScene extends Phaser.Scene {
         this.goblins.add(s);
         if (this._colisao) this.physics.add.collider(s, this._colisao);
         return s;
+    }
+
+    // ── Spawn boss ──────────────────────────────────────────────────────────
+    _spawnBoss(x, y) {
+        const b = new BossSkeleton(this, x, y);
+        this.goblins.add(b);
+        if (this._colisao) this.physics.add.collider(b, this._colisao);
+        return b;
     }
 
     // ── Apanhar item ──────────────────────────────────────────────────────

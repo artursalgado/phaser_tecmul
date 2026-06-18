@@ -12,6 +12,7 @@ export default class GameOverScene extends Phaser.Scene {
         const kills = data?.kills ?? 0;
         const time  = data?.time  ?? 0;
 
+        SoundManager.stopBgMusic();
         SoundManager.play('die');
 
         // Fundo com fade-in

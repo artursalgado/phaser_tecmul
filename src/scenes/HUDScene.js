@@ -124,24 +124,53 @@ export default class HUDScene extends Phaser.Scene {
         //------------------------------------------------------------
         // PAINEL DE OBJETIVOS DA JANGADA (canto superior direito, abaixo dos kills)
         //------------------------------------------------------------
-        this.questTxts = {};
-        const questY0 = 76;
-        this.add.rectangle(W - 16 - 75, questY0 + 28, 150, 64, 0x000000, 0.4)
-            .setOrigin(0.5).setDepth(2);
+        const questY0  = 76;
+        const panelH2  = 72;
+        const panelW2  = 152;
+        this.add.rectangle(W - 8 - panelW2 / 2, questY0 + panelH2 / 2 - 4, panelW2, panelH2, 0x000000, 0.45)
+            .setDepth(2);
         this.add.text(W - 16, questY0 - 4, 'JANGADA [F]', {
             fontSize: '9px', fill: '#ffdd66', fontStyle: 'bold'
         }).setOrigin(1, 0).setDepth(3);
 
+        // Slots visuais por recurso
+        // Configuração: cor preenchido, cor vazio, n slots
+        const SLOT_CFG = {
+            wood: { color: 0x88cc44, emptyColor: 0x334411, slots: 5 },
+            rope: { color: 0xddaa44, emptyColor: 0x443311, slots: 3 },
+            sail: { color: 0x44bbff, emptyColor: 0x112233, slots: 1 },
+        };
+        const SLOT_SIZE  = 10;
+        const SLOT_GAP   = 3;
+        const SLOT_RIGHT = W - 16;
+
+        this._raftSlots = {};  // { wood: [rect, ...], rope: [...], sail: [...] }
+
         if (this.quest) {
             this.quest.getProgress().forEach((p, i) => {
-                const t = this.add.text(W - 16, questY0 + 12 + i * 16, '', {
-                    fontSize: '11px', fill: '#cccccc'
-                }).setOrigin(1, 0).setDepth(3);
-                this.questTxts[p.id] = t;
+                const rowY  = questY0 + 10 + i * 22;
+                const cfg   = SLOT_CFG[p.id] || { color: 0xffffff, emptyColor: 0x333333, slots: 1 };
+                const total = cfg.slots;
+                const rowW  = total * SLOT_SIZE + (total - 1) * SLOT_GAP;
+
+                // Label (ícone + nome)
+                this.add.text(SLOT_RIGHT - rowW - 6, rowY + SLOT_SIZE / 2,
+                    `${p.icon} ${p.label}`, { fontSize: '9px', fill: '#aaaaaa' }
+                ).setOrigin(1, 0.5).setDepth(3);
+
+                // Slots (da direita para a esquerda)
+                const rects = [];
+                for (let s = 0; s < total; s++) {
+                    const sx = SLOT_RIGHT - (total - 1 - s) * (SLOT_SIZE + SLOT_GAP);
+                    const r  = this.add.rectangle(sx, rowY + SLOT_SIZE / 2, SLOT_SIZE, SLOT_SIZE, cfg.emptyColor)
+                        .setStrokeStyle(1, 0x555555).setDepth(3);
+                    rects.push(r);
+                }
+                this._raftSlots[p.id] = { rects, cfg };
             });
+
             this.quest.on('partDelivered', () => this._refreshQuest());
             this.quest.on('penaltyApplied', () => this._refreshQuest());
-            // Also listen on the global Phaser event bus (quest:updated covers both cases)
             this.game.events.on('quest:updated', () => this._refreshQuest(), this);
             this._refreshQuest();
         }
@@ -245,12 +274,26 @@ export default class HUDScene extends Phaser.Scene {
     // ATUALIZAR PAINEL DE OBJETIVOS DA JANGADA
     //----------------------------------------------------------------
     _refreshQuest() {
-        if (!this.quest) return;
+        if (!this.quest || !this._raftSlots) return;
         this.quest.getProgress().forEach(p => {
-            const t = this.questTxts[p.id];
-            if (!t) return;
-            t.setText(`${p.icon} ${p.label}: ${p.current}/${p.required}`);
-            t.setColor(p.done ? '#88ff88' : '#cccccc');
+            const entry = this._raftSlots[p.id];
+            if (!entry) return;
+            const { rects, cfg } = entry;
+            rects.forEach((r, i) => {
+                const filled = i < p.current;
+                r.setFillStyle(filled ? cfg.color : cfg.emptyColor);
+                r.setStrokeStyle(1, filled ? 0xffffff : 0x555555, filled ? 0.5 : 1);
+                // Pulso no slot que acabou de ser preenchido
+                if (filled && !r._wasFilled) {
+                    r._wasFilled = true;
+                    this.tweens.add({
+                        targets: r, scaleX: 1.4, scaleY: 1.4,
+                        duration: 120, yoyo: true, ease: 'Sine.easeOut'
+                    });
+                } else if (!filled) {
+                    r._wasFilled = false;
+                }
+            });
         });
         if (this._questLogOpen) this._refreshQuestLogPanel();
     }

@@ -15,6 +15,8 @@ export default class VictoryScene extends Phaser.Scene {
         SoundManager.play('victory');
         SoundManager.stopBgMusic();
 
+        this.cameras.main.fadeIn(700, 0, 0, 0);
+
         const overlay = this.add.rectangle(W/2, H/2, W, H, 0x1a1000, 0);
         this.tweens.add({ targets: overlay, alpha: 0.9, duration: 600 });
 
