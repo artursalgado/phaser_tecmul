@@ -73,6 +73,17 @@ export default class PlayerStats extends Phaser.Events.EventEmitter {
         this.emit('changed', this);
     }
 
+    // Repõe tudo a 100% e tira o estado de "morto".
+    // Usado no respawn (1 vida extra) — o jogador volta a ter stats cheios.
+    reset() {
+        this.health = this.maxHealth;
+        this.hunger = this.maxHunger;
+        this.thirst = this.maxThirst;
+        this.energy = this.maxEnergy;
+        this.dead   = false;
+        this.emit('changed', this);
+    }
+
     // Percentagem de 0 a 1 de cada stat
     get healthPct()  { return this.health  / this.maxHealth;  }
     get hungerPct()  { return this.hunger  / this.maxHunger;  }
