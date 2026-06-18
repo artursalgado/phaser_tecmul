@@ -230,9 +230,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             if (!t.dead) {
                 const d = Phaser.Math.Distance.Between(hitX, hitY, t.x, t.y);
                 if (d < this.attackRange + 20) {
-                    // Escala a resistência da árvore baseando-se no multiplicador de energia
-                    t.hitsLeft += (1 - mult);
-                    t.chop();
+                    if (Math.random() < mult) t.chop();
                 }
             }
         });
