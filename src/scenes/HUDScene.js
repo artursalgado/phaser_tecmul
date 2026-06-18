@@ -120,9 +120,9 @@ export default class HUDScene extends Phaser.Scene {
         //------------------------------------------------------------
         // OUVIR EVENTOS
         //------------------------------------------------------------
-        this.inventory.on('changed',         () => this._refreshHotbar());
-        this.inventory.on('selectionChanged', () => this._refreshHotbar());
-        this.stats.on('changed',             () => this._refreshBars());
+        this.inventory.on('changed',         this._refreshHotbar, this);
+        this.inventory.on('selectionChanged', this._refreshHotbar, this);
+        this.stats.on('changed',             this._refreshBars,   this);
 
         this._refreshHotbar();
         this._refreshBars();
@@ -205,9 +205,9 @@ export default class HUDScene extends Phaser.Scene {
                 this._raftSlots[p.id] = { rects, cfg };
             });
 
-            this.quest.on('partDelivered', () => this._refreshQuest());
-            this.quest.on('penaltyApplied', () => this._refreshQuest());
-            this.game.events.on('quest:updated', () => this._refreshQuest(), this);
+            this.quest.on('partDelivered',  this._refreshQuest, this);
+            this.quest.on('penaltyApplied', this._refreshQuest, this);
+            this.game.events.on('quest:updated', this._refreshQuest, this);
             this._refreshQuest();
         }
 
@@ -215,13 +215,13 @@ export default class HUDScene extends Phaser.Scene {
         // QUEST LOG (painel detalhado, tecla Q)
         //------------------------------------------------------------
         this._buildQuestLog(W, H);
-        this.gameScene.events.on('toggleQuestLog', () => this._toggleQuestLog());
+        this.gameScene.events.on('toggleQuestLog', this._toggleQuestLog, this);
 
         //------------------------------------------------------------
         // LIVRO / DIÁRIO DO NÁUFRAGO
         //------------------------------------------------------------
         this._buildBook(W, H);
-        this.gameScene.events.on('openBook', () => this._toggleBook());
+        this.gameScene.events.on('openBook', this._toggleBook, this);
 
         //------------------------------------------------------------
         // AVISO DE VIDA CRÍTICA (overlay de tela cheia, escondido por defeito)
@@ -366,16 +366,36 @@ export default class HUDScene extends Phaser.Scene {
         this.questLogGroup = this.add.group();
 
         const panelW = 360, panelH = 220;
-        const bg = this.add.rectangle(W / 2, H / 2, panelW, panelH, 0x0b0b18, 0.92)
-            .setStrokeStyle(2, 0x3366aa).setDepth(60).setScrollFactor(0).setVisible(false);
-        const title = this.add.text(W / 2, H / 2 - panelH / 2 + 18,
-            'REGISTO DA JANGADA', { fontSize: '14px', fill: '#ffdd66', fontStyle: 'bold' }
-        ).setOrigin(0.5).setDepth(61).setScrollFactor(0).setVisible(false);
-        const hint = this.add.text(W / 2, H / 2 + panelH / 2 - 14,
-            '[Q] fechar', { fontSize: '9px', fill: '#888888' }
+        const cx = W / 2 - panelW / 2;
+        const cy = H / 2 - panelH / 2;
+        const HEADER_H = 28;
+
+        const bgGfx = this.add.graphics().setDepth(60).setScrollFactor(0).setVisible(false);
+        // Sombra
+        bgGfx.fillStyle(0x000000, 0.35);
+        bgGfx.fillRoundedRect(cx + 4, cy + 4, panelW, panelH, 6);
+        // Fundo castanho escuro
+        bgGfx.fillStyle(0x160a00, 0.92);
+        bgGfx.fillRoundedRect(cx, cy, panelW, panelH, 6);
+        // Borda dourada
+        bgGfx.lineStyle(1.5, 0xc8901a, 0.72);
+        bgGfx.strokeRoundedRect(cx, cy, panelW, panelH, 6);
+        // Header band
+        bgGfx.fillStyle(0x3d1a00, 1);
+        bgGfx.fillRoundedRect(cx, cy, panelW, HEADER_H, { tl: 6, tr: 6, bl: 0, br: 0 });
+        // Linha divisória dourada
+        bgGfx.lineStyle(1, 0xc8901a, 0.6);
+        bgGfx.lineBetween(cx + 8, cy + HEADER_H, cx + panelW - 8, cy + HEADER_H);
+
+        const title = this.add.text(cx + panelW / 2, cy + HEADER_H / 2,
+            'REGISTO DA JANGADA', { fontSize: '11px', fill: '#f5c070', fontStyle: 'bold' }
         ).setOrigin(0.5).setDepth(61).setScrollFactor(0).setVisible(false);
 
-        this.questLogGroup.addMultiple([bg, title, hint]);
+        const hint = this.add.text(W / 2, H / 2 + panelH / 2 - 14,
+            '[Q] fechar', { fontSize: '9px', fill: '#c8a870', stroke: '#000000', strokeThickness: 2 }
+        ).setOrigin(0.5).setDepth(61).setScrollFactor(0).setVisible(false);
+
+        this.questLogGroup.addMultiple([bgGfx, title, hint]);
         this._questLogRows = [];
 
         if (this.quest) {
@@ -383,17 +403,28 @@ export default class HUDScene extends Phaser.Scene {
                 const y = H / 2 - panelH / 2 + 48 + i * 50;
                 const z = this._zoneInfo[p.id] || { fonte: '?', zona: '?' };
 
-                const head = this.add.text(W / 2 - panelW / 2 + 20, y,
-                    `${p.icon} ${p.label}`, { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold' }
+                const iconX = W / 2 - panelW / 2 + 20;
+                const img = this.add.image(iconX, y, p.id)
+                    .setDisplaySize(14, 14)
+                    .setOrigin(0, 0.5)
+                    .setDepth(61)
+                    .setScrollFactor(0)
+                    .setVisible(false);
+
+                const labelX = iconX + 22;
+                const head = this.add.text(labelX, y,
+                    p.label, { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold' }
                 ).setOrigin(0, 0.5).setDepth(61).setScrollFactor(0).setVisible(false);
+
                 const prog = this.add.text(W / 2 + panelW / 2 - 20, y,
                     '', { fontSize: '13px', fill: '#cccccc', fontStyle: 'bold' }
                 ).setOrigin(1, 0.5).setDepth(61).setScrollFactor(0).setVisible(false);
-                const sub = this.add.text(W / 2 - panelW / 2 + 20, y + 18,
+
+                const sub = this.add.text(iconX, y + 18,
                     `${z.fonte} · ${z.zona}`, { fontSize: '10px', fill: '#8899aa' }
                 ).setOrigin(0, 0.5).setDepth(61).setScrollFactor(0).setVisible(false);
 
-                this.questLogGroup.addMultiple([head, prog, sub]);
+                this.questLogGroup.addMultiple([img, head, prog, sub]);
                 this._questLogRows.push({ id: p.id, head, prog, sub });
             });
         }
@@ -662,6 +693,19 @@ export default class HUDScene extends Phaser.Scene {
             `— ${data.book.page} ${this._bookPage * 2 + 1}–${this._bookPage * 2 + 2} / ${total} —`
         );
         this._bookCloseHint.setText(data.book.close);
+    }
+
+    shutdown() {
+        this.inventory?.off('changed',          this._refreshHotbar, this);
+        this.inventory?.off('selectionChanged',  this._refreshHotbar, this);
+        this.stats?.off('changed',               this._refreshBars,   this);
+        if (this.quest) {
+            this.quest.off('partDelivered',  this._refreshQuest, this);
+            this.quest.off('penaltyApplied', this._refreshQuest, this);
+        }
+        this.game.events.off('quest:updated',        this._refreshQuest,    this);
+        this.gameScene?.events.off('toggleQuestLog', this._toggleQuestLog,  this);
+        this.gameScene?.events.off('openBook',        this._toggleBook,      this);
     }
 
     _updateBookNav() {

@@ -68,9 +68,21 @@ export default class GameOverScene extends Phaser.Scene {
             });
         }
 
-        // Painel RPG (NineSlice com panel_rpg 96×96, bordas 16px)
-        const panel = this.add.nineslice(W/2, H/2 - 10, 'panel_rpg', null, 480, 370, 16, 16, 16, 16)
-            .setAlpha(0).setDepth(5);
+        // Painel RPG (Graphics)
+        const panelW = 480, panelH = 370;
+        const cx = W/2 - panelW/2;
+        const cy = (H/2 - 10) - panelH/2;
+
+        const panel = this.add.graphics().setAlpha(0).setDepth(5);
+        // Sombra
+        panel.fillStyle(0x000000, 0.35);
+        panel.fillRoundedRect(cx + 4, cy + 4, panelW, panelH, 6);
+        // Fundo castanho escuro
+        panel.fillStyle(0x160a00, 0.92);
+        panel.fillRoundedRect(cx, cy, panelW, panelH, 6);
+        // Borda dourada
+        panel.lineStyle(1.5, 0xc8901a, 0.72);
+        panel.strokeRoundedRect(cx, cy, panelW, panelH, 6);
 
         const titulo = this.add.text(W/2, H/2 - 130, I18n.t('gameover.title'), {
             fontFamily: 'Georgia, serif', fontSize: '52px', fill: '#cc2200', fontStyle: 'bold',
@@ -131,7 +143,7 @@ export default class GameOverScene extends Phaser.Scene {
 
         this.add.text(W/2, H - 24,
             I18n.lang === 'en' ? '[R] Retry  ·  [M] Menu' : '[R] Tentar de novo  ·  [M] Menu',
-            { fontSize: '11px', fill: '#555555' }
+            { fontSize: '11px', fill: '#c8a870', stroke: '#000000', strokeThickness: 2 }
         ).setOrigin(0.5);
     }
 }

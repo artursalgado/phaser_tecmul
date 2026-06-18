@@ -233,6 +233,13 @@ export default class GameScene extends Phaser.Scene {
             stroke: '#000000', strokeThickness: 2
         }).setOrigin(0.5).setDepth(9);
         // ── EVENTOS ───────────────────────────────────────────────────────────
+        // Phaser 3.80 shutdown() não chama removeAllListeners — limpar antes de re-registar
+        this.events.off('enemyDied');
+        this.events.off('playerDamaged');
+        this.events.off('playerAttack');
+        this.events.off('enemyHurt');
+        this.events.off('playerStep');
+
         this.events.on('enemyDied', (x, y) => {
             this._killCount++;
             this._score += 100;
