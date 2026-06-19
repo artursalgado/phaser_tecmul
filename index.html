@@ -5,6 +5,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stranded</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#1a0a00" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Stranded" />
+
+  <!-- OpenGraph para partilha -->
+  <meta property="og:title" content="Stranded" />
+  <meta property="og:description" content="Sobrevive na ilha, repara a jangada e foge." />
+  <meta property="og:type" content="website" />
   <style>
     * {
       margin: 0;
@@ -51,6 +63,11 @@
       // ?debug=1 na URL mostra o overlay logo ao arrancar
       if (devMode) el.style.display = 'block';
     })();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
   </script>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.min.js"></script>
   <script type="module" src="src/main.js"></script>
