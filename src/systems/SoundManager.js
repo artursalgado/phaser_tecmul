@@ -161,6 +161,12 @@ class SoundManager {
       case "pause":
         this.somPausa();
         break;
+      case "chop":
+        this.somCorteArvore();
+        break;
+      case "tree_fall":
+        this.somArvoreACair();
+        break;
       default:
         break;
     }
@@ -258,6 +264,32 @@ class SoundManager {
     [523, 659, 784, 1047].forEach((f, i) => {
       this.tocarTom(f, 0.25, "sine", i * 0.13, 0.18);
     });
+  }
+
+  // Machadada numa árvore: batida grave curta + ruído de impacto
+  somCorteArvore() {
+    const osc = this.criarOscilador("sawtooth", 220);
+    const g = this.criarGainNode(0.18 * this.volume);
+    osc.connect(g);
+    g.connect(this.ctx.destination);
+    osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.07);
+    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.09);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.09);
+    this.tocarRuido(0.12, 0.01, 0.07);
+  }
+
+  // Árvore a cair: tom descendente longo + ruído de estrondo
+  somArvoreACair() {
+    const osc = this.criarOscilador("sawtooth", 280);
+    const g = this.criarGainNode(0.22 * this.volume);
+    osc.connect(g);
+    g.connect(this.ctx.destination);
+    osc.frequency.exponentialRampToValueAtTime(55, this.ctx.currentTime + 0.35);
+    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.4);
+    this.tocarRuido(0.18, 0.02, 0.35);
   }
 
   // Utilitário para tocar um tom simples de frequência e forma de onda definidas

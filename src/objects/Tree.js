@@ -1,5 +1,6 @@
 import { burst } from "../systems/Particles.js";
 import I18n from "../systems/I18n.js";
+import SoundManager from "../systems/SoundManager.js";
 
 // Árvore interativa no mapa que pode ser cortada com o ataque do jogador (barra de espaço).
 // Leva 3 machadadas para ser destruída, concedendo itens de madeira diretamente ao jogador.
@@ -30,6 +31,8 @@ export default class Tree extends Phaser.Physics.Arcade.Sprite {
     }
     this.hitsLeft--;
 
+    SoundManager.play("chop");
+
     // Efeito de partículas: liberta pequenas folhas verdes ao ser atingida
     burst(this.scene, this.x, this.y - 20, {
       color: 0x66cc44,
@@ -56,6 +59,7 @@ export default class Tree extends Phaser.Physics.Arcade.Sprite {
   // Lógica para derrubar a árvore, dar recompensas e animar o seu desaparecimento
   fall() {
     this.dead = true;
+    SoundManager.play("tree_fall");
 
     // Adiciona a madeira recolhida diretamente ao inventário do jogador
     this.scene.inventory.addItem("wood", this.woodGiven);
