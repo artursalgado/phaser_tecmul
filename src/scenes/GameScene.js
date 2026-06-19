@@ -90,6 +90,8 @@ export default class GameScene extends Phaser.Scene {
         this._raftReady    = false;
         this._autosaveTimer = 0;
         this._loadedPlayerPos = null;
+        this._waveTimer = 75;
+        this._waveWarningShown = false;
 
         const { mapW, mapH } = this._setupTilemap();
         if (!mapW) return;
@@ -108,6 +110,8 @@ export default class GameScene extends Phaser.Scene {
                 this._elapsedSec = saveData.elapsedSec ?? 0;
                 this._hasExtraLife = saveData.hasExtraLife !== false;
                 this._enemiesUnlocked = !!saveData.enemiesUnlocked;
+                this._waveTimer = saveData.waveTimer ?? 75;
+                this._waveWarningShown = !!saveData.waveWarningShown;
 
                 if (saveData.inventory) this.inventory.fromJSON(saveData.inventory);
                 if (saveData.stats) this.stats.fromJSON(saveData.stats);
@@ -412,6 +416,21 @@ export default class GameScene extends Phaser.Scene {
             this._autosaveTimer = 0;
             SaveManager.save(this);
         }
+
+        if (this._enemiesUnlocked) {
+            this._waveTimer -= delta / 1000;
+
+            if (this._waveTimer <= 5 && !this._waveWarningShown) {
+                this._waveWarningShown = true;
+                this._showWaveWarning();
+            }
+
+            if (this._waveTimer <= 0) {
+                this._waveTimer = 75;
+                this._waveWarningShown = false;
+                this._triggerWave();
+            }
+        }
     }
 
     // ── Pausa ─────────────────────────────────────────────────────────────
@@ -655,4 +674,83 @@ export default class GameScene extends Phaser.Scene {
     get elapsedSec()  { return this._elapsedSec; }
     get score()       { return this._score; }
     get killCount()   { return this._killCount; }
+
+    _showWaveWarning() {
+        const W = this.scale.width, H = this.scale.height;
+        const msg = I18n.t('hud.wave_warning');
+        const warn = this.add.text(W / 2, H / 2 - 60, msg, {
+            fontFamily: 'Georgia, serif', fontSize: '18px',
+            fill: '#ffaa44', fontStyle: 'bold italic',
+            stroke: '#000000', strokeThickness: 3,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0);
+        this.tweens.add({
+            targets: warn, alpha: 1, duration: 400,
+            yoyo: true, hold: 2200,
+            onComplete: () => warn.destroy()
+        });
+        SoundManager.play('pause');
+    }
+
+    _triggerWave() {
+        const aliveCount = this.goblins.getChildren().filter(g => !g.dead).length;
+        if (aliveCount >= 10) return;
+
+        const count = Phaser.Math.Between(2, 3);
+        const maxToSpawn = Math.min(count, 10 - aliveCount);
+
+        for (let i = 0; i < maxToSpawn; i++) {
+            let spawnX = 0, spawnY = 0;
+            let found = false;
+
+            for (let attempts = 0; attempts < 100; attempts++) {
+                const rx = Phaser.Math.Between(32, this._mapW - 32);
+                const ry = Phaser.Math.Between(32, this._mapH - 32);
+
+                const dist = Phaser.Math.Distance.Between(rx, ry, this.player.x, this.player.y);
+                if (dist < 300) continue;
+
+                if (this._colisao) {
+                    const tile = this._colisao.getTileAtWorldXY(rx, ry);
+                    if (tile && tile.index > 0) continue;
+                }
+
+                spawnX = rx;
+                spawnY = ry;
+                found = true;
+                break;
+            }
+
+            if (found) {
+                const elapsed = this._elapsedSec;
+                let choice = 'goblin_1';
+                const roll = Math.random();
+
+                if (elapsed <= 180) {
+                    if (roll < 0.70) choice = 'goblin_1';
+                    else if (roll < 0.90) choice = 'skeleton';
+                    else choice = 'goblin_2';
+                } else if (elapsed <= 360) {
+                    if (roll < 0.60) choice = 'skeleton';
+                    else if (roll < 0.80) choice = 'goblin_2';
+                    else if (roll < 0.90) choice = 'goblin_3';
+                    else choice = 'goblin_1';
+                } else {
+                    if (roll < 0.40) choice = 'goblin_2';
+                    else if (roll < 0.80) choice = 'goblin_3';
+                    else if (roll < 0.95) choice = 'skeleton';
+                    else choice = 'goblin_1';
+                }
+
+                if (choice === 'goblin_1') {
+                    this._spawnGoblin(spawnX, spawnY, 1);
+                } else if (choice === 'goblin_2') {
+                    this._spawnGoblin(spawnX, spawnY, 2);
+                } else if (choice === 'goblin_3') {
+                    this._spawnGoblin(spawnX, spawnY, 3);
+                } else if (choice === 'skeleton') {
+                    this._spawnSkeleton(spawnX, spawnY);
+                }
+            }
+        }
+    }
 }

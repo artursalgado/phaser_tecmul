@@ -10,6 +10,8 @@ class SaveManager {
             elapsedSec: scene._elapsedSec,
             hasExtraLife: scene._hasExtraLife,
             enemiesUnlocked: scene._enemiesUnlocked,
+            waveTimer: scene._waveTimer,
+            waveWarningShown: scene._waveWarningShown,
             playerPosition: scene.player ? { x: scene.player.x, y: scene.player.y } : null
         };
         try {

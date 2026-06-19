@@ -16,7 +16,8 @@
     "inventory_full": "Inventory full!",
     "enemy_danger": "⚔ Danger approaches...",
     "enemy_attention": "🪵 Your activity draws attention...",
-    "sailing": "Setting sail..."
+    "sailing": "Setting sail...",
+    "wave_warning": "⚔ A new wave approaches..."
   },
   "inventory": {
     "title": "Inventory",
