@@ -248,20 +248,20 @@ export default class HUDScene extends Phaser.Scene {
         const miniX = W - 8 - miniW;
         const miniY = H - 8 - miniH;
 
-        // Desenhar fundo e borda RPG
-        this.minimapBorderGfx = this.add.graphics().setDepth(11);
-        // Sombra
-        this.minimapBorderGfx.fillStyle(0x000000, 0.35);
-        this.minimapBorderGfx.fillRoundedRect(miniX + 3, miniY + 3, miniW, miniH, 6);
-        // Fundo escuro do painel
-        this.minimapBorderGfx.fillStyle(0x160a00, 0.92);
-        this.minimapBorderGfx.fillRoundedRect(miniX, miniY, miniW, miniH, 6);
-        // Borda dourada RPG
+        // Sombra + fundo escuro (depth baixo, por baixo do terreno)
+        this.minimapBgGfx = this.add.graphics().setDepth(9);
+        this.minimapBgGfx.fillStyle(0x000000, 0.35);
+        this.minimapBgGfx.fillRoundedRect(miniX + 3, miniY + 3, miniW, miniH, 6);
+        this.minimapBgGfx.fillStyle(0x160a00, 1);
+        this.minimapBgGfx.fillRoundedRect(miniX, miniY, miniW, miniH, 6);
+
+        // Graphics do terreno (desenhado uma vez, depth acima do fundo)
+        this.minimapTerrainGfx = this.add.graphics().setDepth(10);
+
+        // Borda dourada RPG (depth acima de tudo no minimap)
+        this.minimapBorderGfx = this.add.graphics().setDepth(14);
         this.minimapBorderGfx.lineStyle(1.5, 0xc8901a, 0.72);
         this.minimapBorderGfx.strokeRoundedRect(miniX, miniY, miniW, miniH, 6);
-
-        // Graphics do terreno (desenhado uma vez)
-        this.minimapTerrainGfx = this.add.graphics().setDepth(10);
 
         // Máscara geométrica arredondada
         const maskShape = this.make.graphics({ x: 0, y: 0, add: false });
@@ -809,6 +809,7 @@ export default class HUDScene extends Phaser.Scene {
 
     _toggleMinimap() {
         this._minimapVisible = !this._minimapVisible;
+        this.minimapBgGfx.setVisible(this._minimapVisible);
         this.minimapBorderGfx.setVisible(this._minimapVisible);
         this.minimapTerrainGfx.setVisible(this._minimapVisible);
         this.minimapDynamicGfx.setVisible(this._minimapVisible);
