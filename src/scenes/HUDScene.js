@@ -24,7 +24,8 @@ export default class HUDScene extends Phaser.Scene {
 
         const slotSize   = 18 * 3;
         const spacing    = 6;
-        const totalWidth = this.inventory.size * slotSize + (this.inventory.size - 1) * spacing;
+        const HOTBAR_SIZE = 8;
+        const totalWidth = HOTBAR_SIZE * slotSize + (HOTBAR_SIZE - 1) * spacing;
         const hotbarX    = (W - totalWidth) / 2 + slotSize / 2;
         const hotbarY    = H - 38;
 
@@ -47,7 +48,7 @@ export default class HUDScene extends Phaser.Scene {
             stroke: '#000000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(3);
 
-        for (let i = 0; i < this.inventory.size; i++) {
+        for (let i = 0; i < HOTBAR_SIZE; i++) {
             const x = hotbarX + i * (slotSize + spacing);
 
             const bg   = this.add.image(x, hotbarY, 'itemdisc_01').setScale(3).setDepth(1);
@@ -271,7 +272,8 @@ export default class HUDScene extends Phaser.Scene {
     // ATUALIZAR HOTBAR
     //----------------------------------------------------------------
     _refreshHotbar() {
-        this.inventory.slots.forEach((slot, i) => {
+        for (let i = 0; i < 8; i++) {
+            const slot = this.inventory.slots[i];
             const bg   = this.slotBgs[i];
             const icon = this.slotIcons[i];
             const text = this.slotTexts[i];
@@ -286,7 +288,7 @@ export default class HUDScene extends Phaser.Scene {
             }
 
             bg.setTexture(i === this.inventory.selectedSlot ? 'itemdisc_02' : 'itemdisc_01');
-        });
+        }
 
         // Atualizar label com nome do item selecionado
         if (this._selectedItemLabel) {

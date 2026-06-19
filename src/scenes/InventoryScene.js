@@ -27,7 +27,7 @@ const HDR = 40;
 const FLT = 26;
 const PAD = 14;
 
-const SLOT = 60;
+const SLOT = 44;
 const SGAP = 8;
 const SCOLS = 4;
 
@@ -47,6 +47,8 @@ export default class InventoryScene extends Phaser.Scene {
         this._inv          = this.scene.get('GameScene').inventory;
         this._selectedIdx  = -1;
         this._filterCat    = 'all';
+        this._dragFrom     = -1;
+        this._ghostIcon    = null;
 
         // ── Dim overlay ──────────────────────────────────────────────
         this.add.rectangle(CX, CY, W, H, 0x000000, 0.62)
@@ -79,11 +81,49 @@ export default class InventoryScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-ESC', () => this._close());
         this.input.keyboard.on('keydown-I',   () => this._close());
 
+        // ── Drag & Drop ──────────────────────────────────────────────
+        this.input.on('pointermove', (ptr) => {
+            if (this._ghostIcon) this._ghostIcon.setPosition(ptr.x, ptr.y);
+        });
+
+        this.input.on('pointerup', (ptr) => {
+            if (this._dragFrom < 0) return;
+            
+            // Encontrar slot de destino por posição
+            const from = this._dragFrom;
+            let toIdx = -1;
+            for (let j = 0; j < this._slotObjs.length; j++) {
+                const { sx, sy } = this._slotObjs[j];
+                if (Math.abs(ptr.x - sx) < SLOT / 2 && Math.abs(ptr.y - sy) < SLOT / 2) {
+                    toIdx = j;
+                    break;
+                }
+            }
+            
+            // Limpar ghost
+            if (this._ghostIcon) {
+                this._ghostIcon.destroy();
+                this._ghostIcon = null;
+            }
+            this._dragFrom = -1;
+            
+            if (toIdx >= 0 && toIdx !== from) {
+                this._inv.moveSlot(from, toIdx);
+            } else if (toIdx === from || toIdx < 0) {
+                // Clique simples sem arrastar → selecionar slot
+                this._clickSlot(from);
+            }
+            
+            this._refreshSlots();
+        });
+
         // Limpar listener ao fechar
         this._onChanged = () => this._refreshSlots();
         this._inv.on('changed', this._onChanged);
         this.events.once('shutdown', () => {
             this._inv.off('changed', this._onChanged);
+            this.input.off('pointermove');
+            this.input.off('pointerup');
         });
     }
 
@@ -167,7 +207,7 @@ export default class InventoryScene extends Phaser.Scene {
     _buildSlots() {
         this._slotObjs = [];
 
-        for (let i = 0; i < this._inv.size; i++) {
+        for (let i = 0; i < this._inv.slots.length; i++) {
             const col = i % SCOLS;
             const row = Math.floor(i / SCOLS);
             const sx  = GL + SLOT / 2 + col * (SLOT + SGAP);
@@ -180,9 +220,12 @@ export default class InventoryScene extends Phaser.Scene {
                 fontSize: '10px', color: '#ffffff', fontStyle: 'bold',
                 stroke: '#000000', strokeThickness: 2,
             }).setOrigin(1, 1).setDepth(4);
-            this.add.text(sx - SLOT / 2 + 3, sy - SLOT / 2 + 3, String(i + 1), {
-                fontSize: '8px', color: '#554433',
-            }).setOrigin(0, 0).setDepth(4);
+
+            if (i < 8) {
+                this.add.text(sx - SLOT / 2 + 3, sy - SLOT / 2 + 3, String(i + 1), {
+                    fontSize: '8px', color: '#554433',
+                }).setOrigin(0, 0).setDepth(4);
+            }
 
             const zone = this.add.zone(sx, sy, SLOT, SLOT)
                 .setInteractive({ useHandCursor: true }).setDepth(5);
@@ -195,10 +238,38 @@ export default class InventoryScene extends Phaser.Scene {
             zone.on('pointerout', () => {
                 this._drawSlotBg(i, i === this._selectedIdx ? 'selected' : this._slotState(i));
             });
-            zone.on('pointerdown', () => this._clickSlot(i));
+            zone.on('pointerdown', (ptr) => {
+                const slot = this._inv.slots[i];
+                if (!slot) { this._clickSlot(i); return; }
+                
+                // Começar drag
+                this._dragFrom = i;
+                const def = ITEM_DB[slot.itemId];
+                const texture = def?.icon ?? slot.itemId;
+                this._ghostIcon = this.add.image(ptr.x, ptr.y, texture)
+                    .setScale(2.4).setAlpha(0.75).setDepth(20);
+                
+                // Highlight o slot de origem
+                this._drawSlotBg(i, 'selected');
+            });
 
             this._slotObjs.push({ gfx, icon, qty, sx, sy });
         }
+
+        // Adicionar distinção visual (linha divisória + textos)
+        const lineY = GT + 2 * (SLOT + SGAP) - SGAP / 2; // GT + 100
+        const divGfx = this.add.graphics().setDepth(2);
+        divGfx.lineStyle(1.5, 0xc8901a, 0.8);
+        divGfx.lineBetween(GL, lineY, GR, lineY);
+
+        this.add.text(GL, GT - 10, 'HOTBAR', {
+            color: '#886644', fontSize: '8px'
+        }).setDepth(4);
+
+        this.add.text(GL, GT + 2 * (SLOT + SGAP) - 10, 'MOCHILA', {
+            color: '#886644', fontSize: '8px'
+        }).setDepth(4);
+
         this._refreshSlots();
     }
 
@@ -238,7 +309,7 @@ export default class InventoryScene extends Phaser.Scene {
     }
 
     _refreshSlots() {
-        for (let i = 0; i < this._inv.size; i++) {
+        for (let i = 0; i < this._inv.slots.length; i++) {
             const { icon, qty } = this._slotObjs[i];
             const slot  = this._inv.slots[i];
             const def   = slot ? ITEM_DB[slot.itemId] : null;

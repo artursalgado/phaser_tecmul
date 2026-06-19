@@ -165,7 +165,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     _setupSystems() {
-        this.inventory = new Inventory(8);
+        this.inventory = new Inventory(24);
         this.stats     = new PlayerStats();
         this.quest     = new QuestManager();
         this.quest.init(this);
