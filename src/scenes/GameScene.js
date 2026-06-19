@@ -10,6 +10,12 @@ import BossSkeleton from '../objects/BossSkeleton.js';
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
 import SaveManager from '../systems/SaveManager.js';
+const SPAWN_POINTS = [
+    { x: 400,  y: 100  }, { x: 1200, y: 100  }, // Norte
+    { x: 400,  y: 1500 }, { x: 1200, y: 1500 }, // Sul
+    { x: 100,  y: 400  }, { x: 100,  y: 1100 }, // Oeste
+    { x: 1500, y: 400  }, { x: 1500, y: 1100 }  // Este
+];
 
 // Fallback (usado só se o mapa não tiver object layer "spawns").
 // Offsets relativos ao centro do mapa, em pixels.
@@ -76,6 +82,7 @@ export default class GameScene extends Phaser.Scene {
         this._paused       = false;
         this._enemiesUnlocked = false; // inimigos só aparecem quando o jogador apanha arma ou 10 madeiras
         this._pendingEnemySpawns = []; // spawns guardados até ao desbloqueio
+        this._waveNumber   = 0;
     }
 
     create(data) {
@@ -92,6 +99,7 @@ export default class GameScene extends Phaser.Scene {
         this._loadedPlayerPos = null;
         this._waveTimer = 75;
         this._waveWarningShown = false;
+        this._waveNumber = 0;
 
         const { mapW, mapH } = this._setupTilemap();
         if (!mapW) return;
@@ -112,6 +120,7 @@ export default class GameScene extends Phaser.Scene {
                 this._enemiesUnlocked = !!saveData.enemiesUnlocked;
                 this._waveTimer = saveData.waveTimer ?? 75;
                 this._waveWarningShown = !!saveData.waveWarningShown;
+                this._waveNumber = saveData.waveNumber ?? 0;
 
                 if (saveData.inventory) this.inventory.fromJSON(saveData.inventory);
                 if (saveData.stats) this.stats.fromJSON(saveData.stats);
@@ -293,10 +302,14 @@ export default class GameScene extends Phaser.Scene {
         this.physics.add.collider(this.goblins, this.goblins);
 
         if (this._enemiesUnlocked) {
+            let delay = 0;
             this._pendingEnemySpawns.forEach(s => {
-                if (s.kind === 'boss')         this._spawnBoss(s.x, s.y);
-                else if (s.kind === 'skeleton') this._spawnSkeleton(s.x, s.y);
-                else                            this._spawnGoblin(s.x, s.y, s.tier);
+                this.time.delayedCall(delay, () => {
+                    if (s.kind === 'boss')         this._spawnBoss(s.x, s.y);
+                    else if (s.kind === 'skeleton') this._spawnSkeleton(s.x, s.y);
+                    else                            this._spawnGoblin(s.x, s.y, s.tier);
+                });
+                delay += 500;
             });
             this._pendingEnemySpawns = [];
         }
@@ -549,12 +562,16 @@ export default class GameScene extends Phaser.Scene {
         // Camera shake suave
         this.cameras.main.shake(300, 0.004);
 
-        // Criar todos os inimigos pendentes com pequeno delay
+        // Criar todos os inimigos pendentes escalonados
         this.time.delayedCall(600, () => {
+            let delay = 0;
             this._pendingEnemySpawns.forEach(s => {
-                if (s.kind === 'boss')         this._spawnBoss(s.x, s.y);
-                else if (s.kind === 'skeleton') this._spawnSkeleton(s.x, s.y);
-                else                            this._spawnGoblin(s.x, s.y, s.tier);
+                this.time.delayedCall(delay, () => {
+                    if (s.kind === 'boss')         this._spawnBoss(s.x, s.y);
+                    else if (s.kind === 'skeleton') this._spawnSkeleton(s.x, s.y);
+                    else                            this._spawnGoblin(s.x, s.y, s.tier);
+                });
+                delay += 500;
             });
             this._pendingEnemySpawns = [];
         });
@@ -769,60 +786,68 @@ export default class GameScene extends Phaser.Scene {
         const aliveCount = this.goblins.getChildren().filter(g => !g.dead).length;
         if (aliveCount >= 10) return;
 
-        const count = Phaser.Math.Between(2, 3);
+        this._waveNumber++;
+        this.events.emit('waveChanged', this._waveNumber);
+
+        let count = 2;
+        if (this._waveNumber >= 10) count = 4;
+        else if (this._waveNumber >= 4) count = 3;
+
         const maxToSpawn = Math.min(count, 10 - aliveCount);
 
+        // Escolher pontos de spawn válidos (distância > 300px do jogador)
+        const validPoints = SPAWN_POINTS.filter(p => {
+            const dist = Phaser.Math.Distance.Between(p.x, p.y, this.player.x, this.player.y);
+            return dist > 300;
+        });
+
+        if (validPoints.length === 0) return;
+
+        const shuffled = Phaser.Utils.Array.Shuffle(validPoints);
+        const selectedPoints = shuffled.slice(0, Math.min(shuffled.length, Phaser.Math.Between(2, 3)));
+
         for (let i = 0; i < maxToSpawn; i++) {
-            let spawnX = 0, spawnY = 0;
-            let found = false;
+            const point = Phaser.Math.RND.pick(selectedPoints);
+            const spawnX = point.x;
+            const spawnY = point.y;
 
-            for (let attempts = 0; attempts < 100; attempts++) {
-                const rx = Phaser.Math.Between(32, this._mapW - 32);
-                const ry = Phaser.Math.Between(32, this._mapH - 32);
+            let choice = 'goblin_1';
+            const roll = Math.random();
 
-                const dist = Phaser.Math.Distance.Between(rx, ry, this.player.x, this.player.y);
-                if (dist < 300) continue;
-
-                if (this._colisao) {
-                    const tile = this._colisao.getTileAtWorldXY(rx, ry);
-                    if (tile && tile.index > 0) continue;
-                }
-
-                spawnX = rx;
-                spawnY = ry;
-                found = true;
-                break;
+            if (this._waveNumber <= 3) {
+                // Wave 1-3: só goblin_1 (80%) e goblin_2 (20%)
+                choice = roll < 0.80 ? 'goblin_1' : 'goblin_2';
+            } else if (this._waveNumber <= 6) {
+                // Wave 4-6: goblin_2 (50%), goblin_1 (30%), skeleton (20%)
+                if (roll < 0.50) choice = 'goblin_2';
+                else if (roll < 0.80) choice = 'goblin_1';
+                else choice = 'skeleton';
+            } else if (this._waveNumber <= 9) {
+                // Wave 7-9: skeleton (50%), goblin_2 (30%), goblin_3 (20%)
+                if (roll < 0.50) choice = 'skeleton';
+                else if (roll < 0.80) choice = 'goblin_2';
+                else choice = 'goblin_3';
+            } else {
+                // Wave 10+: goblin_3 (40%), skeleton (40%), boss (20% — máx 1 boss simultâneo)
+                if (roll < 0.40) choice = 'goblin_3';
+                else if (roll < 0.80) choice = 'skeleton';
+                else choice = 'boss';
             }
 
-            if (found) {
-                const elapsed = this._elapsedSec;
-                let choice = 'goblin_1';
-                const roll = Math.random();
-
-                if (elapsed <= 180) {
-                    if (roll < 0.70) choice = 'goblin_1';
-                    else if (roll < 0.90) choice = 'skeleton';
-                    else choice = 'goblin_2';
-                } else if (elapsed <= 360) {
-                    if (roll < 0.60) choice = 'skeleton';
-                    else if (roll < 0.80) choice = 'goblin_2';
-                    else if (roll < 0.90) choice = 'goblin_3';
-                    else choice = 'goblin_1';
-                } else {
-                    if (roll < 0.40) choice = 'goblin_2';
-                    else if (roll < 0.80) choice = 'goblin_3';
-                    else if (roll < 0.95) choice = 'skeleton';
-                    else choice = 'goblin_1';
-                }
-
-                if (choice === 'goblin_1') {
-                    this._spawnGoblin(spawnX, spawnY, 1);
-                } else if (choice === 'goblin_2') {
-                    this._spawnGoblin(spawnX, spawnY, 2);
-                } else if (choice === 'goblin_3') {
-                    this._spawnGoblin(spawnX, spawnY, 3);
-                } else if (choice === 'skeleton') {
+            if (choice === 'goblin_1') {
+                this._spawnGoblin(spawnX, spawnY, 1);
+            } else if (choice === 'goblin_2') {
+                this._spawnGoblin(spawnX, spawnY, 2);
+            } else if (choice === 'goblin_3') {
+                this._spawnGoblin(spawnX, spawnY, 3);
+            } else if (choice === 'skeleton') {
+                this._spawnSkeleton(spawnX, spawnY);
+            } else if (choice === 'boss') {
+                const bossAlive = this.goblins.getChildren().some(g => g instanceof BossSkeleton && !g.dead);
+                if (bossAlive) {
                     this._spawnSkeleton(spawnX, spawnY);
+                } else {
+                    this._spawnBoss(spawnX, spawnY);
                 }
             }
         }

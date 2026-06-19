@@ -172,6 +172,10 @@ export default class HUDScene extends Phaser.Scene {
             fontSize: '10px', fill: '#ffdd44'
         }).setOrigin(0, 0).setDepth(3);
 
+        this.waveTxt = this.add.text(QPX + QPW / 2, QSEP + 24, 'WAVE 0', {
+            fontSize: '10px', fill: '#ffaa66', fontStyle: 'bold'
+        }).setOrigin(0.5, 0).setDepth(3);
+
         this.killsTxt = this.add.text(QPX + QPW - 10, QSEP + 24, '☠ 0', {
             fontSize: '10px', fill: '#ff8888'
         }).setOrigin(1, 0).setDepth(3);
@@ -288,6 +292,10 @@ export default class HUDScene extends Phaser.Scene {
         this.input.keyboard?.on('keydown-M', () => {
             this._toggleMinimap();
         });
+
+        // Escutar eventos de wave do GameScene
+        this.gameScene.events.on('waveChanged', this._onWaveChanged, this);
+        this._onWaveChanged(this.gameScene._waveNumber || 0);
     }
 
     update(time, delta) {
@@ -799,6 +807,7 @@ export default class HUDScene extends Phaser.Scene {
         this.gameScene?.events.off('toggleQuestLog', this._toggleQuestLog,  this);
         this.gameScene?.events.off('openBook',        this._toggleBook,      this);
         this.input.keyboard?.off('keydown-M');
+        this.gameScene?.events.off('waveChanged',    this._onWaveChanged,   this);
     }
 
     _updateBookNav() {
@@ -958,6 +967,12 @@ export default class HUDScene extends Phaser.Scene {
         // Círculo interno branco
         gfx.fillStyle(0xffffff, 1);
         gfx.fillCircle(px, py, 4);
+    }
+
+    _onWaveChanged(w) {
+        if (this.waveTxt) {
+            this.waveTxt.setText(I18n.lang === 'pt' ? `ONDA ${w}` : `WAVE ${w}`);
+        }
     }
 }
 
