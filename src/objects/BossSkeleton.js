@@ -294,9 +294,12 @@ export default class BossSkeleton extends Skeleton {
     this.play("skeleton_death", true);
 
     // Slow-mo por 1s e tremor forte de câmara
-    this.scene.time.timeScale = 0.3;
-    this.scene.time.delayedCall(1000, () => { this.scene.time.timeScale = 1; });
-    this.scene.cameras.main.shake(500, 0.012);
+    const sc = this.scene;
+    if (sc) {
+      sc.time.timeScale = 0.3;
+      sc.time.delayedCall(1000, () => { if (sc.time) sc.time.timeScale = 1; });
+      sc.cameras.main.shake(500, 0.012);
+    }
 
     // Gera explosões massivas de sangue laranja e fagulhas amarelas
     burst(this.scene, this.x, this.y - 20, {
