@@ -282,6 +282,11 @@ export default class GameScene extends Phaser.Scene {
     // Ouve a morte do jogador
     this.stats.on("died", () => {
       const perdas = this.quest.applyDeathPenalty();
+      const dx = this.player.x;
+      const dy = this.player.y;
+
+      // Larga todos os items do inventário no chão no sítio da morte
+      this.dropInventarioNoChao(dx, dy);
 
       // Se o jogador ainda tiver a segunda vida extra ativa
       if (this.hasExtraLife) {
@@ -1222,6 +1227,27 @@ export default class GameScene extends Phaser.Scene {
   }
 
   // Lógica para repor a vida e reposicionar o jogador na praia caso ele perca a 1ª vida
+  // Larga todos os items do inventário no chão espalhados à volta de (x, y)
+  dropInventarioNoChao(x, y) {
+    const slots = this.inventory.slots;
+    const raio  = 28;
+
+    slots.forEach((slot, i) => {
+      if (!slot || !slot.itemId || slot.qty <= 0) return;
+
+      // Posição em espiral para não ficarem todos sobrepostos
+      const angulo = (i / slots.length) * Math.PI * 2;
+      const dist   = raio + Math.random() * 16;
+      const ox     = Math.cos(angulo) * dist;
+      const oy     = Math.sin(angulo) * dist;
+
+      this.spawnPickup(x + ox, y + oy, slot.itemId, slot.qty);
+    });
+
+    this.inventory.clear();
+    this.events.emit("inventoryChanged");
+  }
+
   renascerJogador() {
     this.stats.reset();
     this.player.setPosition(this.spawnPos.x, this.spawnPos.y); // Volta para a praia inicial

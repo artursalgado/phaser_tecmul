@@ -208,6 +208,12 @@ export default class Inventory extends Phaser.Events.EventEmitter {
     this.emit("changed", this.slots);
   }
 
+  // Limpa todos os slots de uma vez (usado na morte do jogador)
+  clear() {
+    this.slots.fill(null);
+    this.emit("changed", this.slots);
+  }
+
   // Troca os itens entre dois slots (usado no arrastar e largar da UI)
   moveSlot(fromIdx, toIdx) {
     if (fromIdx === toIdx) {
