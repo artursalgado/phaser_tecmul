@@ -43,7 +43,10 @@ export default class HUDScene extends Phaser.Scene {
         hbg.lineBetween(W / 2 - hbw / 2 + 12, hotbarY - 30, W / 2 + hbw / 2 - 12, hotbarY - 30);
 
         // Dica de controlos (TOPO do painel, acima dos slots)
-        this.add.text(W / 2, hotbarY - 40, '[E] usar   ·   [Q] jangada   ·   [I] inventário', {
+        const hintString = I18n.lang === 'pt'
+            ? '[E] usar   ·   [Q] jangada   ·   [I] inventário   ·   [M] mapa'
+            : '[E] use   ·   [Q] raft   ·   [I] inventory   ·   [M] map';
+        this.add.text(W / 2, hotbarY - 40, hintString, {
             fontSize: '9px', fill: '#c8a870',
             stroke: '#000000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(3);
@@ -233,10 +236,65 @@ export default class HUDScene extends Phaser.Scene {
             fontSize: '16px', fill: '#ff4444', fontStyle: 'bold'
         }).setOrigin(0.5).setAlpha(0).setDepth(51);
         this._blinking = false;
+
+        //------------------------------------------------------------
+        // MINIMAPA (canto inferior direito, 128x96)
+        //------------------------------------------------------------
+        this._minimapVisible = true;
+        this._terrainDrawn = false;
+
+        const miniW = 128;
+        const miniH = 96;
+        const miniX = W - 8 - miniW;
+        const miniY = H - 8 - miniH;
+
+        // Desenhar fundo e borda RPG
+        this.minimapBorderGfx = this.add.graphics().setDepth(11);
+        // Sombra
+        this.minimapBorderGfx.fillStyle(0x000000, 0.35);
+        this.minimapBorderGfx.fillRoundedRect(miniX + 3, miniY + 3, miniW, miniH, 6);
+        // Fundo escuro do painel
+        this.minimapBorderGfx.fillStyle(0x160a00, 0.92);
+        this.minimapBorderGfx.fillRoundedRect(miniX, miniY, miniW, miniH, 6);
+        // Borda dourada RPG
+        this.minimapBorderGfx.lineStyle(1.5, 0xc8901a, 0.72);
+        this.minimapBorderGfx.strokeRoundedRect(miniX, miniY, miniW, miniH, 6);
+
+        // Graphics do terreno (desenhado uma vez)
+        this.minimapTerrainGfx = this.add.graphics().setDepth(10);
+
+        // Máscara geométrica arredondada
+        const maskShape = this.make.graphics({ x: 0, y: 0, add: false });
+        maskShape.fillStyle(0xffffff);
+        maskShape.fillRoundedRect(miniX, miniY, miniW, miniH, 6);
+        const mask = maskShape.createGeometryMask();
+        this.minimapTerrainGfx.setMask(mask);
+
+        // Graphics dos elementos dinâmicos (jogadores, inimigos, etc.)
+        this.minimapDynamicGfx = this.add.graphics().setDepth(12);
+        this.minimapDynamicGfx.setMask(mask);
+
+        // Tecla M para alternar visibilidade
+        this.input.keyboard?.on('keydown-M', () => {
+            this._toggleMinimap();
+        });
     }
 
-    update() {
+    update(time, delta) {
         if (!this.gameScene) return;
+
+        // Desenhar terreno do minimapa uma única vez assim que a layer de colisão estiver carregada
+        if (!this._terrainDrawn && this.gameScene._colisao && this.gameScene._mapa) {
+            this._drawMinimapTerrain();
+            this._terrainDrawn = true;
+        }
+
+        // Desenhar elementos dinâmicos do minimapa se estiver visível
+        if (this._minimapVisible) {
+            this._drawMinimapDynamics();
+        } else {
+            this.minimapDynamicGfx.clear();
+        }
 
         // Timer
         const sec  = Math.floor(this.gameScene.elapsedSec);
@@ -718,6 +776,7 @@ export default class HUDScene extends Phaser.Scene {
         this.game.events.off('quest:updated',        this._refreshQuest,    this);
         this.gameScene?.events.off('toggleQuestLog', this._toggleQuestLog,  this);
         this.gameScene?.events.off('openBook',        this._toggleBook,      this);
+        this.input.keyboard?.off('keydown-M');
     }
 
     _updateBookNav() {
@@ -740,6 +799,106 @@ export default class HUDScene extends Phaser.Scene {
 
         if (hasPrev) this._drawNavBtn(this._bookPrevGfx, prevX, navY, 48, 24, false);
         if (hasNext) this._drawNavBtn(this._bookNextGfx, nextX, navY, 48, 24, false);
+    }
+
+    _toggleMinimap() {
+        this._minimapVisible = !this._minimapVisible;
+        this.minimapBorderGfx.setVisible(this._minimapVisible);
+        this.minimapTerrainGfx.setVisible(this._minimapVisible);
+        this.minimapDynamicGfx.setVisible(this._minimapVisible);
+    }
+
+    _drawMinimapTerrain() {
+        const colisao = this.gameScene._colisao;
+        const mapa = this.gameScene._mapa;
+        if (!colisao || !mapa) return;
+
+        const mapWidthInTiles = mapa.width;
+        const mapHeightInTiles = mapa.height;
+
+        const miniW = 128;
+        const miniH = 96;
+        const miniX = this.scale.width - 8 - miniW;
+        const miniY = this.scale.height - 8 - miniH;
+
+        const tileW = miniW / mapWidthInTiles;
+        const tileH = miniH / mapHeightInTiles;
+
+        this.minimapTerrainGfx.clear();
+
+        // Desenhar blocos de terreno
+        for (let ty = 0; ty < mapHeightInTiles; ty++) {
+            for (let tx = 0; tx < mapWidthInTiles; tx++) {
+                const tile = colisao.getTileAt(tx, ty);
+                const isWater = tile && tile.index > 0;
+                // Cores RPG: verde escuro para terra (0x1e3f20), azul escuro para água (0x1b2d42)
+                const color = isWater ? 0x1b2d42 : 0x1e3f20;
+                this.minimapTerrainGfx.fillStyle(color, 1);
+                this.minimapTerrainGfx.fillRect(miniX + tx * tileW, miniY + ty * tileH, tileW + 0.1, tileH + 0.1);
+            }
+        }
+    }
+
+    _drawMinimapDynamics() {
+        const gfx = this.minimapDynamicGfx;
+        gfx.clear();
+
+        if (!this.gameScene || !this.gameScene.player) return;
+
+        const mapW = this.gameScene._mapW;
+        const mapH = this.gameScene._mapH;
+        if (!mapW || !mapH) return;
+
+        const miniW = 128;
+        const miniH = 96;
+        const miniX = this.scale.width - 8 - miniW;
+        const miniY = this.scale.height - 8 - miniH;
+
+        const scaleX = miniW / mapW;
+        const scaleY = miniH / mapH;
+
+        const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+
+        // 1. Zona da jangada (raftZone - ponto dourado/amarelo)
+        const raft = this.gameScene.raftZone;
+        if (raft) {
+            const rx = miniX + clamp(raft.x, 0, mapW) * scaleX;
+            const ry = miniY + clamp(raft.y, 0, mapH) * scaleY;
+            gfx.fillStyle(0xffd700, 1);
+            gfx.fillCircle(rx, ry, 3.5);
+
+            gfx.lineStyle(1, 0xffd700, 0.5);
+            gfx.strokeCircle(rx, ry, 5);
+        }
+
+        // 2. Inimigos vivos (goblins/skeletons/boss - pontos vermelhos)
+        if (this.gameScene.goblins) {
+            gfx.fillStyle(0xff3333, 1);
+            this.gameScene.goblins.getChildren().forEach(g => {
+                if (g.active && !g.dead) {
+                    const ex = miniX + clamp(g.x, 0, mapW) * scaleX;
+                    const ey = miniY + clamp(g.y, 0, mapH) * scaleY;
+                    gfx.fillCircle(ex, ey, 2.5);
+                }
+            });
+        }
+
+        // 3. Jogador (ponto branco brilhante, pulsa/pisca)
+        const player = this.gameScene.player;
+        const px = miniX + clamp(player.x, 0, mapW) * scaleX;
+        const py = miniY + clamp(player.y, 0, mapH) * scaleY;
+
+        const blink = Math.floor(this.time.now / 200) % 2 === 0;
+        if (blink) {
+            gfx.fillStyle(0xffffff, 1);
+            gfx.fillCircle(px, py, 3);
+
+            gfx.lineStyle(1.5, 0xffffff, 0.4);
+            gfx.strokeCircle(px, py, 5);
+        } else {
+            gfx.fillStyle(0xffffff, 0.85);
+            gfx.fillCircle(px, py, 2.5);
+        }
     }
 }
 
