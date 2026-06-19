@@ -541,12 +541,16 @@ export default class GameScene extends Phaser.Scene {
 
     posBaus.forEach((def) => {
       const baul = this.add
-        .rectangle(def.x, def.y, 18, 14, 0x8b5e2a)
-        .setStrokeStyle(2, 0xd4a030)
-        .setDepth(3);
+        .image(def.x, def.y, "spr_chest_closed")
+        .setDepth(3)
+        .setScale(1.4);
 
-      const icone = this.add.text(def.x, def.y - 20, "📦", { fontSize: "11px" })
-        .setOrigin(0.5).setDepth(4).setAlpha(0.7);
+      const icone = this.add
+        .text(def.x, def.y - 18, "[ E ]", {
+          fontSize: "8px", fill: "#ffffff",
+          stroke: "#000000", strokeThickness: 2,
+        })
+        .setOrigin(0.5).setDepth(4).setAlpha(0);
 
       this.baus.push({ ...def, baul, icone, aberto: false });
     });
@@ -600,8 +604,8 @@ export default class GameScene extends Phaser.Scene {
       if (b.aberto) continue;
       if (Phaser.Math.Distance.Between(px, py, b.x, b.y) < RAIO) {
         b.aberto = true;
-        b.baul.setFillStyle(0x4a2e0a);
-        b.icone.setText("🔓").setAlpha(0.4);
+        b.baul.setTexture("spr_chest_open");
+        b.icone.setAlpha(0);
         b.itens.forEach(({ id, qty }) => {
           this.inventory.addItem(id, qty);
           this.spawnPickup(b.x + Phaser.Math.Between(-16, 16), b.y - 10, id, qty);

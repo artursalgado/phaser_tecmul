@@ -287,6 +287,10 @@ export default class PreloadScene extends Phaser.Scene {
     // Sprites dos NPCs
     this.load.image("spr_npc_fisher", "assets/images/spr_npc_fisher.png");
     this.load.image("spr_npc_old",    "assets/images/spr_npc_old.png");
+
+    // Sprites dos baús
+    this.load.image("spr_chest_closed", "assets/images/spr_chest_closed.png");
+    this.load.image("spr_chest_open",   "assets/images/spr_chest_open.png");
   }
 
   create() {
