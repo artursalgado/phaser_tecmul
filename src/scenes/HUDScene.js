@@ -857,21 +857,22 @@ export default class HUDScene extends Phaser.Scene {
 
     this.quest.getProgress().forEach((p) => {
       const slot = this.raftSlots[p.id];
-      if (!slot) {
-        return;
-      }
+      if (!slot) return;
 
-      const entregues = p.current;
-      const total = p.need;
+      const entregues  = p.current;
+      const noInv      = this.inventory ? this.inventory.getQuantity(p.id) : 0;
+      const total      = p.need;
+      const completo   = entregues >= total;
+      const corSolida  = completo ? 0x22cc22 : slot.cfg.color;
 
-      // Pinta de verde se já atingiu o total de entregas, ou deixa com a cor padrão do recurso
-      const corPintura = entregues >= total ? 0x22cc22 : slot.cfg.color;
-
-      // Varre a série de quadradinhos. Se i < entregues, pinta com a cor ativa, senão deixa vazio
       for (let i = 0; i < slot.rects.length; i++) {
         const rect = slot.rects[i];
         if (i < entregues) {
-          rect.setFillStyle(corPintura, 1);
+          // Entregue à jangada — cor sólida
+          rect.setFillStyle(corSolida, 1);
+        } else if (i < entregues + noInv) {
+          // No inventário mas ainda não entregue — cor mais clara/translúcida
+          rect.setFillStyle(slot.cfg.color, 0.45);
         } else {
           rect.setFillStyle(slot.cfg.emptyColor, 1);
         }
