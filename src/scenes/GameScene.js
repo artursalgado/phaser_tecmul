@@ -55,13 +55,13 @@ const ROPE_CRATE_SPAWNS = [
 ];
 
 const FOOD_VALUES = {
-    carrot: { hunger: 20 },
-    potato: { hunger: 28 },
-    wheat:  { hunger: 12 },
-    fish:   { hunger: 35, health: 8 },
-    egg:    { hunger: 18, health: 5 },
-    milk:   { thirst: 30, health: 5 },
-    water:  { thirst: 45 },
+    carrot: { hunger: 20, energy: 8 },
+    potato: { hunger: 28, energy: 10 },
+    wheat:  { hunger: 12, energy: 5 },
+    fish:   { hunger: 35, health: 8, energy: 15 },
+    egg:    { hunger: 18, health: 5, energy: 8 },
+    milk:   { thirst: 30, health: 5, energy: 10 },
+    water:  { thirst: 45, energy: 12 },
 };
 
 
@@ -476,6 +476,7 @@ export default class GameScene extends Phaser.Scene {
         if (effect.hunger) this.stats.eat(effect.hunger);
         if (effect.thirst) this.stats.drink(effect.thirst);
         if (effect.health) this.stats.heal(effect.health);
+        if (effect.energy) this.stats.rest(effect.energy);
         this.inventory.removeItem(slot.itemId, 1);
         SoundManager.play('pickup');
         const nome = I18n.t(`items.${slot.itemId}`);
