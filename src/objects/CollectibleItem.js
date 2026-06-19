@@ -18,7 +18,7 @@ export default class CollectibleItem extends Phaser.Physics.Arcade.Sprite {
         // Não bloqueia o jogador, serve só para deteção de sobreposição
         this.body.setImmovable(true);
 
-        this.setScale(2);
+        this.setScale(1.2);
         this.setDepth(2);
 
         // Pequena animação de flutuação para o item se destacar no mapa
