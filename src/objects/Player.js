@@ -1,12 +1,22 @@
+import SoundManager from "../systems/SoundManager.js";
+
 // Tabela com os atributos de cada ferramenta/arma equipável.
 // Serve para o ataque ler o dano, alcance e cooldown corretos dinamicamente.
 const WEAPON_STATS = {
-  axe: { damage: 25, range: 52, cooldown: 700 }, // Machado: bom para cortar árvores
-  pickaxe: { damage: 15, range: 44, cooldown: 500 }, // Picareta: rápida, boa para pedras
-  sword: { damage: 20, range: 60, cooldown: 550 }, // Espada: maior alcance para combate
-  hammer: { damage: 35, range: 40, cooldown: 900 }, // Martelo: lento mas dá muito dano
-  none: { damage: 10, range: 36, cooldown: 600 }, // Mãos vazias: dano mínimo e curto alcance
+  axe:     { damage: 25, range: 52, cooldown: 700 },
+  pickaxe: { damage: 15, range: 44, cooldown: 500 },
+  sword:   { damage: 20, range: 60, cooldown: 550 },
+  hammer:  { damage: 35, range: 64, cooldown: 900 }, // Área 360° (ver atacar())
+  shovel:  { damage: 5,  range: 40, cooldown: 2200 }, // Escavar chão (ver atacar())
+  none:    { damage: 10, range: 36, cooldown: 600 },
 };
+
+// Itens que o chão pode esconder ao usar a pá
+const SPOILS_ESCAVACAO = [
+  { id: "rock",  peso: 5 },
+  { id: "water", peso: 3 },
+  { id: "rope",  peso: 1 },
+];
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -344,6 +354,34 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       }
     });
 
+    // Martelo: bate em área 360° em torno do jogador (não apenas na direção)
+    if (itemId === "hammer") {
+      goblins.forEach((g) => {
+        if (!g.dead) {
+          const d = Phaser.Math.Distance.Between(this.x, this.y, g.x, g.y);
+          if (d < this.attackRange && Phaser.Math.Distance.Between(hitX, hitY, g.x, g.y) >= this.attackRange) {
+            g.takeDamage(this.attackDamage * multiplicador * 0.6, "right");
+          }
+        }
+      });
+      // Círculo visual do spin
+      const spinRing = this.scene.add.circle(this.x, this.y, this.attackRange, 0xff8800, 0.2).setDepth(9);
+      this.scene.tweens.add({
+        targets: spinRing,
+        alpha: 0,
+        scaleX: 1.3,
+        scaleY: 1.3,
+        duration: 350,
+        onComplete: () => spinRing.destroy(),
+      });
+    }
+
+    // Pá: escavar o chão em vez de atacar inimigos
+    if (itemId === "shovel") {
+      this.escavar();
+      return; // não mostra o ring de ataque normal
+    }
+
     // Desenha um anel amarelo temporário para feedback visual do golpe
     const ring = this.scene.add
       .circle(hitX, hitY, 10, 0xffff88, 0.55)
@@ -362,6 +400,54 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       this.isBusy = false;
       this.playAnim("idle");
     });
+  }
+
+  // Pá: tenta escavar o chão e encontrar um item escondido (25% de sucesso)
+  escavar() {
+    const { burst } = this.scene.sys.registry.get?.("particles") ?? {};
+
+    // Poeira visual
+    const po = this.scene.add.circle(this.x, this.y + 8, 14, 0xd4aa60, 0.45).setDepth(5);
+    this.scene.tweens.add({
+      targets: po,
+      alpha: 0,
+      scaleX: 2.2,
+      scaleY: 2.2,
+      duration: 400,
+      onComplete: () => po.destroy(),
+    });
+
+    SoundManager.play("chop"); // som de batida no chão
+
+    if (Math.random() > 0.25) {
+      // 75% de chance de não encontrar nada
+      const msg = this.scene.add
+        .text(this.x, this.y - 28, "Nada...", { fontSize: "10px", fill: "#aaaaaa", fontStyle: "italic" })
+        .setOrigin(0.5)
+        .setDepth(20);
+      this.scene.tweens.add({ targets: msg, y: msg.y - 20, alpha: 0, duration: 900, onComplete: () => msg.destroy() });
+      return;
+    }
+
+    // Escolhe item pelo peso
+    const total = SPOILS_ESCAVACAO.reduce((s, e) => s + e.peso, 0);
+    let r = Math.random() * total;
+    let escolhido = SPOILS_ESCAVACAO[0];
+    for (const entrada of SPOILS_ESCAVACAO) {
+      r -= entrada.peso;
+      if (r <= 0) { escolhido = entrada; break; }
+    }
+
+    this.scene.inventory?.addItem(escolhido.id, 1);
+
+    const popup = this.scene.add
+      .text(this.x, this.y - 30, `+1 ${escolhido.id}`, {
+        fontSize: "11px", fill: "#e8d090", fontStyle: "bold",
+        stroke: "#000000", strokeThickness: 2,
+      })
+      .setOrigin(0.5)
+      .setDepth(20);
+    this.scene.tweens.add({ targets: popup, y: popup.y - 32, alpha: 0, duration: 1000, onComplete: () => popup.destroy() });
   }
 
   // Efeito de piscar vermelho quando o jogador sofre dano de inimigos ou fome
