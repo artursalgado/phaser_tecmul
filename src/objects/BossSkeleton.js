@@ -16,12 +16,21 @@ export default class BossSkeleton extends Skeleton {
     this.detectionRange = 320; // Deteta o jogador de muito longe
     this.setScale(1.05);
 
-    this.setTint(0xff6622); // Cor de brasa flamejante
+    this.setTint(0xff6622);
     this.bossTint = 0xff6622;
 
     // Cria a barra de vida gigante na parte de cima do ecrã
     this.criarBarraVidaBoss(scene);
-    this.roared = false; // Flag para garantir que o grito de surgimento só acontece uma vez
+    this.roared = false;
+
+    // Controlo de fases e ataques especiais
+    this.fase2Ativa = false;
+    this.chargeTimer = 0;       // Conta regressiva para a próxima carga
+    this.chargeCooldown = 8000; // ms entre cargas
+    this.emCharge = false;      // A executar carga agora?
+    this.spinTimer = 0;
+    this.spinCooldown = 12000;
+    this.stunUntil = 0;         // Tempo até o qual o boss fica stunado após carga falhada
   }
 
   // Cria os retângulos de UI que mostram a barra de vida do Boss fixada no topo do ecrã
@@ -113,12 +122,10 @@ export default class BossSkeleton extends Skeleton {
   }
 
   update(player, time, delta) {
-    if (this.dead) {
-      return;
-    }
+    if (this.dead) return;
+
     this.atualizarBarraVidaBoss();
 
-    // Se o jogador estiver dentro do raio de deteção, inicia o evento do Boss
     const dx = player.x - this.x;
     const dy = player.y - this.y;
     const distancia = Math.sqrt(dx * dx + dy * dy);
@@ -127,8 +134,134 @@ export default class BossSkeleton extends Skeleton {
       this.rugir();
     }
 
-    // Executa a lógica de perseguição do esqueleto normal
-    super.update(player, time, delta);
+    // Ativa a fase 2 ao chegar a 50% de vida pela primeira vez
+    if (!this.fase2Ativa && this.health <= this.maxHealth * 0.5) {
+      this.ativarFase2();
+    }
+
+    // Durante stun não faz nada
+    if (time < this.stunUntil) {
+      this.body.setVelocity(0);
+      return;
+    }
+
+    // Ataque de carga (fase 1 e 2)
+    if (!this.emCharge && this.roared) {
+      this.chargeTimer -= delta;
+      if (this.chargeTimer <= 0) {
+        this.chargeTimer = this.chargeCooldown;
+        this.iniciarCarga(player, time);
+        return;
+      }
+    }
+
+    // Ataque de spin (só fase 2)
+    if (this.fase2Ativa && !this.emCharge) {
+      this.spinTimer -= delta;
+      if (this.spinTimer <= 0) {
+        this.spinTimer = this.spinCooldown;
+        this.atacarSpin(player);
+      }
+    }
+
+    if (!this.emCharge) {
+      super.update(player, time, delta);
+    }
+  }
+
+  iniciarCarga(player, time) {
+    // Flash vermelho de aviso por 0.8s antes de carregar
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    this.setTint(0xff0000);
+    this.body.setVelocity(0);
+
+    this.scene.time.delayedCall(800, () => {
+      if (this.dead) return;
+      this.emCharge = true;
+      this.clearTint();
+      this.setTint(this.bossTint);
+
+      // Velocidade de carga: 3× a velocidade normal
+      const vx = (dx / dist) * this.speed * 3;
+      const vy = (dy / dist) * this.speed * 3;
+      this.body.setVelocity(vx, vy);
+
+      // Após 1s verifica se acertou (colisão tratada pela GameScene) e para
+      this.scene.time.delayedCall(1000, () => {
+        if (this.dead) return;
+        this.emCharge = false;
+        this.body.setVelocity(0);
+
+        // Stun de 1.5s por falhar a carga
+        this.stunUntil = this.scene.time.now + 1500;
+        this.setTint(0xaaaaff); // Azul de atordoado
+        this.scene.time.delayedCall(1500, () => {
+          if (!this.dead) this.setTint(this.bossTint);
+        });
+      });
+    });
+  }
+
+  atacarSpin(player) {
+    const raio = 60;
+    const dano = 20;
+
+    // Círculo visual de expansão
+    const circulo = this.scene.add.circle(this.x, this.y, 4, 0xff4400, 0.5).setDepth(10);
+    this.scene.tweens.add({
+      targets: circulo,
+      scaleX: raio / 4,
+      scaleY: raio / 4,
+      alpha: 0,
+      duration: 400,
+      onComplete: () => circulo.destroy(),
+    });
+
+    // Dano ao jogador se estiver no raio
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    if (Math.sqrt(dx * dx + dy * dy) <= raio) {
+      player.sofrerDano?.(dano);
+    }
+  }
+
+  ativarFase2() {
+    this.fase2Ativa = true;
+    this.speed = 100;
+    this.bossTint = 0xff2200;
+    this.setTint(this.bossTint);
+    this.chargeCooldown = 6000;
+
+    // Flash branco e tremor de transição
+    this.scene.cameras.main.shake(600, 0.01);
+    this.setTint(0xffffff);
+    this.scene.time.delayedCall(300, () => {
+      if (!this.dead) this.setTint(this.bossTint);
+    });
+
+    // Aviso no ecrã
+    const aviso = this.scene.add
+      .text(this.scene.scale.width / 2, 70, "💀 BOSS ENFURECEU!", {
+        fontSize: "22px",
+        fill: "#ff2200",
+        fontStyle: "bold",
+        stroke: "#000000",
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(202);
+
+    this.scene.tweens.add({
+      targets: aviso,
+      alpha: 0,
+      delay: 2000,
+      duration: 600,
+      onComplete: () => aviso.destroy(),
+    });
   }
 
   takeDamage(amount, fromDir = "right") {
@@ -160,7 +293,9 @@ export default class BossSkeleton extends Skeleton {
     this.clearTint();
     this.play("skeleton_death", true);
 
-    // Tremor forte de câmara no final
+    // Slow-mo por 1s e tremor forte de câmara
+    this.scene.time.timeScale = 0.3;
+    this.scene.time.delayedCall(1000, () => { this.scene.time.timeScale = 1; });
     this.scene.cameras.main.shake(500, 0.012);
 
     // Gera explosões massivas de sangue laranja e fagulhas amarelas
