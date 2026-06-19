@@ -9,7 +9,7 @@ export default class BossSkeleton extends Skeleton {
         // Stats: HP×4, dano×2, escala×1.4, alcance maior
         this.maxHealth      = 120;
         this.health         = 120;
-        this.damage         = 30;
+        this.damage         = 15;
         this.speed          = 75;
         this.detectionRange = 320;
         this.setScale(1.05);

@@ -50,9 +50,9 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
 
     _applyTier(tier) {
         const tiers = {
-            1: { hp: 40,  speed: 55,  damage: 12, tint: null,       scale: 0.75 },
-            2: { hp: 70,  speed: 70,  damage: 20, tint: 0xff8888,   scale: 0.82 },
-            3: { hp: 110, speed: 85,  damage: 30, tint: 0xcc88ff,   scale: 0.90 },
+            1: { hp: 40,  speed: 55,  damage: 6,  tint: null,       scale: 0.75 },
+            2: { hp: 70,  speed: 70,  damage: 10, tint: 0xff8888,   scale: 0.82 },
+            3: { hp: 110, speed: 85,  damage: 15, tint: 0xcc88ff,   scale: 0.90 },
         };
         const cfg = tiers[tier] || tiers[1];
         this.maxHealth = cfg.hp;

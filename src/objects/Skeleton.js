@@ -29,7 +29,7 @@ export default class Skeleton extends Phaser.Physics.Arcade.Sprite {
         this.maxHealth      = 30;
         this.health         = 30;
         this.speed          = 90;    // mais rápido que goblin tier 1
-        this.damage         = 15;
+        this.damage         = 8;
         this.dead           = false;
         this.damageCooldown = 750;
         this.lastDamageTime = 0;
