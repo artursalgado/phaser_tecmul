@@ -30,6 +30,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.attackRange    = 48;
         this.attackCooldown = 600;
         this.lastAttackTime = 0;
+        this._facingX       = 1;
+        this._facingY       = 0;
 
         // Passo sonoro
         this._stepTimer = 0;
@@ -184,6 +186,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.body.setVelocityY(dy * speed);
 
         if (dx !== 0 || dy !== 0) {
+            const len = Math.sqrt(dx * dx + dy * dy);
+            this._facingX = dx / len;
+            this._facingY = dy / len;
+
             if (dx < 0) this._setFlipAll(true);
             else if (dx > 0) this._setFlipAll(false);
             this.playAnim(running ? 'run' : 'walk', running);
@@ -226,9 +232,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         const anim     = itemId === 'pickaxe' ? 'mining' : 'axe';
         this.playAnim(anim, isWeapon);
 
-        const offX = this.flipX ? -this.attackRange : this.attackRange;
-        const hitX = this.x + offX;
-        const hitY = this.y;
+        const reach = this.attackRange * 0.5;
+        const hitX  = this.x + this._facingX * reach;
+        const hitY  = this.y + this._facingY * reach;
 
         const mult = this._energyMult();
 
@@ -236,9 +242,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         goblins.forEach(g => {
             if (!g.dead) {
                 const d = Phaser.Math.Distance.Between(hitX, hitY, g.x, g.y);
-                if (d < this.attackRange + 20) {
+                if (d < this.attackRange) {
                     // Dano de ataque reduzido pelo cansaço
-                    g.takeDamage(this.attackDamage * mult, this.flipX ? 'left' : 'right');
+                    g.takeDamage(this.attackDamage * mult, this._facingX < 0 ? 'left' : 'right');
                     this.scene.events.emit('enemyHurt');
                 }
             }
@@ -249,16 +255,16 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         trees.forEach(t => {
             if (!t.dead) {
                 const d = Phaser.Math.Distance.Between(hitX, hitY, t.x, t.y);
-                if (d < this.attackRange + 20) {
+                if (d < this.attackRange) {
                     if (Math.random() < mult) t.chop();
                 }
             }
         });
 
         // Efeito visual
-        const ring = this.scene.add.circle(hitX, hitY, 18, 0xffff88, 0.55).setDepth(10);
+        const ring = this.scene.add.circle(hitX, hitY, 10, 0xffff88, 0.55).setDepth(10);
         this.scene.tweens.add({
-            targets: ring, scaleX: 2.2, scaleY: 2.2, alpha: 0,
+            targets: ring, scaleX: 1.8, scaleY: 1.8, alpha: 0,
             duration: 220, onComplete: () => ring.destroy()
         });
 
