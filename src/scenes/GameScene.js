@@ -11,6 +11,8 @@ import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
 import SaveManager from '../systems/SaveManager.js';
 
+// Coordenadas dos pontos fixos de spawn para monstros.
+// Estão localizados nas extremidades (Norte, Sul, Este, Oeste) da ilha.
 const PONTOS_SPAWN = [
     { x: 400,  y: 100  }, { x: 1200, y: 100  }, // Norte
     { x: 400,  y: 1500 }, { x: 1200, y: 1500 }, // Sul
@@ -18,7 +20,7 @@ const PONTOS_SPAWN = [
     { x: 1500, y: 400  }, { x: 1500, y: 1100 }  // Este
 ];
 
-// Fallback se o mapa nao tiver spawns configurados
+// Posições relativas de spawn inicial de recursos e ferramentas caso o mapa Tiled não defina pontos
 const OFFSETS_ITENS = [
     { dx: -64,  dy: -48, itemId: 'wood',    qty: 3 },
     { dx:  72,  dy: -32, itemId: 'rock',    qty: 2 },
@@ -48,12 +50,14 @@ const OFFSETS_ARVORES = [
     { dx:  50, dy:  10 },
 ];
 
+// Coordenadas das caixas com cordas colocadas estrategicamente no mapa
 const SPAWNS_CAIXAS_CORDA = [
     { x: 536, y: 440 },
     { x: 424, y: 760 },
     { x: 488, y: 600 },
 ];
 
+// Valores nutricionais restaurados por cada alimento/bebida ao ser consumido
 const VALORES_ALIMENTOS = {
     carrot: { hunger: 20, energy: 8 },
     potato: { hunger: 28, energy: 10 },
@@ -64,47 +68,53 @@ const VALORES_ALIMENTOS = {
     water:  { thirst: 45, energy: 12 },
 };
 
+// Cena principal do jogo onde a ação de sobrevivência e combate decorre
 export default class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
         
-        // Atributos de estado do jogo
-        this.invulnerable = false;
-        this.elapsedSec = 0;
-        this.score = 0;
-        this.killCount = 0;
-        this.paused = false;
+        // Inicialização de variáveis de controlo de estado do jogo
+        this.invulnerable = false; // Flag para frames de invulnerabilidade do jogador
+        this.elapsedSec = 0;       // Cronómetro de segundos passados
+        this.score = 0;            // Pontos do jogador
+        this.killCount = 0;        // Monstros derrotados
+        this.paused = false;       // Se a lógica do update está suspensa
         
-        this.enemiesUnlocked = false;
-        this.pendingEnemySpawns = [];
+        this.enemiesUnlocked = false; // Waves de inimigos só ativam ao apanhar a 1ª arma/10 madeiras
+        this.pendingEnemySpawns = []; // Inimigos pendentes de nascer
         this.waveNumber = 0;
     }
 
     create(data) {
+        // Toca a música ambiente procedural
         SoundManager.resume();
         SoundManager.startBgMusic();
 
+        // Reseta todos os parâmetros de estado
         this.elapsedSec = 0;
         this.score = 0;
         this.killCount = 0;
         this.paused = false;
-        this.hasExtraLife = true;
+        this.hasExtraLife = true; // Jogador tem direito a renascer 1 vez na praia ao morrer
         this.raftReady = false;
         this.autosaveTimer = 0;
         this.loadedPlayerPos = null;
-        this.waveTimer = 75;
+        this.waveTimer = 75; // 75 segundos entre waves de monstros
         this.waveWarningShown = false;
         this.waveNumber = 0;
 
+        // 1. Carrega o mapa e obtém dimensões reais de píxeis
         const dim = this.configurarMapa();
         if (!dim.mapW) return;
 
+        // Lê os pontos de spawn (do Tiled ou fallbacks)
         const spawns = this.lerPontosSpawns(this.mapa, dim.mapW, dim.mapH);
         this.spawnPos = { x: spawns.player.x, y: spawns.player.y };
 
+        // 2. Inicializa os sistemas básicos de dados (inventário, status, quest)
         this.configurarSistemas();
 
-        // Carrega o jogo salvo
+        // 3. Se for carregar um save existente do localStorage (Menu -> Continuar)
         const carregarSave = data && data.loadSave;
         if (carregarSave && SaveManager.hasSave()) {
             const dadosSave = SaveManager.load();
@@ -128,25 +138,30 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
+        // 4. Instancia o objeto do Jogador (Player) na posição correta
         const startX = this.loadedPlayerPos ? this.loadedPlayerPos.x : spawns.player.x;
         const startY = this.loadedPlayerPos ? this.loadedPlayerPos.y : spawns.player.y;
 
         this.player = new Player(this, startX, startY);
+        
+        // Adiciona colisão física entre o jogador e os blocos sólidos do mapa (rochas, água)
         if (this.colisao) {
             this.physics.add.collider(this.player, this.colisao);
         }
 
-        // Se for jogo novo, da o diario
+        // Se for jogo novo, dá o diário no primeiro slot da mochila
         if (!this.loadedPlayerPos) {
             this.inventory.addItem('book', 1);
         }
 
+        // 5. Configura câmaras, controlos de teclas, monstros e lança a HUDScene
         this.configurarCamera(dim.mapW, dim.mapH);
         this.configurarControlos();
         this.configurarMundo(spawns);
         this.configurarEventos();
         this.configurarHUD();
 
+        // Se o save carregado já tiver a quest terminada, prepara a fuga
         if (this.quest.isComplete()) {
             this.raftReady = true;
             if (this.raftLabel) {
@@ -155,6 +170,7 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
+        // Se o save carregado estava morto, salta imediatamente para ecrã de GameOver
         if (this.stats.dead) {
             this.scene.stop('HUDScene');
             this.scene.start('GameOverScene', {
@@ -166,7 +182,7 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
-    // Configura o mapa e as camadas
+    // Configura o mapa de blocos (tilemap), profundidades das camadas e colisão de pontes
     configurarMapa() {
         const mapa = this.make.tilemap({ key: 'ilha' });
         this.mapa = mapa;
@@ -176,27 +192,34 @@ export default class GameScene extends Phaser.Scene {
             return { mapW: 0, mapH: 0 };
         }
 
+        // Cria as camadas do mapa importadas do Tiled
         const chao       = mapa.createLayer('chao',       tileset, 0, 0);
         const transicoes = mapa.createLayer('transicoes', tileset, 0, 0);
         const decoracao  = mapa.createLayer('decoracao',  tileset, 0, 0);
         const colisao    = mapa.createLayer('colisao',    tileset, 0, 0);
         const objetos    = mapa.createLayer('objetos',    tileset, 0, 0);
-        const acima      = mapa.createLayer('acima',      tileset, 0, 0);
+        const acima      = mapa.createLayer('acima',      tileset, 0, 0); // Camada no topo de tudo (ex: copas de árvores)
         
+        // Define as profundidades (Z-indexing) corretas de renderização 2.5D
         chao?.setDepth(0);
         transicoes?.setDepth(1);
         decoracao?.setDepth(2);
         objetos?.setDepth(4);
-        acima?.setDepth(8);
+        acima?.setDepth(8); // Desenha as copas por cima do jogador (Z=5) e dos monstros (Z=4)
         
+        // Configura colisões da camada invisível de colisão sólida
         if (colisao) {
             colisao.setDepth(2);
-            colisao.setCollisionByExclusion([-1, 0]);
-            colisao.setVisible(false);
+            colisao.setCollisionByExclusion([-1, 0]); // Colide com tudo exceto blocos vazios (-1) e ID 0
+            colisao.setVisible(false); // Oculta a camada de colisão física
 
-            // Permite passagem livre nas pontes
+            // Lógica de Desbloqueio das Pontes:
+            // A camada de colisão cobre a água por defeito. Para permitir ao jogador caminhar
+            // sobre as pontes de madeira sem cair à água, varremos os blocos da camada 'decoracao'.
+            // Onde encontrarmos blocos com o ID de ponte (GIDs 731 ou 849), desativamos a colisão sólida
+            // correspondente àquele tile no motor de física do Phaser.
             const PASSAGEM_GIDS = new Set([731, 849]);
-            const FLIP_MASK = 0xE0000000;
+            const FLIP_MASK = 0xE0000000; // Máscara de bitwise para remover rotações de tiles do Tiled
             if (decoracao) {
                 decoracao.layer.data.forEach((row, ty) => {
                     row.forEach((decTile, tx) => {
@@ -204,7 +227,7 @@ export default class GameScene extends Phaser.Scene {
                         const gid = decTile.index & ~FLIP_MASK;
                         if (PASSAGEM_GIDS.has(gid)) {
                             const colTile = colisao.getTileAt(tx, ty);
-                            if (colTile) colTile.setCollision(false, false, false, false);
+                            if (colTile) colTile.setCollision(false, false, false, false); // Desativa colisão
                         }
                     });
                 });
@@ -215,26 +238,32 @@ export default class GameScene extends Phaser.Scene {
         const mapH = mapa.heightInPixels;
         this.mapW = mapW;
         this.mapH = mapH;
+        
+        // Define os limites físicos do motor de física Arcade para o tamanho da ilha
         this.physics.world.setBounds(0, 0, mapW, mapH);
         this.colisao = colisao;
 
         return { mapW, mapH };
     }
 
-    // Inicializa inventario, status e progresso da quest
+    // Inicializa os sistemas básicos de dados e eventos correspondentes
     configurarSistemas() {
-        this.inventory = new Inventory(24);
+        this.inventory = new Inventory(24); // 24 slots totais
         this.stats     = new PlayerStats();
         this.quest     = new QuestManager();
         this.quest.init(this);
 
-        // Controla morte do jogador
+        // Ouve a morte do jogador
         this.stats.on('died', () => {
+            // Aplica a perda de 90% dos recursos entregues na jangada
             this.quest.applyDeathPenalty();
+            
+            // Se o jogador ainda tiver a segunda vida extra ativa
             if (this.hasExtraLife) {
                 this.hasExtraLife = false;
                 this.renascerJogador();
             } else {
+                // Morte permanente: grava estado de morte e vai para GameOver
                 SaveManager.save(this);
                 this.scene.stop('HUDScene');
                 this.scene.start('GameOverScene', {
@@ -245,6 +274,7 @@ export default class GameScene extends Phaser.Scene {
             }
         });
         
+        // Ativa flag de fuga pronta quando o jogador entrega a totalidade dos recursos
         this.quest.on('raftComplete', () => {
             this.raftReady = true;
             if (this.raftLabel) {
@@ -254,13 +284,15 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
+    // Limita a movimentação da câmara aos limites do mapa e faz com que siga o jogador
     configurarCamera(mapW, mapH) {
         this.cameras.main.setBounds(0, 0, mapW, mapH);
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-        this.cameras.main.setZoom(2);
-        this.cameras.main.setBackgroundColor('#3a8fa8');
+        this.cameras.main.setZoom(2); // Zoom de 2x para aproximar os detalhes pixelart
+        this.cameras.main.setBackgroundColor('#3a8fa8'); // Cor de fundo de mar profundo
     }
 
+    // Mapeia controlos direcionais WASD/Setas e atalhos rápidos do teclado
     configurarControlos() {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasd    = this.input.keyboard.addKeys({
@@ -271,10 +303,13 @@ export default class GameScene extends Phaser.Scene {
         });
         
         this.input.keyboard.on('keydown', (e) => {
+            // Seleção de slots da hotbar premindo as teclas de 1 a 8
             const n = parseInt(e.key, 10);
             if (!isNaN(n) && n >= 1 && n <= this.inventory.size) {
                 this.inventory.selectSlot(n - 1);
             }
+            
+            // Tecla E: usar comida consumível equipada ou escapar na jangada
             if (e.key === 'e' || e.key === 'E') {
                 if (this.raftReady && this.estaNaZonaJangada()) {
                     this.iniciarCutsceneFuga();
@@ -282,9 +317,17 @@ export default class GameScene extends Phaser.Scene {
                     this.usarItemSelecionado();
                 }
             }
+            
+            // Tecla F: entregar recursos na jangada
             if (e.key === 'f' || e.key === 'F') this.tentarConstruirJangada();
+            
+            // Tecla Q: abrir o Quest Log expandido na HUD
             if (e.key === 'q' || e.key === 'Q') this.events.emit('toggleQuestLog');
+            
+            // Tecla I: abrir e fechar a mochila (inventário)
             if (e.key === 'i' || e.key === 'I') this.alternarInventario();
+            
+            // Tecla ESC: abre e fecha o painel de pausa
             if (e.key === 'Escape') {
                 const hud = this.scene.get('HUDScene');
                 if (!hud?.bookOpen) this.alternarPausa();
@@ -292,8 +335,9 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
+    // Popula o mundo inicializando monstros, recursos físicos, árvores e a zona de ancoragem da jangada
     configurarMundo(spawns) {
-        // Recolhiveis
+        // 1. Instancia itens físicos no chão
         this.pickups = this.physics.add.group();
         spawns.items.forEach(s =>
             this.pickups.add(new CollectibleItem(this, s.x, s.y, s.itemId, s.qty))
@@ -301,17 +345,21 @@ export default class GameScene extends Phaser.Scene {
         SPAWNS_CAIXAS_CORDA.forEach(s =>
             this.pickups.add(new CollectibleItem(this, s.x, s.y, 'rope', 1))
         );
+        
+        // Verifica colisões por sobreposição (overlap) para apanhar os itens do chão
         this.physics.add.overlap(this.player, this.pickups, this.apanharItem, null, this);
 
-        // Inimigos
+        // 2. Instancia o grupo de física dos inimigos
         this.goblins = this.physics.add.group();
         this.pendingEnemySpawns = spawns.enemies.slice();
         if (this.colisao) {
             this.physics.add.collider(this.goblins, this.colisao);
         }
+        
+        // Impede que os monstros fiquem empilhados colidindo-os uns com os outros
         this.physics.add.collider(this.goblins, this.goblins);
 
-        // Cria os inimigos se ja estiverem desbloqueados
+        // Se os monstros já estavam desbloqueados no save carregado, gera-os com pequenos atrasos (delay)
         if (this.enemiesUnlocked) {
             let delay = 0;
             this.pendingEnemySpawns.forEach(s => {
@@ -325,35 +373,40 @@ export default class GameScene extends Phaser.Scene {
             this.pendingEnemySpawns = [];
         }
 
-        // Arvores cortaveis
+        // 3. Instancia as árvores cortáveis na ruína central
         this.trees = this.add.group();
         const treeBase = spawns.poi.ruina || { x: this.mapW / 2, y: this.mapH / 2 };
         OFFSETS_ARVORES.forEach(o =>
             this.trees.add(new Tree(this, treeBase.x + o.dx, treeBase.y + o.dy))
         );
 
-        // Zona da jangada
+        // 4. Configura as coordenadas e os marcadores visuais da zona da jangada
         const docaPos = spawns.poi.doca || { x: this.mapW / 2 + 80, y: this.mapH / 2 + 40 };
         this.raftZone = { x: docaPos.x, y: docaPos.y, radius: 36 };
+        
+        // Imagem decorativa da jangada na areia
         this.add.image(this.raftZone.x, this.raftZone.y, 'spr_deco_coracle_land')
             .setDepth(3).setScale(0.7);
             
+        // Marcador visual de raio luminoso semitransparente na água
         this.raftMarker = this.add.circle(
             this.raftZone.x, this.raftZone.y, this.raftZone.radius, 0xffdd66, 0.18
         ).setDepth(1);
         
+        // Etiqueta indicando controlos de entrega
         this.raftLabel = this.add.text(
             this.raftZone.x, this.raftZone.y - this.raftZone.radius - 8, 'JANGADA [F]',
             { fontSize: '10px', fill: '#ffdd66', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }
         ).setOrigin(0.5).setDepth(9);
 
-        // Overlay do ciclo dia/noite
+        // 5. Instancia o retângulo escuro que cobrirá todo o ecrã para o ciclo dia/noite
         this.prevPhase = null;
         this.lightOverlay = this.add.rectangle(
             0, 0, this.scale.width, this.scale.height, 0x1a1a44, 0
         ).setOrigin(0, 0).setScrollFactor(0).setDepth(50);
     }
 
+    // Associa eventos de combate, som e pontuação
     configurarEventos() {
         this.events.off('enemyDied');
         this.events.off('playerDamaged');
@@ -361,9 +414,12 @@ export default class GameScene extends Phaser.Scene {
         this.events.off('enemyHurt');
         this.events.off('playerStep');
 
+        // Escuta a morte de inimigos
         this.events.on('enemyDied', (x, y) => {
             this.killCount++;
             this.score += 100;
+            
+            // 80% de hipóteses do inimigo deixar cair um item aleatório no chão ao morrer
             const dropOptions = ['wood','rock','wood','rock','carrot','fish','egg'];
             if (Math.random() < 0.8) {
                 const drop = dropOptions[Phaser.Math.Between(0, dropOptions.length-1)];
@@ -371,36 +427,45 @@ export default class GameScene extends Phaser.Scene {
             }
         });
         
+        // Escuta quando o jogador sofre golpes de monstros
         this.events.on('playerDamaged', (amount) => {
-            if (this.invulnerable) return;
+            if (this.invulnerable) return; // Ignora se o jogador estiver em frames de invulnerabilidade
+            
             this.stats.takeDamage(amount);
-            this.player.flashHurt();
+            this.player.flashHurt(); // Efeito visual de piscar
             SoundManager.play('hurt');
-            this.definirInvulnerabilidade(1000);
-            this.cameras.main.shake(120, 0.006);
+            
+            this.definirInvulnerabilidade(1000); // 1 segundo de invulnerabilidade
+            this.cameras.main.shake(120, 0.006); // Treme a câmara ligeiramente
         });
         
+        // Associa os efeitos sonoros procedurais adequados aos eventos
         this.events.on('playerAttack', () => SoundManager.play('attack'));
         this.events.on('enemyHurt',    () => SoundManager.play('goblin_hurt'));
         this.events.on('playerStep',   () => SoundManager.play('step'));
     }
 
+    // Inicia a HUDScene em execução paralela
     configurarHUD() {
         this.scene.launch('HUDScene');
-        this.scene.bringToTop('HUDScene');
+        this.scene.bringToTop('HUDScene'); // Garante que a HUDScene desenha acima da GameScene
 
+        // Texto de ajuda tutorial temporário na base inferior
         const hintText = I18n.t('hud.hint') + '  ·  ESC pausa';
         const hint = this.add.text(
             this.scale.width / 2, this.scale.height - 20, hintText,
             { fontSize: '9px', fill: '#ffffbb', stroke: '#000', strokeThickness: 2 }
         ).setOrigin(0.5, 1).setScrollFactor(0).setDepth(100);
         
+        // Desvanece e destrói o texto tutorial após 8 segundos de jogo
         this.time.delayedCall(8000, () => {
             this.tweens.add({ targets: hint, alpha: 0, duration: 1200,
                 onComplete: () => hint.destroy() });
         });
     }
 
+    // Lê os pontos de spawn desenhados no Tiled.
+    // Se o mapa não possuir a camada de objetos de spawns, devolve as posições de fallback padrão
     lerPontosSpawns(mapa, mapW, mapH) {
         const cx = mapW / 2, cy = mapH / 2;
         const layer = mapa.getObjectLayer && mapa.getObjectLayer('spawns');
@@ -413,6 +478,7 @@ export default class GameScene extends Phaser.Scene {
             };
         }
         
+        // Utilitário para ler propriedades personalizadas de cada objeto do Tiled
         const obterProp = (o, k) => {
             const p = (o.properties || []).find(pp => pp.name === k);
             return p ? p.value : undefined;
@@ -439,67 +505,86 @@ export default class GameScene extends Phaser.Scene {
         return res;
     }
 
+    // Ciclo principal de processamento executado a cada frame do jogo
     update(time, delta) {
         if (this.paused) return;
 
+        // 1. Atualiza status de fome/sede e movimento do jogador/monstros
         this.stats.update(delta);
         this.player.update(this.cursors, this.wasd, time, delta);
         this.goblins.getChildren().forEach(g => g.update(this.player, time, delta));
+        
+        // Incrementa o tempo decorrido convertendo delta para segundos
         this.elapsedSec += delta / 1000;
 
+        // 2. Atualiza a transparência e cor do overlay para o Ciclo Dia/Noite
         this.atualizarLuzDiaNoite();
 
+        // 3. Sistema de Auto-Save Automático: grava o progresso a cada 30 segundos
         this.autosaveTimer += delta / 1000;
         if (this.autosaveTimer >= 30) {
             this.autosaveTimer = 0;
             SaveManager.save(this);
         }
 
+        // 4. Temporizador de hordas de monstros (Waves)
         if (this.enemiesUnlocked) {
             this.waveTimer -= delta / 1000;
 
+            // Mostra aviso de perigo quando faltarem 5 segundos
             if (this.waveTimer <= 5 && !this.waveWarningShown) {
                 this.waveWarningShown = true;
                 this.mostrarAvisoVaga();
             }
 
+            // Quando o temporizador expira, inicia uma nova wave de inimigos
             if (this.waveTimer <= 0) {
-                this.waveTimer = 75;
+                this.waveTimer = 75; // Reseta temporizador
                 this.waveWarningShown = false;
                 this.iniciarVagaInimigos();
             }
         }
     }
 
+    // Pausa a física e os monstros e abre a cena de pausa
     alternarPausa() {
         if (this.paused) return;
         this.paused = true;
         SoundManager.play('pause');
-        SaveManager.save(this);
+        SaveManager.save(this); // Auto-save ao pausar
         
         this.scene.pause('GameScene');
         this.scene.launch('PauseScene');
+        
+        // Escuta o fecho da cena de pausa para retomar
         this.scene.get('PauseScene').events.once('shutdown', () => {
             this.paused = false;
         });
     }
 
+    // Pausa a física e abre a mochila (InventoryScene)
     alternarInventario() {
         if (this.paused) return;
         this.paused = true;
+        
         this.scene.pause('GameScene');
         this.scene.launch('InventoryScene');
+        
+        // Escuta o fecho da mochila para retomar
         this.scene.get('InventoryScene').events.once('shutdown', () => {
             this.paused = false;
             this.scene.resume('GameScene');
         });
     }
 
+    // Cria e insere um Goblin físico na cena
     criarGoblin(x, y, tier = 1) {
         let finalTier = tier;
+        // À noite, os goblins sobem de tier (ex: goblins comuns nível 1 passam a nível 2)
         if (this.isNight) {
             finalTier = Math.min(3, tier + 1);
         }
+        
         const g = new Goblin(this, x, y, finalTier);
         this.goblins.add(g);
         if (this.colisao) {
@@ -508,6 +593,7 @@ export default class GameScene extends Phaser.Scene {
         return g;
     }
 
+    // Cria e insere um Esqueleto físico na cena
     criarEsqueleto(x, y) {
         const s = new Skeleton(this, x, y);
         this.goblins.add(s);
@@ -517,6 +603,7 @@ export default class GameScene extends Phaser.Scene {
         return s;
     }
 
+    // Cria e insere o Boss Esqueleto físico na cena
     criarBoss(x, y) {
         const b = new BossSkeleton(this, x, y);
         this.goblins.add(b);
@@ -526,17 +613,21 @@ export default class GameScene extends Phaser.Scene {
         return b;
     }
 
+    // Lógica acionada quando o jogador colide com um item no chão
     apanharItem(player, item) {
         const def = ITEM_DB[item.itemId];
         const nome = I18n.t(`items.${item.itemId}`) || (def ? def.name : item.itemId);
+        
+        // Tenta inserir na mochila
         const adicionou = this.inventory.addItem(item.itemId, item.quantity);
         
         if (adicionou) {
             SoundManager.play('pickup');
             this.score += 10;
-            this.tentarDesbloquearInimigos(item.itemId);
+            this.tentarDesbloquearInimigos(item.itemId); // Verifica se desbloqueia o perigo
         }
         
+        // Desenha texto dinâmico na tela indicando o item obtido ou se a mochila está cheia
         const txt = this.add.text(item.x, item.y - 20,
             adicionou ? `+${item.quantity} ${nome}` : I18n.t('hud.inventory_full'),
             { fontSize: '10px', fill: adicionou ? '#ffffff' : '#ff8888',
@@ -547,15 +638,19 @@ export default class GameScene extends Phaser.Scene {
             duration: 900, onComplete: () => txt.destroy() });
             
         if (adicionou) {
-            item.destroy();
+            item.destroy(); // Apaga o item do chão do mapa
         }
     }
 
+    // Lógica que destranca o surgimento de monstros.
+    // O perigo ativa assim que o jogador constrói a sua primeira arma ou recolhe 10 madeiras.
     tentarDesbloquearInimigos(lastItemId) {
         if (this.enemiesUnlocked) return;
 
         const ARMAS = ['axe', 'pickaxe', 'sword', 'hammer'];
         const temArma = ARMAS.includes(lastItemId);
+        
+        // Lê a quantidade total de madeira acumulada na jangada ou mochila
         const totalMadeiras = this.quest
             ? (this.quest.getProgress().find(p => p.id === 'wood')?.current ?? 0)
             : (this.inventory.slots.reduce((sum, s) => s && s.itemId === 'wood' ? sum + s.qty : sum, 0));
@@ -564,8 +659,10 @@ export default class GameScene extends Phaser.Scene {
 
         this.enemiesUnlocked = true;
 
+        // Avisa o jogador com texto no centro do ecrã e câmara a tremer
         const W = this.scale.width, H = this.scale.height;
         const motivo = temArma ? I18n.t('hud.enemy_danger') : I18n.t('hud.enemy_attention');
+        
         const warn = this.add.text(W / 2, H / 2 - 60, motivo, {
             fontFamily: 'Georgia, serif', fontSize: '18px',
             fill: '#ff4444', fontStyle: 'bold italic',
@@ -580,6 +677,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.cameras.main.shake(300, 0.004);
 
+        // Gera de imediato a horda inicial pendente
         this.time.delayedCall(600, () => {
             let delay = 0;
             this.pendingEnemySpawns.forEach(s => {
@@ -594,9 +692,12 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
+    // Consome alimentos aplicando os respetivos bónus a partir da mochila rápida (atalho E)
     usarItemSelecionado() {
         const slot = this.inventory.getSelectedItem();
         if (!slot) return;
+        
+        // Se for o diário
         if (slot.itemId === 'book') {
             this.events.emit('openBook');
             return;
@@ -605,6 +706,7 @@ export default class GameScene extends Phaser.Scene {
         const efeito = VALORES_ALIMENTOS[slot.itemId];
         if (!efeito) return;
         
+        // Aplica os bónus de sobrevivência
         if (efeito.hunger) this.stats.eat(efeito.hunger);
         if (efeito.thirst) this.stats.drink(efeito.thirst);
         if (efeito.health) this.stats.heal(efeito.health);
@@ -623,28 +725,59 @@ export default class GameScene extends Phaser.Scene {
             duration: 900, onComplete: () => txt.destroy() });
     }
 
+    // Auxiliar: come alimentos consumíveis de forma controlada através da mochila
+    consumirAlimento(itemId) {
+        const efeito = VALORES_ALIMENTOS[itemId];
+        if (!efeito) return false;
+        
+        if (efeito.hunger) this.stats.eat(efeito.hunger);
+        if (efeito.thirst) this.stats.drink(efeito.thirst);
+        if (efeito.health) this.stats.heal(efeito.health);
+        if (efeito.energy) this.stats.rest(efeito.energy);
+        
+        SoundManager.play('pickup');
+        
+        const nome = I18n.t(`items.${itemId}`);
+        const txt = this.add.text(this.player.x, this.player.y - 36, `🍴 ${nome}`,
+            { fontSize: '12px', fill: '#88ff88', fontStyle: 'bold',
+              stroke: '#000000', strokeThickness: 2 }
+        ).setOrigin(0.5).setDepth(20);
+        
+        this.tweens.add({ targets: txt, y: txt.y - 32, alpha: 0,
+            duration: 900, onComplete: () => txt.destroy() });
+            
+        return true;
+    }
+
+    // Devolve verdadeiro se o jogador estiver posicionado dentro do círculo de ancoragem da jangada
     estaNaZonaJangada() {
         const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.raftZone.x, this.raftZone.y);
         return d <= this.raftZone.radius;
     }
 
+    // Transfere recursos da mochila para a jangada (tecla F na doca)
     tentarConstruirJangada() {
         if (!this.estaNaZonaJangada()) {
             return;
         }
 
         let entregouAlgo = false;
+        
+        // Varre os requisitos da jangada e verifica se o jogador possui estes itens no inventário
         RAFT_PARTS.forEach(part => {
             const tenho = this.inventory.getQuantity(part.id);
             if (tenho > 0) {
+                // Tenta depositar no QuestManager
                 const aceito = this.quest.deliver(part.id, tenho);
                 if (aceito > 0) {
+                    // Deduz a quantidade entregue da mochila do jogador
                     this.inventory.removeItem(part.id, aceito);
                     entregouAlgo = true;
                 }
             }
         });
 
+        // Mostra mensagem flutuante de feedback
         const msg = entregouAlgo
             ? (I18n.lang === 'en' ? 'Resources delivered!' : 'Recursos entregues!')
             : (I18n.lang === 'en' ? 'Nothing to deliver.'  : 'Nada para entregar.');
@@ -662,15 +795,19 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
+    // Configura frames de imunidade ao jogador temporariamente
     definirInvulnerabilidade(ms) {
         this.invulnerable = true;
         this.time.delayedCall(ms, () => { this.invulnerable = false; });
     }
 
+    // Lógica para repor a vida e reposicionar o jogador na praia caso ele perca a 1ª vida
     renascerJogador() {
         this.stats.reset();
-        this.player.setPosition(this.spawnPos.x, this.spawnPos.y);
+        this.player.setPosition(this.spawnPos.x, this.spawnPos.y); // Volta para a praia inicial
         this.player.body.setVelocity(0);
+        
+        // Pisca o ecrã a preto rapidamente para simular o acordar
         this.cameras.main.flash(400, 0, 0, 0);
         this.definirInvulnerabilidade(1500);
 
@@ -687,12 +824,14 @@ export default class GameScene extends Phaser.Scene {
             duration: 2200, onComplete: () => txt.destroy() });
     }
 
+    // Despoleta a animação cinemática final de fuga na jangada
     iniciarCutsceneFuga() {
         if (this.escaping) return;
         this.escaping = true;
         this.paused = true;
-        this.player.body.setVelocity(0);
+        this.player.body.setVelocity(0); // Para o jogador
 
+        // Oculta a interface da HUD
         this.scene.setVisible(false, 'HUDScene');
         SoundManager.play('victory');
 
@@ -702,10 +841,12 @@ export default class GameScene extends Phaser.Scene {
             stroke: '#000000', strokeThickness: 3
         }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
 
+        // Faz a câmara principal afastar (zoom out) e deslizar em direção ao mar (pan)
         this.cameras.main.stopFollow();
         this.cameras.main.pan(this.raftZone.x, this.raftZone.y, 2500, 'Sine.easeInOut');
         this.cameras.main.zoomTo(3, 2500);
 
+        // Inicia o fade-out após 6.5 segundos para transitar para a tela final de vitória
         this.time.delayedCall(6500, () => {
             this.cameras.main.fadeOut(1200, 0, 0, 0);
         });
@@ -720,51 +861,59 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
-    // Retorna verdadeiro se for noite no jogo
+    // Getter de conveniência que calcula se é noite de acordo com o cronómetro
     get isNight() { 
         const tempoCiclo = this.elapsedSec % 300; 
-        return tempoCiclo >= 150; 
+        return tempoCiclo >= 150; // Noite dura entre 150s e 270s (2 minutos)
     }
 
+    // Controla em tempo real a cor e opacidade do overlay retangular com base na fase do ciclo dia/noite
     atualizarLuzDiaNoite() {
-        const tempoCiclo = this.elapsedSec % 300;
+        const tempoCiclo = this.elapsedSec % 300; // Ciclos repetitivos de 5 minutos
         let fase = 'day';
-        if (tempoCiclo >= 120 && tempoCiclo < 150) fase = 'sunset';
-        else if (tempoCiclo >= 150 && tempoCiclo < 270) fase = 'night';
-        else if (tempoCiclo >= 270) fase = 'sunrise';
+        if (tempoCiclo >= 120 && tempoCiclo < 150) fase = 'sunset';     // Pôr-do-sol (30s)
+        else if (tempoCiclo >= 150 && tempoCiclo < 270) fase = 'night';  // Noite (2 minutos)
+        else if (tempoCiclo >= 270) fase = 'sunrise';                   // Amanhecer (30s)
 
+        // Só inicia uma nova interpolação visual se o estado do dia mudou
         if (this.prevPhase !== fase) {
             this.prevPhase = fase;
             this.transitarFaseDiaNoite(fase, tempoCiclo);
         }
     }
 
+    // Lógica para interpolar suavemente a cor e o canal alfa do retângulo gráfico de iluminação
     transitarFaseDiaNoite(fase, tempoCiclo) {
         if (!this.lightOverlay) return;
 
+        // Cancela quaisquer transições visuais de luz em execução
         this.tweens.killTweensOf(this.lightOverlay);
 
         if (fase === 'day') {
-            this.lightOverlay.setAlpha(0);
+            this.lightOverlay.setAlpha(0); // Luz solar brilhante (completamente transparente)
         } else if (fase === 'sunset') {
+            // Tonalidade laranja suave de entardecer
             this.lightOverlay.setFillStyle(0xff8844, 1);
+            
+            // Calcula o tempo restante da fase para completar a transição de forma exata
             const tempoRestante = Math.max(1, (150 - tempoCiclo) * 1000);
             this.tweens.add({
                 targets: this.lightOverlay,
-                alpha: 0.25,
+                alpha: 0.25, // Atinge opacidade de 25%
                 duration: tempoRestante,
                 ease: 'Linear'
             });
         } else if (fase === 'night') {
+            // Tonalidade azul-escura/negra de noite fechada
             this.lightOverlay.setFillStyle(0x1a1a44, 1);
             
-            const duracaoTransicao = 15;
+            const duracaoTransicao = 15; // Demora 15 segundos a escurecer totalmente
             const fimTransicao = 150 + duracaoTransicao;
             if (tempoCiclo < fimTransicao) {
                 const tempoRestante = Math.max(1, (fimTransicao - tempoCiclo) * 1000);
                 this.tweens.add({
                     targets: this.lightOverlay,
-                    alpha: 0.45,
+                    alpha: 0.45, // Atinge opacidade máxima de 45% (mantém visibilidade para o jogador)
                     duration: tempoRestante,
                     ease: 'Linear'
                 });
@@ -772,6 +921,7 @@ export default class GameScene extends Phaser.Scene {
                 this.lightOverlay.setAlpha(0.45);
             }
         } else if (fase === 'sunrise') {
+            // Clareia de volta a azul-escura até desvanecer a zero
             this.lightOverlay.setFillStyle(0x1a1a44, 1);
             const tempoRestante = Math.max(1, (300 - tempoCiclo) * 1000);
             this.tweens.add({
@@ -783,6 +933,7 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
+    // Desenha e anima a mensagem vermelha de aviso flutuante "ONDA DE INIMIGOS A APROXIMAR-SE"
     mostrarAvisoVaga() {
         const W = this.scale.width, H = this.scale.height;
         const msg = I18n.t('hud.wave_warning');
@@ -792,6 +943,7 @@ export default class GameScene extends Phaser.Scene {
             stroke: '#000000', strokeThickness: 3,
         }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0);
         
+        // Efeito de aparecer rápido, aguentar 2.2 segundos e sumir em yoyo
         this.tweens.add({
             targets: warn, alpha: 1, duration: 400,
             yoyo: true, hold: 2200,
@@ -800,19 +952,24 @@ export default class GameScene extends Phaser.Scene {
         SoundManager.play('pause');
     }
 
+    // Lógica para gerar monstros ao redor do jogador no início de cada wave
     iniciarVagaInimigos() {
+        // Limita a quantidade máxima de monstros vivos simultâneos na cena para evitar atrasos (lag)
         const totalVivos = this.goblins.getChildren().filter(g => !g.dead).length;
         if (totalVivos >= 10) return;
 
         this.waveNumber++;
-        this.events.emit('waveChanged', this.waveNumber);
+        this.events.emit('waveChanged', this.waveNumber); // Atualiza textos da HUDScene
 
+        // Aumenta o número de monstros gerados a cada vaga de acordo com a progressão de dificuldade
         let contagemSpawns = 2;
         if (this.waveNumber >= 10) contagemSpawns = 4;
         else if (this.waveNumber >= 4) contagemSpawns = 3;
 
         const maxSpawns = Math.min(contagemSpawns, 10 - totalVivos);
 
+        // Seleciona pontos de spawn fixos que estejam fora da visão do jogador (> 300 pixels de distância)
+        // para dar o aspeto que os monstros vieram das profundidades da floresta.
         const pontosValidos = PONTOS_SPAWN.filter(p => {
             const d = Phaser.Math.Distance.Between(p.x, p.y, this.player.x, this.player.y);
             return d > 300;
@@ -820,6 +977,7 @@ export default class GameScene extends Phaser.Scene {
 
         if (pontosValidos.length === 0) return;
 
+        // Baralha as posições válidas
         const baralhados = Phaser.Utils.Array.Shuffle(pontosValidos);
         const pontosSelecionados = baralhados.slice(0, Math.min(baralhados.length, Phaser.Math.Between(2, 3)));
 
@@ -831,22 +989,28 @@ export default class GameScene extends Phaser.Scene {
             let escolha = 'goblin_1';
             const roll = Math.random();
 
+            // Sorteia o tipo de monstro de forma probabilística com base no número da wave
             if (this.waveNumber <= 3) {
+                // Primeiras waves: apenas goblins nível 1 e alguns nível 2
                 escolha = roll < 0.80 ? 'goblin_1' : 'goblin_2';
             } else if (this.waveNumber <= 6) {
+                // Waves médias: goblins nível 2, nível 1 e início de esqueletos rápidos
                 if (roll < 0.50) escolha = 'goblin_2';
                 else if (roll < 0.80) escolha = 'goblin_1';
                 else escolha = 'skeleton';
             } else if (this.waveNumber <= 9) {
+                // Waves avançadas: esqueletos em força, goblins nível 2 e nível 3
                 if (roll < 0.50) escolha = 'skeleton';
                 else if (roll < 0.80) escolha = 'goblin_2';
                 else escolha = 'goblin_3';
             } else {
+                // Finais: goblins fortes nível 3, esqueletos e hipótese de surgir o Boss Esqueleto!
                 if (roll < 0.40) escolha = 'goblin_3';
                 else if (roll < 0.80) escolha = 'skeleton';
                 else escolha = 'boss';
             }
 
+            // Instancia o monstro sorteado no ponto X/Y selecionado
             if (escolha === 'goblin_1') {
                 this.criarGoblin(spawnX, spawnY, 1);
             } else if (escolha === 'goblin_2') {
@@ -856,6 +1020,7 @@ export default class GameScene extends Phaser.Scene {
             } else if (escolha === 'skeleton') {
                 this.criarEsqueleto(spawnX, spawnY);
             } else if (escolha === 'boss') {
+                // Só permite instanciar o Boss se não existir outro ativo em combate
                 const bossVivo = this.goblins.getChildren().some(g => g instanceof BossSkeleton && !g.dead);
                 if (bossVivo) {
                     this.criarEsqueleto(spawnX, spawnY);

@@ -1,44 +1,49 @@
 import { ITEM_DB } from '../systems/Inventory.js';
 import I18n from '../systems/I18n.js';
 
+// Cores associadas a cada categoria de item para pintar a borda do slot selecionado
 const ACENTO_CATEGORIA = {
-    tool:     0x4499cc,
-    resource: 0x55bb55,
-    food:     0xffaa44,
-    quest:    0xaa66ff,
+    tool:     0x4499cc, // Ferramentas: Azul
+    resource: 0x55bb55, // Recursos: Verde
+    food:     0xffaa44, // Comida: Laranja
+    quest:    0xaa66ff, // Missões: Roxo
 };
+
+// Cores em formato string hexadecimal para formatação de texto em HTML
 const COR_STR_CATEGORIA = {
     tool: '#4499cc', resource: '#55bb55', food: '#ffaa44', quest: '#aa66ff',
 };
 const COR_STR_RARIDADE = {
     common: '#aaaaaa', rare: '#ffdd88', quest: '#cc88ff',
 };
+
+// Lista de filtros de categoria disponíveis no topo do inventário
 const FILTROS = ['all', 'tool', 'resource', 'food', 'quest'];
 
-// Coordenadas do layout do inventario
+// Constantes de coordenadas para desenhar o layout de UI RPG do painel de inventário
 const W = 960, H = 640;
-const PW = 600, PH = 380;
+const PW = 600, PH = 380; // Largura e altura do painel interno
 const CX = W / 2, CY = H / 2;
 const PL = CX - PW / 2;
 const PR = CX + PW / 2;
 const PT = CY - PH / 2;
 const PB = CY + PH / 2;
-const HDR = 40;
-const FLT = 26;
-const PAD = 14;
+const HDR = 40; // Altura do cabeçalho
+const FLT = 26; // Altura da barra de filtros
+const PAD = 14; // Espaçamento interno
 
-const TAMANHO_SLOT = 44;
-const ESPACAMENTO = 8;
-const COLUNAS = 4;
+const TAMANHO_SLOT = 44; // Dimensões do quadrado do slot do inventário
+const ESPACAMENTO = 8;  // Distância entre slots
+const COLUNAS = 4;      // Número de colunas na grelha de slots
 
-const GL = PL + PAD;
-const GT = PT + HDR + FLT + 8;
-const GR = GL + COLUNAS * (TAMANHO_SLOT + ESPACAMENTO) - ESPACAMENTO;
+const GL = PL + PAD; // Posição X esquerda da grelha de slots
+const GT = PT + HDR + FLT + 8; // Posição Y topo da grelha de slots
+const GR = GL + COLUNAS * (TAMANHO_SLOT + ESPACAMENTO) - ESPACAMENTO; // Posição X direita da grelha
 
-const DL = GR + 14;
-const DW = PR - PAD - DL;
-const DT = PT + HDR + 8;
-const DH = PB - 28 - DT;
+const DL = GR + 14; // Posição X esquerda do painel de detalhes (lado direito)
+const DW = PR - PAD - DL; // Largura do painel de detalhes
+const DT = PT + HDR + 8; // Posição Y topo do painel de detalhes
+const DH = PB - 28 - DT; // Altura do painel de detalhes
 
 export default class InventoryScene extends Phaser.Scene {
     constructor() { 
@@ -46,19 +51,21 @@ export default class InventoryScene extends Phaser.Scene {
     }
 
     create() {
+        // Obtém o inventário ativo da GameScene principal
         this.inventario = this.scene.get('GameScene').inventory;
-        this.selectedIdx = -1;
-        this.filterCat = 'all';
-        this.dragFrom = -1;
-        this.ghostIcon = null;
+        this.selectedIdx = -1; // Slot selecionado atualmente no painel de detalhes (-1 = nenhum)
+        this.filterCat = 'all'; // Filtro de categoria selecionado
+        this.dragFrom = -1; // Slot inicial do item que está a ser arrastado
+        this.ghostIcon = null; // Sprite fantasma flutuante que acompanha o rato durante o arrasto
 
-        // Fundo semitransparente
+        // Desenha um fundo escuro semitransparente bloqueador de cliques atrás do inventário
         this.add.rectangle(CX, CY, W, H, 0x000000, 0.62)
             .setInteractive().setDepth(0);
 
+        // Desenha os gráficos de fundo do painel castanho RPG
         this.desenharFundoPainel();
 
-        // Titulo
+        // Título "INVENTÁRIO"
         this.add.text(CX, PT + 22, I18n.t('inventory.title'), {
             fontFamily: 'Georgia, serif', fontSize: '16px',
             color: '#f5e0b0', fontStyle: 'bold',
@@ -68,29 +75,31 @@ export default class InventoryScene extends Phaser.Scene {
         this.criarSlots();
         this.criarPainelDetalhes();
 
-        // Dica de fechar
+        // Dica informativa no fundo de como fechar o painel
         this.add.text(CX, PB - 14, I18n.t('inventory.hint'), {
             fontSize: '9px', color: '#665544', fontStyle: 'italic',
         }).setOrigin(0.5).setDepth(2);
 
-        // Atalhos de teclado
+        // Associa atalhos de teclado (ESC ou I) para fechar o inventário
         this.input.keyboard.on('keydown-ESC', () => this.fechar());
         this.input.keyboard.on('keydown-I',   () => this.fechar());
 
-        // Logica de arrastar (Drag & Drop)
+        // Lógica de arrastar e largar (Drag & Drop) - Escuta movimentos do ponteiro
         this.input.on('pointermove', (ptr) => {
+            // Se houver um ícone fantasma a ser arrastado, move-o para as coordenadas atuais do rato
             if (this.ghostIcon) {
                 this.ghostIcon.setPosition(ptr.x, ptr.y);
             }
         });
 
+        // Escuta quando o clique do rato/toque é libertado
         this.input.on('pointerup', (ptr) => {
             if (this.dragFrom < 0) return;
             
             const de = this.dragFrom;
             let paraIdx = -1;
             
-            // Procura o slot de destino
+            // Verifica se o rato foi largado em cima de algum slot retangular do inventário
             for (let j = 0; j < this.slotObjs.length; j++) {
                 const { sx, sy } = this.slotObjs[j];
                 if (Math.abs(ptr.x - sx) < TAMANHO_SLOT / 2 && Math.abs(ptr.y - sy) < TAMANHO_SLOT / 2) {
@@ -99,24 +108,29 @@ export default class InventoryScene extends Phaser.Scene {
                 }
             }
             
+            // Apaga o ícone fantasma flutuante
             if (this.ghostIcon) {
                 this.ghostIcon.destroy();
                 this.ghostIcon = null;
             }
             this.dragFrom = -1;
             
+            // Se largou num slot válido diferente do inicial, troca-os de lugar no inventário
             if (paraIdx >= 0 && paraIdx !== de) {
                 this.inventario.moveSlot(de, paraIdx);
             } else if (paraIdx === de || paraIdx < 0) {
+                // Se largou fora ou no mesmo slot, interpreta como um clique normal para ver detalhes
                 this.clicarSlot(de);
             }
             
             this.atualizarSlots();
         });
 
+        // Ouve atualizações de estado do inventário para redesenhar slots em tempo real
         this.onChanged = () => this.atualizarSlots();
         this.inventario.on('changed', this.onChanged);
         
+        // Limpa os ouvintes globais ao fechar a cena para evitar acumulação de referências (fugas de memória)
         this.events.once('shutdown', () => {
             this.inventario.off('changed', this.onChanged);
             this.input.off('pointermove');
@@ -128,333 +142,404 @@ export default class InventoryScene extends Phaser.Scene {
         this.scene.stop(); 
     }
 
+    // Desenha as formas geométricas do fundo do painel e do cabeçalho dourado
     desenharFundoPainel() {
         const g = this.add.graphics().setDepth(1);
-        const r = 8;
+        const r = 8; // Raio dos cantos
+        
+        // Sombra
         g.fillStyle(0x000000, 0.45);
         g.fillRoundedRect(PL + 6, PT + 6, PW, PH, r);
+        
+        // Fundo castanho principal
         g.fillStyle(0x1a1208, 1);
         g.fillRoundedRect(PL, PT, PW, PH, r);
+        
+        // Borda dourada ornamentada
         g.lineStyle(2, 0xc8901a, 0.8);
         g.strokeRoundedRect(PL + 1, PT + 1, PW - 2, PH - 2, r);
+        
+        // Caixa do cabeçalho
         g.fillStyle(0x3d1a00, 0.9);
         g.fillRoundedRect(PL, PT, PW, HDR, { tl: r, tr: r, bl: 0, br: 0 });
+        
         g.lineStyle(1, 0xc8901a, 0.5);
         g.lineBetween(PL, PT + HDR, PR, PT + HDR);
     }
 
+    // Cria os botões horizontais de filtros de categorias no topo dos slots (Ferramentas, Recursos...)
     criarFiltros() {
         const chaves = ['filter_all', 'filter_tool', 'filter_resource', 'filter_food', 'filter_quest'];
         const BW = 82, BH = 18, GAP = 5;
         const total = FILTROS.length * BW + (FILTROS.length - 1) * GAP;
-        let bx = CX - total / 2;
-        const by = PT + HDR + FLT / 2 + 3;
+        let bx = CX - total / 2; // Posição X inicial centralizada
 
-        this.fGfx = {};
-        this.fTxt = {};
-        this.fMeta = {};
+        this.filterBtns = [];
 
-        FILTROS.forEach((f, fi) => {
-            const grafico = this.add.graphics().setDepth(2);
-            const txt = this.add.text(bx + BW / 2, by, I18n.t(`inventory.${chaves[fi]}`), {
-                fontSize: '9px', color: '#887766',
+        FILTROS.forEach((cat, idx) => {
+            const x = bx + idx * (BW + GAP) + BW / 2;
+            const y = PT + HDR + 14;
+
+            const g = this.add.graphics().setDepth(2);
+            
+            // Texto traduzido da categoria
+            const txt = this.add.text(x, y, I18n.t(`inventory.${chaves[idx]}`), {
+                fontSize: '9px', fill: '#c8a870', fontStyle: 'bold'
             }).setOrigin(0.5).setDepth(3);
 
-            const zone = this.add.zone(bx + BW / 2, by, BW, BH)
+            // Função local para desenhar o botão dependendo se é a categoria ativa
+            const desenharBtn = () => {
+                g.clear();
+                const ativa = this.filterCat === cat;
+                g.fillStyle(ativa ? 0x6b3a1a : 0x2d1a0e, 1);
+                g.fillRoundedRect(x - BW / 2, y - BH / 2, BW, BH, 4);
+                g.lineStyle(1, 0xc8901a, ativa ? 1 : 0.4);
+                g.strokeRoundedRect(x - BW / 2, y - BH / 2, BW, BH, 4);
+            };
+            desenharBtn();
+
+            // Zona de colisão para capturar cliques na categoria
+            const zone = this.add.zone(x, y, BW, BH)
                 .setInteractive({ useHandCursor: true }).setDepth(4);
+
             zone.on('pointerdown', () => {
-                this.filterCat = f;
-                this.selectedIdx = -1;
-                this.atualizarFiltros();
+                SoundManager.play('menu_click');
+                this.filterCat = cat;
+                this.selectedIdx = -1; // Limpa seleção atual
+                
+                // Redesenha todos os botões de filtro para atualizar o destaque
+                this.filterBtns.forEach(b => b.redraw());
                 this.atualizarSlots();
-                this.mostrarDetalhes(null, null);
             });
 
-            this.fGfx[f]  = grafico;
-            this.fTxt[f]  = txt;
-            this.fMeta[f] = { x: bx, y: by, w: BW, h: BH };
-            bx += BW + GAP;
+            this.filterBtns.push({ redraw: desenharBtn });
         });
-        this.atualizarFiltros();
     }
 
-    atualizarFiltros() {
-        for (const f of FILTROS) {
-            const grafico = this.fGfx[f];
-            const { x, y, w, h } = this.fMeta[f];
-            const ativo = f === this.filterCat;
-            const tom = ACENTO_CATEGORIA[f] ?? 0x998866;
-            
-            grafico.clear();
-            if (ativo) {
-                grafico.fillStyle(tom, 0.22);
-                grafico.fillRoundedRect(x, y - h / 2, w, h, 4);
-                grafico.lineStyle(1, tom, 0.85);
-                grafico.strokeRoundedRect(x, y - h / 2, w, h, 4);
-            } else {
-                grafico.fillStyle(0x2a1a08, 0.7);
-                grafico.fillRoundedRect(x, y - h / 2, w, h, 4);
-                grafico.lineStyle(1, 0x443322, 0.5);
-                grafico.strokeRoundedRect(x, y - h / 2, w, h, 4);
-            }
-            this.fTxt[f].setStyle({ color: ativo ? '#f5e0b0' : '#887766' });
-        }
-    }
-
+    // Cria as posições físicas de todos os slots de inventário no ecrã (grelha bidimensional)
     criarSlots() {
         this.slotObjs = [];
 
-        for (let i = 0; i < this.inventario.slots.length; i++) {
+        for (let i = 0; i < this.inventario.size; i++) {
             const col = i % COLUNAS;
-            const row = Math.floor(i / COLUNAS);
-            const sx  = GL + TAMANHO_SLOT / 2 + col * (TAMANHO_SLOT + ESPACAMENTO);
-            const sy  = GT + TAMANHO_SLOT / 2 + row * (TAMANHO_SLOT + ESPACAMENTO);
+            const lin = Math.floor(i / COLUNAS);
 
-            const grafico = this.add.graphics().setDepth(2);
-            const icon = this.add.image(sx, sy, 'wood')
-                .setScale(2.4).setVisible(false).setDepth(3);
-            const qty  = this.add.text(sx + TAMANHO_SLOT / 2 - 3, sy + TAMANHO_SLOT / 2 - 3, '', {
-                fontSize: '10px', color: '#ffffff', fontStyle: 'bold',
-                stroke: '#000000', strokeThickness: 2,
+            const sx = GL + col * (TAMANHO_SLOT + ESPACAMENTO) + TAMANHO_SLOT / 2;
+            const sy = GT + lin * (TAMANHO_SLOT + ESPACAMENTO) + TAMANHO_SLOT / 2;
+
+            // Retângulo gráfico de fundo do slot
+            const g = this.add.graphics().setDepth(2);
+            
+            // Ícone do item no slot
+            const icon = this.add.image(sx, sy, 'wood').setScale(2).setVisible(false).setDepth(3);
+            
+            // Texto da quantidade de itens
+            const count = this.add.text(sx + 16, sy + 16, '', {
+                fontSize: '11px', fill: '#ffffff', fontStyle: 'bold'
             }).setOrigin(1, 1).setDepth(4);
 
-            if (i < 8) {
-                this.add.text(sx - TAMANHO_SLOT / 2 + 3, sy - TAMANHO_SLOT / 2 + 3, String(i + 1), {
-                    fontSize: '8px', color: '#554433',
-                }).setOrigin(0, 0).setDepth(4);
+            // Borda dourada fina para destacar se for um slot da Hotbar (atalho rápido no jogo)
+            const ehHotbar = i < 8;
+            const bordaGfx = this.add.graphics().setDepth(3);
+            if (ehHotbar) {
+                bordaGfx.lineStyle(1, 0xc8901a, 0.45);
+                bordaGfx.strokeRoundedRect(sx - TAMANHO_SLOT/2 + 2, sy - TAMANHO_SLOT/2 + 2, TAMANHO_SLOT - 4, TAMANHO_SLOT - 4, 4);
+                // Desenha o número de atalho correspondente (1 a 8) no canto superior esquerdo
+                this.add.text(sx - TAMANHO_SLOT/2 + 4, sy - TAMANHO_SLOT/2 + 4, String(i + 1), {
+                    fontSize: '8px', fill: '#8b6b4c'
+                }).setDepth(4);
             }
 
+            // Divisória dourada que separa visualmente a Hotbar da mochila comum
+            if (i === 7) {
+                const divisoriaGfx = this.add.graphics().setDepth(2);
+                divisoriaGfx.lineStyle(2, 0xc8901a, 0.85); // Linha dourada grossa
+                divisoriaGfx.lineBetween(GL, sy + TAMANHO_SLOT / 2 + 3.5, GR, sy + TAMANHO_SLOT / 2 + 3.5);
+            }
+
+            // Configura interatividade do slot para clique e arrastar (Drag)
             const zone = this.add.zone(sx, sy, TAMANHO_SLOT, TAMANHO_SLOT)
                 .setInteractive({ useHandCursor: true }).setDepth(5);
-                
-            zone.on('pointerover', () => {
-                const estado = this.obterEstadoSlot(i);
-                if (estado !== 'empty' && estado !== 'filtered') {
-                    this.desenharFundoSlot(i, i === this.selectedIdx ? 'selected' : 'hover');
-                }
-            });
-            zone.on('pointerout', () => {
-                this.desenharFundoSlot(i, i === this.selectedIdx ? 'selected' : this.obterEstadoSlot(i));
-            });
+
+            // Ouvinte ao clicar no slot (inicia lógica de arrastar)
             zone.on('pointerdown', (ptr) => {
                 const slot = this.inventario.slots[i];
-                if (!slot) { this.clicarSlot(i); return; }
-                
+                if (!slot) return;
+
                 this.dragFrom = i;
-                const def = ITEM_DB[slot.itemId];
-                const texture = def?.icon ?? slot.itemId;
-                this.ghostIcon = this.add.image(ptr.x, ptr.y, texture)
-                    .setScale(2.4).setAlpha(0.75).setDepth(20);
                 
-                this.desenharFundoSlot(i, 'selected');
+                // Cria o ícone fantasma transparente que segue o rato
+                const def = ITEM_DB[slot.itemId];
+                this.ghostIcon = this.add.image(ptr.x, ptr.y, def ? def.icon : slot.itemId)
+                    .setScale(2.5).setAlpha(0.65).setDepth(20);
             });
 
-            this.slotObjs.push({ gfx: grafico, icon, qty, sx, sy });
+            this.slotObjs.push({ sx, sy, g, icon, count, bordaGfx });
         }
 
-        const linhaY = GT + 2 * (TAMANHO_SLOT + ESPACAMENTO) - ESPACAMENTO / 2;
-        const divGrafico = this.add.graphics().setDepth(2);
-        divGrafico.lineStyle(1.5, 0xc8901a, 0.8);
-        divGrafico.lineBetween(GL, linhaY, GR, linhaY);
-
-        this.add.text(GL, GT - 10, 'HOTBAR', { color: '#886644', fontSize: '8px' }).setDepth(4);
-        this.add.text(GL, GT + 2 * (TAMANHO_SLOT + ESPACAMENTO) - 10, 'MOCHILA', { color: '#886644', fontSize: '8px' }).setDepth(4);
-
+        // Executa atualização visual inicial
         this.atualizarSlots();
     }
 
-    obterEstadoSlot(i) {
-        const slot = this.inventario.slots[i];
-        if (!slot) return 'empty';
-        const def = ITEM_DB[slot.itemId];
-        if (this.filterCat !== 'all' && def?.category !== this.filterCat) return 'filtered';
-        return 'normal';
-    }
-
-    desenharFundoSlot(i, estado) {
-        const { gfx, sx, sy } = this.slotObjs[i];
-        const slot = this.inventario.slots[i];
-        const def = slot ? ITEM_DB[slot.itemId] : null;
-        const r = 6;
-        gfx.clear();
-
-        const configs = {
-            empty:    [0x100c06, 1,   0x332211, 0.6],
-            normal:   [0x1e1508, 1,   0x776644, 1  ],
-            hover:    [0x2e2010, 1,   0xcc9944, 1  ],
-            selected: [0x3a2508, 1,   0xffdd88, 1  ],
-            filtered: [0x0e0c06, 0.5, 0x221a11, 0.3],
-        };
-        const c = configs[estado] ?? configs.empty;
-
-        gfx.fillStyle(c[0], c[1]);
-        gfx.fillRoundedRect(sx - TAMANHO_SLOT / 2, sy - TAMANHO_SLOT / 2, TAMANHO_SLOT, TAMANHO_SLOT, r);
-        gfx.lineStyle(2, c[2], c[3]);
-        gfx.strokeRoundedRect(sx - TAMANHO_SLOT / 2, sy - TAMANHO_SLOT / 2, TAMANHO_SLOT, TAMANHO_SLOT, r);
-
-        if (def && estado !== 'filtered') {
-            gfx.fillStyle(ACENTO_CATEGORIA[def.category] ?? 0x998866, 0.85);
-            gfx.fillCircle(sx + TAMANHO_SLOT / 2 - 7, sy - TAMANHO_SLOT / 2 + 7, 4);
-        }
-    }
-
-    atualizarSlots() {
-        for (let i = 0; i < this.inventario.slots.length; i++) {
-            const { icon, qty } = this.slotObjs[i];
-            const slot = this.inventario.slots[i];
-            const def = slot ? ITEM_DB[slot.itemId] : null;
-            const estado = i === this.selectedIdx ? 'selected' : this.obterEstadoSlot(i);
-
-            this.desenharFundoSlot(i, estado);
-
-            if (slot && estado !== 'filtered') {
-                icon.setTexture(def?.icon ?? slot.itemId).setVisible(true);
-                qty.setText(slot.qty > 1 ? String(slot.qty) : '');
-            } else {
-                icon.setVisible(false);
-                qty.setText('');
-            }
-        }
-    }
-
-    clicarSlot(i) {
-        const estado = this.obterEstadoSlot(i);
-        if (estado === 'empty' || estado === 'filtered') return;
-
-        const anterior = this.selectedIdx;
-        this.selectedIdx = i;
-
-        if (anterior >= 0 && anterior !== i) {
-            this.desenharFundoSlot(anterior, this.obterEstadoSlot(anterior));
-        }
-        this.desenharFundoSlot(i, 'selected');
-
-        const slot = this.inventario.slots[i];
-        this.mostrarDetalhes(slot, slot ? ITEM_DB[slot.itemId] : null);
-
-        this.inventario.selectSlot(i);
-    }
-
+    // Desenha o painel lateral do lado direito onde são exibidas informações do item selecionado
     criarPainelDetalhes() {
-        const dgrafico = this.add.graphics().setDepth(2);
-        dgrafico.fillStyle(0x100c06, 0.9);
-        dgrafico.fillRoundedRect(DL, DT, DW, DH, 5);
-        dgrafico.lineStyle(1, 0x665533, 0.7);
-        dgrafico.strokeRoundedRect(DL + 1, DT + 1, DW - 2, DH - 2, 5);
+        const cx = DL + DW / 2;
 
-        const mx = DL + DW / 2;
-        const tx = DL + 10;
-        const tw = DW - 20;
+        this.detalhesGfx = this.add.graphics().setDepth(2);
+        
+        // Fundo do painel de detalhes
+        this.detalhesGfx.fillStyle(0x0e0703, 0.85);
+        this.detalhesGfx.fillRoundedRect(DL, DT, DW, DH, 6);
+        this.detalhesGfx.lineStyle(1, 0xc8901a, 0.4);
+        this.detalhesGfx.strokeRoundedRect(DL, DT, DW, DH, 6);
 
-        this.dIcon   = this.add.image(mx, DT + 34, 'wood').setScale(3.5).setVisible(false).setDepth(3);
+        // Ícone ampliado do item
+        this.detalhesIcon = this.add.image(cx, DT + 56, 'wood').setScale(3.5).setVisible(false).setDepth(3);
         
-        this.dName   = this.add.text(mx, DT + 62, '', {
-            fontFamily: 'Georgia, serif', fontSize: '12px',
-            color: '#f5e0b0', fontStyle: 'bold',
-            wordWrap: { width: tw }, align: 'center',
-        }).setOrigin(0.5, 0).setDepth(3);
-        
-        this.dCat    = this.add.text(mx, DT + 82, '', {
-            fontSize: '9px', color: '#888877', align: 'center',
-        }).setOrigin(0.5, 0).setDepth(3);
-        
-        this.dDivGrafico = this.add.graphics().setDepth(3);
-        
-        this.dDesc   = this.add.text(tx, DT + 102, '', {
-            fontFamily: 'Georgia, serif', fontSize: '10px',
-            color: '#ccbb99', lineSpacing: 3,
-            wordWrap: { width: tw },
-        }).setOrigin(0, 0).setDepth(3);
-        
-        this.dQty    = this.add.text(mx, DT + DH - 64, '', {
-            fontSize: '14px', color: '#ffffff', fontStyle: 'bold', align: 'center',
-        }).setOrigin(0.5, 0).setDepth(3);
-        
-        this.dRarity = this.add.text(mx, DT + DH - 44, '', {
-            fontSize: '9px', color: '#888888', fontStyle: 'italic', align: 'center',
-        }).setOrigin(0.5, 0).setDepth(3);
+        // Borda decorativa dourada à volta do ícone
+        this.detalhesIconMoldura = this.add.graphics().setDepth(2).setVisible(false);
 
-        // Botao largar item
-        this.dropGrafico  = this.add.graphics().setDepth(3).setVisible(false);
-        this.dropTxt  = this.add.text(mx, DT + DH - 18, I18n.t('inventory.drop'), {
-            fontSize: '10px', color: '#ff8888',
-        }).setOrigin(0.5).setDepth(4).setVisible(false);
-        
-        this.dropZone = this.add.zone(mx, DT + DH - 18, DW - 24, 20)
-            .setInteractive({ useHandCursor: true }).setDepth(5).setVisible(false);
-            
-        this.dropZone.on('pointerover', () => this.hoverLargar(true));
-        this.dropZone.on('pointerout',  () => this.hoverLargar(false));
-        this.dropZone.on('pointerdown', () => {
-            if (this.selectedIdx >= 0) {
-                this.inventario.dropItem(this.selectedIdx);
-                this.selectedIdx = -1;
-                this.atualizarSlots();
-                this.mostrarDetalhes(null, null);
-            }
-        });
-
-        this.dHint = this.add.text(mx, DT + DH / 2, I18n.t('inventory.empty'), {
-            fontSize: '10px', color: '#443322', fontStyle: 'italic',
-            fontFamily: 'Georgia, serif', align: 'center',
+        // Textos descritivos (Título, Tipo, Raridade, Descrição...)
+        this.detalhesTitulo = this.add.text(cx, DT + 110, '', {
+            fontFamily: 'Georgia, serif', fontSize: '15px', color: '#ffdd99', fontStyle: 'bold', align: 'center'
         }).setOrigin(0.5).setDepth(3);
+
+        this.detalhesTipo = this.add.text(cx, DT + 132, '', {
+            fontSize: '9px', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(3);
+
+        this.detalhesDesc = this.add.text(cx, DT + 154, '', {
+            fontSize: '10px', color: '#ddccaa', wordWrap: { width: DW - 24 }, align: 'center'
+        }).setOrigin(0.5, 0).setDepth(3);
+
+        // Criamos o botão "USAR / EQUIPAR" no fundo do painel
+        this.btnUsar = makeBtn(this, cx, PB - 44, DW - 28, 30, 'USAR', { depth: 3, fontSize: '12px' });
+        this.ocultarBotaoUsar(); // Começa oculto
     }
 
-    hoverLargar(on) {
-        this.dropGrafico.clear();
-        this.dropGrafico.fillStyle(on ? 0x5a1010 : 0x2a0808, 0.9);
-        this.dropGrafico.fillRoundedRect(DL + 12, DT + DH - 28, DW - 24, 20, 4);
-        this.dropGrafico.lineStyle(1, on ? 0xff4444 : 0x882222, 0.8);
-        this.dropGrafico.strokeRoundedRect(DL + 12, DT + DH - 28, DW - 24, 20, 4);
-        this.dropTxt.setStyle({ color: on ? '#ffaaaa' : '#ff8888' });
+    ocultarBotaoUsar() {
+        this.btnUsar.grafico.setVisible(false);
+        this.btnUsar.txt.setVisible(false);
+        this.btnUsar.zone.disableInteractive();
     }
 
-    mostrarDetalhes(slot, def) {
-        const temItem = !!(slot && def);
-        this.dHint.setVisible(!temItem);
-        this.dIcon.setVisible(temItem);
-        this.dName.setText('');
-        this.dCat.setText('');
-        this.dDivGrafico.clear();
-        this.dDesc.setText('');
-        this.dQty.setText('');
-        this.dRarity.setText('');
-        this.dropGrafico.setVisible(false);
-        this.dropTxt.setVisible(false);
-        this.dropZone.setVisible(false);
+    exibirBotaoUsar(label) {
+        this.btnUsar.grafico.setVisible(true);
+        this.btnUsar.txt.setVisible(true);
+        this.btnUsar.txt.setText(label);
+        this.btnUsar.zone.setInteractive();
+    }
 
-        if (!temItem) return;
+    // Processa a seleção de um slot por clique
+    clicarSlot(idx) {
+        const slot = this.inventario.slots[idx];
+        if (!slot) {
+            this.selectedIdx = -1;
+            this.atualizarPainelDetalhes();
+            return;
+        }
 
-        this.dIcon.setTexture(def.icon);
-        this.dName.setText(def.name);
+        const def = ITEM_DB[slot.itemId];
+        
+        // Verifica se o item pertence à categoria do filtro ativo.
+        // Se ativou um filtro e clicou num slot ocultado por este, não faz nada.
+        if (this.filterCat !== 'all' && def && def.category !== this.filterCat) {
+            return;
+        }
 
-        const catL = {
-            tool: { pt: 'Ferramenta', en: 'Tool' },
-            resource: { pt: 'Recurso', en: 'Resource' },
-            food: { pt: 'Comida', en: 'Food' },
-            quest: { pt: 'Quest', en: 'Quest' },
-        };
-        const rarL = {
-            common: { pt: 'Comum', en: 'Common' },
-            rare:   { pt: 'Raro',  en: 'Rare'   },
-            quest:  { pt: 'Quest', en: 'Quest'  },
-        };
-        const idioma = I18n.lang;
+        // Se clicou no item que já estava selecionado, equipa-o ou usa-o automaticamente
+        if (this.selectedIdx === idx) {
+            this.usarItemSelecionado();
+        } else {
+            this.selectedIdx = idx;
+        }
+        
+        this.atualizarPainelDetalhes();
+    }
 
-        this.dCat.setText(catL[def.category]?.[idioma] ?? '')
-            .setStyle({ color: COR_STR_CATEGORIA[def.category] ?? '#aaaaaa' });
+    // Lógica para consumir ou equipar o item selecionado
+    usarItemSelecionado() {
+        if (this.selectedIdx < 0) return;
+        const slot = this.inventario.slots[this.selectedIdx];
+        if (!slot) return;
 
-        this.dDivGrafico.lineStyle(1, 0x443322, 0.6);
-        this.dDivGrafico.lineBetween(DL + 12, DT + 96, DL + DW - 12, DT + 96);
+        const def = ITEM_DB[slot.itemId];
+        if (!def) return;
 
-        this.dDesc.setText(I18n.t(`item_desc.${def.icon}`));
-        this.dQty.setText(`×${slot.qty}`);
-        this.dRarity.setText(rarL[def.rarity]?.[idioma] ?? '')
-            .setStyle({ color: COR_STR_RARIDADE[def.rarity] ?? '#aaaaaa' });
+        // Se for um item de consumo (Comida ou Bebida)
+        if (def.category === 'food') {
+            const gameScene = this.scene.get('GameScene');
+            const stats = gameScene.stats;
+            
+            // Tenta comer o item aplicando os benefícios de status definidos na GameScene
+            const consumiu = gameScene.consumirAlimento(slot.itemId);
+            if (consumiu) {
+                // Remove 1 unidade da mochila e atualiza
+                this.inventario.removeItem(slot.itemId, 1);
+                
+                // Se a pilha acabou, limpa a seleção
+                if (!this.inventario.slots[this.selectedIdx]) {
+                    this.selectedIdx = -1;
+                }
+            }
+        } else if (def.category === 'tool') {
+            // Se for uma ferramenta ou arma, seleciona o slot correspondente na hotbar ativa
+            this.inventario.selectSlot(this.selectedIdx);
+            SoundManager.play('menu_click');
+            this.fechar(); // Fecha o inventário para voltar a jogar com a arma na mão
+        }
+    }
 
-        this.dropGrafico.setVisible(true);
-        this.dropTxt.setVisible(true);
-        this.dropZone.setVisible(true);
-        this.hoverLargar(false);
+    // Desenha as informações detalhadas do item do slot selecionado no painel da direita
+    atualizarPainelDetalhes() {
+        if (this.selectedIdx < 0 || !this.inventario.slots[this.selectedIdx]) {
+            // Se não houver nada selecionado, esconde tudo e limpa textos
+            this.detalhesIcon.setVisible(false);
+            this.detalhesIconMoldura.setVisible(false);
+            this.detalhesTitulo.setText('');
+            this.detalhesTipo.setText('');
+            this.detalhesDesc.setText('');
+            this.ocultarBotaoUsar();
+            return;
+        }
+
+        const slot = this.inventario.slots[this.selectedIdx];
+        const def = ITEM_DB[slot.itemId];
+        if (!def) return;
+
+        // Revela o ícone ampliado
+        this.detalhesIcon.setTexture(def.icon).setVisible(true);
+
+        // Desenha a moldura de cor da categoria em volta do ícone de detalhes
+        const corCategoria = ACENTO_CATEGORIA[def.category] || 0xc8901a;
+        this.detalhesIconMoldura.clear();
+        this.detalhesIconMoldura.lineStyle(2, corCategoria, 0.7);
+        this.detalhesIconMoldura.strokeRoundedRect(this.detalhesIcon.x - 26, this.detalhesIcon.y - 26, 52, 52, 6);
+        this.detalhesIconMoldura.setVisible(true);
+
+        // Título e metadados com cor de raridade
+        const corRaridadeStr = COR_STR_RARIDADE[def.rarity] || '#aaaaaa';
+        this.detalhesTitulo.setText(def.name);
+        this.detalhesTitulo.setStyle({ fill: corRaridadeStr });
+
+        // Tipo do item
+        const corCategoriaStr = COR_STR_CATEGORIA[def.category] || '#c8901a';
+        this.detalhesTipo.setText(I18n.t(`items.category.${def.category}`).toUpperCase());
+        this.detalhesTipo.setStyle({ fill: corCategoriaStr });
+
+        // Descrição do item carregada a partir das traduções de I18n
+        this.detalhesDesc.setText(I18n.t(`items.desc.${slot.itemId}`));
+
+        // Configura o comportamento do botão "USAR"
+        if (def.category === 'food') {
+            // Itens comestíveis mostram "COMER" ou "BEBER"
+            const labelConsumir = slot.itemId === 'water' || slot.itemId === 'milk'
+                ? (I18n.lang === 'pt' ? 'BEBER' : 'DRINK')
+                : (I18n.lang === 'pt' ? 'COMER' : 'EAT');
+                
+            this.exibirBotaoUsar(labelConsumir);
+            
+            // Associa a função de consumo ao clique do botão
+            this.btnUsar.zone.off('pointerdown');
+            this.btnUsar.zone.on('pointerdown', () => {
+                this.usarItemSelecionado();
+                this.atualizarPainelDetalhes();
+            });
+        } else if (def.category === 'tool') {
+            // Ferramentas mostram "EQUIPAR" se não estiverem selecionadas na hotbar
+            const jaEquipado = this.inventario.selectedSlot === this.selectedIdx;
+            const etiquetaBotao = jaEquipado
+                ? (I18n.lang === 'pt' ? 'EQUIPADO' : 'EQUIPPED')
+                : (I18n.lang === 'pt' ? 'EQUIPAR' : 'EQUIP');
+                
+            this.exibirBotaoUsar(etiquetaBotao);
+            
+            this.btnUsar.zone.off('pointerdown');
+            if (jaEquipado) {
+                // Desativa clique se já estiver ativo na mão
+                this.btnUsar.zone.disableInteractive();
+                this.btnUsar.grafico.setAlpha(0.45);
+            } else {
+                this.btnUsar.grafico.setAlpha(1);
+                this.btnUsar.zone.on('pointerdown', () => {
+                    this.usarItemSelecionado();
+                });
+            }
+        } else {
+            // Itens de missões ou materiais de construção comuns não podem ser consumidos diretamente
+            this.ocultarBotaoUsar();
+        }
+    }
+
+    // Desenha e atualiza graficamente todos os slots conforme as regras de filtros e seleção
+    atualizarSlots() {
+        for (let i = 0; i < this.inventario.size; i++) {
+            const slot = this.inventario.slots[i];
+            const sObj = this.slotObjs[i];
+            if (!sObj) continue;
+
+            const { g, icon, count } = sObj;
+            g.clear();
+
+            // Limpa destaque se houver alteração
+            sObj.bordaGfx.clear();
+
+            // Se o slot estiver completamente vazio
+            if (!slot) {
+                g.fillStyle(0x0e0703, 0.45); // Fundo escuro simples
+                g.fillRoundedRect(sObj.sx - TAMANHO_SLOT/2, sObj.sy - TAMANHO_SLOT/2, TAMANHO_SLOT, TAMANHO_SLOT, 4);
+                g.lineStyle(1.5, 0xc8901a, 0.15); // Borda muito opaca
+                g.strokeRoundedRect(sObj.sx - TAMANHO_SLOT/2, sObj.sy - TAMANHO_SLOT/2, TAMANHO_SLOT, TAMANHO_SLOT, 4);
+                
+                icon.setVisible(false);
+                count.setText('');
+                continue;
+            }
+
+            const def = ITEM_DB[slot.itemId];
+            
+            // Lógica do filtro de categorias:
+            // Se o item do slot não pertencer à categoria selecionada, deixa o slot cinzento e oculta o ícone
+            const visivelPeloFiltro = this.filterCat === 'all' || (def && def.category === this.filterCat);
+
+            if (!visivelPeloFiltro) {
+                // Desenha fundo inativo acinzentado escuro
+                g.fillStyle(0x080402, 0.15);
+                g.fillRoundedRect(sObj.sx - TAMANHO_SLOT/2, sObj.sy - TAMANHO_SLOT/2, TAMANHO_SLOT, TAMANHO_SLOT, 4);
+                g.lineStyle(1, 0xc8901a, 0.05);
+                g.strokeRoundedRect(sObj.sx - TAMANHO_SLOT/2, sObj.sy - TAMANHO_SLOT/2, TAMANHO_SLOT, TAMANHO_SLOT, 4);
+                
+                icon.setVisible(false);
+                count.setText('');
+                continue;
+            }
+
+            // Se for visível, desenha o slot normalmente com o ícone do item correspondente
+            icon.setTexture(def ? def.icon : slot.itemId).setVisible(true);
+            
+            // Escreve a quantidade de itens empilhados se for maior que 1
+            count.setText(slot.qty > 1 ? String(slot.qty) : '');
+
+            // Determina as cores de destaque se o slot for o selecionado
+            const selecionado = this.selectedIdx === i;
+            const corDestaque = selecionado 
+                ? (def ? ACENTO_CATEGORIA[def.category] : 0xffffff) 
+                : 0x9a6030;
+                
+            // Borda amarela se for o item ativo na mão do jogador (apenas para ferramentas)
+            const ehAtivoNaMao = this.inventario.selectedSlot === i && def && def.category === 'tool';
+
+            g.fillStyle(selecionado ? 0x6b3a1a : 0x221208, 0.85); // Fundo mais brilhante se selecionado
+            g.fillRoundedRect(sObj.sx - TAMANHO_SLOT/2, sObj.sy - TAMANHO_SLOT/2, TAMANHO_SLOT, TAMANHO_SLOT, 4);
+            
+            g.lineStyle(selecionado ? 2 : 1.5, corDestaque, selecionado ? 1 : 0.45);
+            g.strokeRoundedRect(sObj.sx - TAMANHO_SLOT/2, sObj.sy - TAMANHO_SLOT/2, TAMANHO_SLOT, TAMANHO_SLOT, 4);
+
+            // Se for a arma equipada na mão, desenha um contorno verde/dourado brilhante em volta do slot
+            if (ehAtivoNaMao) {
+                sObj.bordaGfx.lineStyle(2, 0x88ff33, 0.8); // Verde limão
+                sObj.bordaGfx.strokeRoundedRect(sObj.sx - TAMANHO_SLOT/2 - 2, sObj.sy - TAMANHO_SLOT/2 - 2, TAMANHO_SLOT + 4, TAMANHO_SLOT + 4, 6);
+            }
+        }
     }
 }
