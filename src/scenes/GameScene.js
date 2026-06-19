@@ -399,7 +399,7 @@ export default class GameScene extends Phaser.Scene {
             { fontSize: '10px', fill: '#ffdd66', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }
         ).setOrigin(0.5).setDepth(9);
 
-        // 5. Instancia o retângulo escuro que cobrirá todo o ecrã para o ciclo dia/noite
+        // 5. Instancia o retângulo escuro que cobrirá todo o ecrã para o ciclo dia/noite. Parâmetros de rectangle: (X superior esquerdo, Y superior esquerdo, largura do ecrã, altura do ecrã, cor escura, opacidade inicial)
         this.prevPhase = null;
         this.lightOverlay = this.add.rectangle(
             0, 0, this.scale.width, this.scale.height, 0x1a1a44, 0

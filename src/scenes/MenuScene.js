@@ -60,7 +60,7 @@ export default class MenuScene extends Phaser.Scene {
         this.add.image(W/2, H/2, 'intro_praia').setDisplaySize(W, H);
         this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.45);
 
-        // Painel central de pergaminho RPG (utiliza NineSlice para esticar a imagem sem desfocar cantos)
+        // Painel central de pergaminho RPG. Parâmetros de nineslice: (centro X, centro Y, textura, frame, largura_final, altura_final, margem_esq, margem_dir, margem_sup, margem_inf) para esticar sem deformar cantos
         const scrollH = 480;
         this.menuBg = this.add.nineslice(W/2, H/2 - 10, 'scroll_rpg', null, 460, scrollH, 18, 18, 24, 24)
             .setDepth(1);

@@ -12,8 +12,9 @@ export default class PauseScene extends Phaser.Scene {
     create() {
         const W = 960, H = 640;
 
-        // Desenha um fundo escuro semitransparente com animação suave de fade-in para focar a atenção na pausa
+        // Desenha um fundo escuro semitransparente. Parâmetros de rectangle: (centro X, centro Y, largura, altura, cor preta, opacidade inicial)
         const overlay = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0);
+        // Transição suave de fade-in. Parâmetros de tweens.add: (targets: objeto alvo, alpha: opacidade final, duration: tempo em ms)
         this.tweens.add({ targets: overlay, alpha: 0.72, duration: 200 });
 
         // Coordenadas e dimensões do painel central RPG

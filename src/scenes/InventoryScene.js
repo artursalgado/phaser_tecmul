@@ -58,7 +58,7 @@ export default class InventoryScene extends Phaser.Scene {
         this.dragFrom = -1; // Slot inicial do item que está a ser arrastado
         this.ghostIcon = null; // Sprite fantasma flutuante que acompanha o rato durante o arrasto
 
-        // Desenha um fundo escuro semitransparente bloqueador de cliques atrás do inventário
+        // Desenha um fundo escuro semitransparente. Parâmetros de rectangle: (centro X, centro Y, largura, altura, cor preta, opacidade)
         this.add.rectangle(CX, CY, W, H, 0x000000, 0.62)
             .setInteractive().setDepth(0);
 

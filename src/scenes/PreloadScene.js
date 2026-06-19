@@ -157,7 +157,7 @@ export default class PreloadScene extends Phaser.Scene {
         ctx.fillStyle = '#1e0d00';
         ctx.fillRect(0, 0, 24, 24);
 
-        // Borda exterior escura
+        // Borda exterior escura. Parâmetros de arc: (centro X, centro Y, raio, ângulo inicial, ângulo final em radianos)
         ctx.beginPath();
         ctx.arc(12, 12, 9, 0, Math.PI * 2);
         ctx.strokeStyle = '#6b3a1a';
@@ -171,7 +171,7 @@ export default class PreloadScene extends Phaser.Scene {
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Efeito de torção de fibra de corda usando curvas bezier
+        // Efeito de torção de fibra de corda usando curvas bezier. Parâmetros de bezierCurveTo: (control1X, control1Y, control2X, control2Y, destinoX, destinoY)
         ctx.beginPath();
         ctx.moveTo(12, 3);
         ctx.bezierCurveTo(18, 3, 21, 8, 21, 12);
@@ -199,15 +199,15 @@ export default class PreloadScene extends Phaser.Scene {
         ctx.fillStyle = '#0d1b2a';
         ctx.fillRect(0, 0, 24, 24);
 
-        // Desenha o mastro da vela
+        // Desenha o mastro da vela. Parâmetros de moveTo/lineTo: (coordenada X, coordenada Y)
         ctx.beginPath();
-        ctx.moveTo(5, 22);
-        ctx.lineTo(5, 2);
+        ctx.moveTo(5, 22); // Move o cursor para (5, 22)
+        ctx.lineTo(5, 2);  // Desenha linha até (5, 2)
         ctx.strokeStyle = '#8b6914';
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Desenha o pano triangular da vela
+        // Desenha o pano triangular da vela. Parâmetros de lineTo: (coordenada X, coordenada Y)
         ctx.beginPath();
         ctx.moveTo(5, 3);
         ctx.lineTo(21, 10);

@@ -20,14 +20,14 @@ export default class VictoryScene extends Phaser.Scene {
         SoundManager.play('victory');
         SoundManager.stopBgMusic();
 
-        // Transição suave de fade-in da câmara ao entrar na cena
+        // Efeito de clarear ecrã (fade-in). Parâmetros do fadeIn: (duração em ms, R, G, B da cor do flash - 0,0,0 para preto)
         this.cameras.main.fadeIn(700, 0, 0, 0);
 
         // Carrega as duas imagens de fundo da cutscene de fim
         const bgJangada = this.add.image(W/2, H/2, 'fim_jangada').setDepth(0); // Imagem 1: Na jangada a fugir
         const bgHappy = this.add.image(W/2, H/2, 'fim_happy').setDepth(0).setAlpha(0); // Imagem 2: Resgatado em casa
 
-        // Overlay dourado semitransparente para dar tom acolhedor de pôr-do-sol
+        // Overlay dourado semitransparente. Parâmetros de rectangle: (centro X, centro Y, largura, altura, cor castanha, opacidade)
         const overlay = this.add.rectangle(W/2, H/2, W, H, 0x1a1000, 0.35).setDepth(1);
 
         // Coordenadas e dimensões do painel central RPG

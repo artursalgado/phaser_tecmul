@@ -22,18 +22,20 @@ export default class GameOverScene extends Phaser.Scene {
         SoundManager.stopBgMusic();
         SoundManager.play('die');
 
-        // Cria um overlay preto em fade-in lento para escurecer o fundo do jogo anterior
+        // Cria um overlay preto. Parâmetros de rectangle: (centro X, centro Y, largura, altura, cor em hex, opacidade inicial)
         const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0);
+        // Transição de fade-in. Parâmetros do tween: (targets: objeto a animar, alpha: opacidade final, duration: tempo em milissegundos)
         this.tweens.add({ targets: overlay, alpha: 0.88, duration: 700 });
 
         // Cria gotas de sangue decorativas a cair suavemente do ecrã para efeitos dramáticos
         for (let i = 0; i < 18; i++) {
+            // Cria um círculo de sangue. Parâmetros de circle: (centro X, centro Y, raio do círculo, cor vermelha, opacidade)
             const gota = this.add.circle(
                 Phaser.Math.Between(80, W - 80),
                 Phaser.Math.Between(-40, H / 2),
                 Phaser.Math.Between(3, 9), 0xaa0000, 0.7
             );
-            // Tween para a gota cair acelerando (Quad.easeIn) e desvanecer
+            // Transição de queda. Parâmetros de tween: (targets: alvo, y: posição Y final, alpha: opacidade final, duration: tempo em ms, delay: atraso de início, ease: curva de aceleração)
             this.tweens.add({
                 targets: gota,
                 y: gota.y + Phaser.Math.Between(200, 500),
