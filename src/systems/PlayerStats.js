@@ -27,6 +27,12 @@ export default class PlayerStats extends Phaser.Events.EventEmitter {
     // Quantidade de dano sofrido por segundo quando a fome ou a sede chegam a zero
     this.starveDamage = 1.0;
     this.dehydrateDamage = 1.5; // Desidratação é mais perigosa que a inanição
+
+    // Valores anteriores (ceil) para evitar redesenhar o HUD a 60fps sem mudanças visíveis
+    this._prevH = 100;
+    this._prevF = 100;
+    this._prevT = 100;
+    this._prevE = 100;
   }
 
   // Atualiza os valores vitais a cada frame do jogo
@@ -51,8 +57,18 @@ export default class PlayerStats extends Phaser.Events.EventEmitter {
       this.takeDamage(this.dehydrateDamage * segundos);
     }
 
-    // Dispara o evento para atualizar os textos e barras gráficas na HUDScene
-    this.emit("changed", this);
+    // Só emite se algum valor visível (arredondado para cima) mudou — evita 60 redesenhos/s desnecessários
+    const ch = Math.ceil(this.health);
+    const cf = Math.ceil(this.hunger);
+    const ct = Math.ceil(this.thirst);
+    const ce = Math.ceil(this.energy);
+    if (ch !== this._prevH || cf !== this._prevF || ct !== this._prevT || ce !== this._prevE) {
+      this._prevH = ch;
+      this._prevF = cf;
+      this._prevT = ct;
+      this._prevE = ce;
+      this.emit("changed", this);
+    }
   }
 
   // Aplica dano ao jogador e verifica se morreu
