@@ -7,6 +7,7 @@ import Skeleton from "../objects/Skeleton.js";
 import Tree from "../objects/Tree.js";
 import QuestManager, { RAFT_PARTS } from "../systems/QuestManager.js";
 import BossSkeleton from "../objects/BossSkeleton.js";
+import FinalBoss from "../objects/FinalBoss.js";
 import I18n from "../systems/I18n.js";
 import SoundManager from "../systems/SoundManager.js";
 import SaveManager from "../systems/SaveManager.js";
@@ -306,6 +307,7 @@ export default class GameScene extends Phaser.Scene {
         this.raftLabel.setText(I18n.lang === "en" ? "ESCAPE [E]" : "FUGIR [E]");
         this.raftLabel.setColor("#88ff88");
       }
+      this.spawnarCriaturaFinal();
     });
   }
 
@@ -896,6 +898,22 @@ export default class GameScene extends Phaser.Scene {
       this.physics.add.collider(b, this.colisao);
     }
     return b;
+  }
+
+  // Spawn da criatura final quando a jangada está completa
+  spawnarCriaturaFinal() {
+    if (this.criaturaFinalSpawnada) return;
+    this.criaturaFinalSpawnada = true;
+
+    // Aparece 200px a norte do jogador para ter espaço de combate
+    const px = this.player.x;
+    const py = this.player.y - 200;
+
+    const boss = new FinalBoss(this, px, py);
+    this.goblins.add(boss);
+    if (this.colisao) {
+      this.physics.add.collider(boss, this.colisao);
+    }
   }
 
   // Lógica acionada quando o jogador colide com um item no chão
