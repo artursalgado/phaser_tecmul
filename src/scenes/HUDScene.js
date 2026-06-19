@@ -274,6 +274,12 @@ export default class HUDScene extends Phaser.Scene {
         this.minimapDynamicGfx = this.add.graphics().setDepth(12);
         this.minimapDynamicGfx.setMask(mask);
 
+        // Label "M" no canto superior esquerdo para indicar atalho
+        this.minimapMText = this.add.text(miniX + 6, miniY + 4, 'M', {
+            fontSize: '9px', fontStyle: 'bold', fill: '#c8a870',
+            stroke: '#000000', strokeThickness: 2,
+        }).setDepth(13);
+
         // Tecla M para alternar visibilidade
         this.input.keyboard?.on('keydown-M', () => {
             this._toggleMinimap();
@@ -806,6 +812,7 @@ export default class HUDScene extends Phaser.Scene {
         this.minimapBorderGfx.setVisible(this._minimapVisible);
         this.minimapTerrainGfx.setVisible(this._minimapVisible);
         this.minimapDynamicGfx.setVisible(this._minimapVisible);
+        this.minimapMText.setVisible(this._minimapVisible);
     }
 
     _drawMinimapTerrain() {
@@ -826,15 +833,27 @@ export default class HUDScene extends Phaser.Scene {
 
         this.minimapTerrainGfx.clear();
 
-        // Desenhar blocos de terreno
+        // 1. Pintar primeiro o fundo completo do minimapa com cor de terra (verde)
+        this.minimapTerrainGfx.fillStyle(0x2d5a1b, 1);
+        this.minimapTerrainGfx.fillRect(miniX, miniY, miniW, miniH);
+
+        // 2. Sobrepor apenas água (azul escuro) e outros obstáculos (castanho)
         for (let ty = 0; ty < mapHeightInTiles; ty++) {
             for (let tx = 0; tx < mapWidthInTiles; tx++) {
-                const tile = colisao.getTileAt(tx, ty);
-                const isWater = tile && tile.index > 0;
-                // Cores RPG: verde escuro para terra (0x1e3f20), azul escuro para água (0x1b2d42)
-                const color = isWater ? 0x1b2d42 : 0x1e3f20;
-                this.minimapTerrainGfx.fillStyle(color, 1);
-                this.minimapTerrainGfx.fillRect(miniX + tx * tileW, miniY + ty * tileH, tileW + 0.1, tileH + 0.1);
+                const chaoTile = mapa.getTileAt(tx, ty, true, 'chao');
+                const chaoIndex = chaoTile ? chaoTile.index : -1;
+                const isWater = chaoIndex >= 270 && chaoIndex <= 360;
+
+                const colisaoTile = colisao.getTileAt(tx, ty);
+                const isSolid = colisaoTile && colisaoTile.index > 0;
+
+                if (isWater) {
+                    this.minimapTerrainGfx.fillStyle(0x1b3a5c, 1);
+                    this.minimapTerrainGfx.fillRect(miniX + tx * tileW, miniY + ty * tileH, tileW + 0.1, tileH + 0.1);
+                } else if (isSolid) {
+                    this.minimapTerrainGfx.fillStyle(0x4a3728, 1);
+                    this.minimapTerrainGfx.fillRect(miniX + tx * tileW, miniY + ty * tileH, tileW + 0.1, tileH + 0.1);
+                }
             }
         }
     }
@@ -859,7 +878,31 @@ export default class HUDScene extends Phaser.Scene {
 
         const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
 
-        // 1. Zona da jangada (raftZone - ponto dourado/amarelo)
+        // 1. Árvores vivas/em pé (trees - pontos verde-escuro 0x1a4f0a, raio 1.5)
+        if (this.gameScene.trees) {
+            gfx.fillStyle(0x1a4f0a, 1);
+            this.gameScene.trees.getChildren().forEach(t => {
+                if (t.active && !t.dead) {
+                    const tx = miniX + clamp(t.x, 0, mapW) * scaleX;
+                    const ty = miniY + clamp(t.y, 0, mapH) * scaleY;
+                    gfx.fillCircle(tx, ty, 1.5);
+                }
+            });
+        }
+
+        // 2. Pickups no chão (pickups - pontos amarelos/claros 0xffee44, raio 1.5)
+        if (this.gameScene.pickups) {
+            gfx.fillStyle(0xffee44, 1);
+            this.gameScene.pickups.getChildren().forEach(p => {
+                if (p.active) {
+                    const px = miniX + clamp(p.x, 0, mapW) * scaleX;
+                    const py = miniY + clamp(p.y, 0, mapH) * scaleY;
+                    gfx.fillCircle(px, py, 1.5);
+                }
+            });
+        }
+
+        // 3. Zona da jangada (raftZone - ponto dourado/amarelo)
         const raft = this.gameScene.raftZone;
         if (raft) {
             const rx = miniX + clamp(raft.x, 0, mapW) * scaleX;
@@ -871,7 +914,7 @@ export default class HUDScene extends Phaser.Scene {
             gfx.strokeCircle(rx, ry, 5);
         }
 
-        // 2. Inimigos vivos (goblins/skeletons/boss - pontos vermelhos)
+        // 4. Inimigos vivos (goblins/skeletons/boss - pontos vermelhos)
         if (this.gameScene.goblins) {
             gfx.fillStyle(0xff3333, 1);
             this.gameScene.goblins.getChildren().forEach(g => {
@@ -883,22 +926,21 @@ export default class HUDScene extends Phaser.Scene {
             });
         }
 
-        // 3. Jogador (ponto branco brilhante, pulsa/pisca)
+        // 5. Jogador (círculo branco de raio 4 com halo/glow de raio 6 ou 8, alpha 0.4)
         const player = this.gameScene.player;
         const px = miniX + clamp(player.x, 0, mapW) * scaleX;
         const py = miniY + clamp(player.y, 0, mapH) * scaleY;
 
         const blink = Math.floor(this.time.now / 200) % 2 === 0;
-        if (blink) {
-            gfx.fillStyle(0xffffff, 1);
-            gfx.fillCircle(px, py, 3);
+        const glowRadius = blink ? 8 : 6;
 
-            gfx.lineStyle(1.5, 0xffffff, 0.4);
-            gfx.strokeCircle(px, py, 5);
-        } else {
-            gfx.fillStyle(0xffffff, 0.85);
-            gfx.fillCircle(px, py, 2.5);
-        }
+        // Halo/glow
+        gfx.fillStyle(0xffffff, 0.4);
+        gfx.fillCircle(px, py, glowRadius);
+
+        // Círculo interno branco
+        gfx.fillStyle(0xffffff, 1);
+        gfx.fillCircle(px, py, 4);
     }
 }
 
