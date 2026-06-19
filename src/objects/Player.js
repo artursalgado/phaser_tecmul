@@ -176,7 +176,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         // Consumir energia ao correr
         if (running && this.scene.stats) {
             this.scene.stats.energy = Math.max(0,
-                this.scene.stats.energy - 20 * (delta / 1000)
+                this.scene.stats.energy - 6 * (delta / 1000)
             );
         }
 
