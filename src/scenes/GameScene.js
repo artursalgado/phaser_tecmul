@@ -532,11 +532,21 @@ export default class GameScene extends Phaser.Scene {
     const ruinaPos = spawns.poi.ruina || { x: this.mapW / 2, y: this.mapH / 2 };
 
     const posBaus = [
-      { x: ruinaPos.x + 120, y: ruinaPos.y - 60,  itens: [{ id: "rope",  qty: 1 }] },
-      { x: ruinaPos.x - 180, y: ruinaPos.y + 80,  itens: [{ id: "sword", qty: 1 }] },
-      { x: 620,               y: 320,              itens: [{ id: "fish",  qty: 2 }] },
-      { x: 280,               y: 680,              itens: [{ id: "rock",  qty: 3 }] },
-      { x: 800,               y: 500,              itens: [{ id: "water", qty: 2 }] },
+      // Baú de exploração — corda para a jangada + comida
+      { x: ruinaPos.x + 120, y: ruinaPos.y - 60,
+        itens: [{ id: "rope", qty: 1 }, { id: "fish", qty: 2 }] },
+      // Baú de arma — espada + comida
+      { x: ruinaPos.x - 180, y: ruinaPos.y + 80,
+        itens: [{ id: "sword", qty: 1 }, { id: "egg", qty: 1 }, { id: "carrot", qty: 1 }] },
+      // Baú de arma — machado + comida
+      { x: 620, y: 320,
+        itens: [{ id: "axe", qty: 1 }, { id: "fish", qty: 1 }] },
+      // Baú de recursos — madeira + comida
+      { x: 280, y: 680,
+        itens: [{ id: "wood", qty: 3 }, { id: "egg", qty: 2 }] },
+      // Baú de recursos — pedra + comida
+      { x: 800, y: 500,
+        itens: [{ id: "rock", qty: 3 }, { id: "fish", qty: 1 }, { id: "carrot", qty: 1 }] },
     ];
 
     posBaus.forEach((def) => {
@@ -606,11 +616,8 @@ export default class GameScene extends Phaser.Scene {
         b.aberto = true;
         b.baul.setTexture("spr_chest_open");
         b.icone.setAlpha(0);
-        b.itens.forEach(({ id, qty }) => {
-          this.inventory.addItem(id, qty);
-          this.spawnPickup(b.x + Phaser.Math.Between(-16, 16), b.y - 10, id, qty);
-        });
         SoundManager.play("pickup");
+        this.mostrarUIBau(b);
         return;
       }
     }
@@ -639,6 +646,106 @@ export default class GameScene extends Phaser.Scene {
         return;
       }
     }
+  }
+
+  // Mostra painel de escolha dos items do baú
+  mostrarUIBau(bau) {
+    this.paused = true;
+
+    const W  = this.scale.width;
+    const H  = this.scale.height;
+    const PW = 200;
+    const itemH = 36;
+    const PH = 44 + bau.itens.length * itemH + 32;
+    const px = (W - PW) / 2;
+    const py = (H - PH) / 2;
+    const D  = 400;
+
+    const grupo = this.add.group();
+
+    // Fundo escuro semi-transparente
+    const fundo = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.45)
+      .setScrollFactor(0).setDepth(D).setInteractive();
+    grupo.add(fundo);
+
+    // Painel castanho
+    const painel = this.add.rectangle(W / 2, H / 2, PW, PH, 0x2a1a08, 1)
+      .setScrollFactor(0).setDepth(D + 1)
+      .setStrokeStyle(2, 0xc89840);
+    grupo.add(painel);
+
+    // Título
+    const titulo = this.add.text(W / 2, py + 14, "☰  Baú encontrado", {
+      fontSize: "11px", fill: "#f0c060", fontStyle: "bold",
+      stroke: "#000", strokeThickness: 2,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 2);
+    grupo.add(titulo);
+
+    // Separador
+    const sep = this.add.rectangle(W / 2, py + 26, PW - 16, 1, 0xc89840)
+      .setScrollFactor(0).setDepth(D + 2);
+    grupo.add(sep);
+
+    // Uma linha por item
+    bau.itens.forEach(({ id, qty }, i) => {
+      const iy = py + 38 + i * itemH;
+      const nome = I18n.t(`items.${id}`) || id;
+
+      // Ícone do item (textura já carregada)
+      const ico = this.add.image(px + 22, iy + itemH / 2, id)
+        .setDisplaySize(22, 22).setScrollFactor(0).setDepth(D + 2);
+      grupo.add(ico);
+
+      // Nome + quantidade
+      const label = this.add.text(px + 38, iy + itemH / 2,
+        `${nome}  ×${qty}`, {
+          fontSize: "10px", fill: "#f0e8c8",
+        }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 2);
+      grupo.add(label);
+
+      // Botão "Tomar"
+      const btnX = px + PW - 30;
+      const btnBg = this.add.rectangle(btnX, iy + itemH / 2, 40, 20, 0x3a6a1a)
+        .setScrollFactor(0).setDepth(D + 2)
+        .setStrokeStyle(1, 0x88cc44)
+        .setInteractive({ useHandCursor: true });
+      const btnTxt = this.add.text(btnX, iy + itemH / 2, "Tomar", {
+        fontSize: "8px", fill: "#c8ff88",
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3);
+      grupo.add(btnBg);
+      grupo.add(btnTxt);
+
+      btnBg.on("pointerdown", () => {
+        const adicionou = this.inventory.addItem(id, qty);
+        if (!adicionou) return;
+        // Remove item da lista do baú
+        const idx = bau.itens.findIndex((it) => it.id === id);
+        if (idx !== -1) bau.itens.splice(idx, 1);
+        // Apaga esta linha
+        btnBg.destroy(); btnTxt.destroy(); ico.destroy(); label.destroy();
+        SoundManager.play("pickup");
+        this.events.emit("inventoryChanged");
+      });
+    });
+
+    // Botão Fechar
+    const fechY = py + PH - 16;
+    const fechBg = this.add.rectangle(W / 2, fechY, 80, 20, 0x4a1a1a)
+      .setScrollFactor(0).setDepth(D + 2)
+      .setStrokeStyle(1, 0xcc4444)
+      .setInteractive({ useHandCursor: true });
+    const fechTxt = this.add.text(W / 2, fechY, "Fechar", {
+      fontSize: "9px", fill: "#ffaaaa",
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3);
+    grupo.add(fechBg);
+    grupo.add(fechTxt);
+
+    const fechar = () => {
+      grupo.destroy(true);
+      this.paused = false;
+    };
+    fechBg.on("pointerdown", fechar);
+    fundo.on("pointerdown", fechar);
   }
 
   // Associa eventos de combate, som e pontuação
