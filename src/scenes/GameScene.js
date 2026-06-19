@@ -553,7 +553,7 @@ export default class GameScene extends Phaser.Scene {
       const baul = this.add
         .image(def.x, def.y, "spr_chest_closed")
         .setDepth(3)
-        .setScale(1.4);
+        .setScale(1.0);
 
       const icone = this.add
         .text(def.x, def.y - 18, "[ E ]", {
@@ -562,7 +562,7 @@ export default class GameScene extends Phaser.Scene {
         })
         .setOrigin(0.5).setDepth(4).setAlpha(0);
 
-      this.baus.push({ ...def, baul, icone, aberto: false });
+      this.baus.push({ ...def, baul, icone, vazio: false });
     });
   }
 
@@ -579,9 +579,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Baús
     this.baus?.forEach((b) => {
-      if (b.aberto) return;
+      if (b.vazio) return;
       const d = Phaser.Math.Distance.Between(px, py, b.x, b.y);
-      b.icone.setAlpha(d < RAIO ? 1 : 0.4);
+      b.icone.setAlpha(d < RAIO ? 1 : 0);
     });
   }
 
@@ -611,9 +611,8 @@ export default class GameScene extends Phaser.Scene {
 
     // Baús primeiro
     for (const b of this.baus ?? []) {
-      if (b.aberto) continue;
+      if (b.vazio) continue;
       if (Phaser.Math.Distance.Between(px, py, b.x, b.y) < RAIO) {
-        b.aberto = true;
         b.baul.setTexture("spr_chest_open");
         b.icone.setAlpha(0);
         SoundManager.play("pickup");
@@ -718,13 +717,17 @@ export default class GameScene extends Phaser.Scene {
       btnBg.on("pointerdown", () => {
         const adicionou = this.inventory.addItem(id, qty);
         if (!adicionou) return;
-        // Remove item da lista do baú
         const idx = bau.itens.findIndex((it) => it.id === id);
         if (idx !== -1) bau.itens.splice(idx, 1);
-        // Apaga esta linha
         btnBg.destroy(); btnTxt.destroy(); ico.destroy(); label.destroy();
         SoundManager.play("pickup");
         this.events.emit("inventoryChanged");
+        if (bau.itens.length === 0) {
+          bau.vazio = true;
+          bau.baul.setTexture("spr_chest_closed").setTint(0x888888);
+          grupo.destroy(true);
+          this.paused = false;
+        }
       });
     });
 
