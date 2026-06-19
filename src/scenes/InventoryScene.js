@@ -1,5 +1,6 @@
 import { ITEM_DB } from "../systems/Inventory.js";
 import I18n from "../systems/I18n.js";
+import SoundManager from "../systems/SoundManager.js";
 
 // Cores associadas a cada categoria de item para pintar a borda do slot selecionado
 const ACENTO_CATEGORIA = {
