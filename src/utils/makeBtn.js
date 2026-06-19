@@ -5,7 +5,7 @@ export default function makeBtn(scene, x, y, w, h, label, {
     hoverFill = '#ffffff',
     border = 0x9a6030,
     borderIdleAlpha = 1,
-    alpha = 0,
+    alpha = 1,
 } = {}) {
     const BG_IDLE  = 0x3d2008;
     const BG_HOVER = 0x6b3810;
