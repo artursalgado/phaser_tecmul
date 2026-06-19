@@ -650,20 +650,15 @@ export default class GameScene extends Phaser.Scene {
       this.killCount++;
       this.score += 100;
 
-      // 80% de hipóteses do inimigo deixar cair um item aleatório no chão ao morrer
-      const dropOptions = [
-        "wood",
-        "rock",
-        "wood",
-        "rock",
-        "carrot",
-        "fish",
-        "egg",
-      ];
-      if (Math.random() < 0.8) {
-        const drop =
-          dropOptions[Phaser.Math.Between(0, dropOptions.length - 1)];
-        this.spawnPickup(x, y, drop, 1);
+      // Sempre dropa 1 comida ao morrer
+      const comidas = ["fish", "fish", "egg", "egg", "carrot"];
+      const comida = comidas[Phaser.Math.Between(0, comidas.length - 1)];
+      this.spawnPickup(x, y, comida, 1);
+
+      // 40% de chance de dropar também um recurso de construção
+      if (Math.random() < 0.4) {
+        const material = Math.random() < 0.6 ? "wood" : "rock";
+        this.spawnPickup(x + 8, y + 8, material, 1);
       }
     });
 
