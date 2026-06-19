@@ -631,8 +631,6 @@ export default class GameScene extends Phaser.Scene {
           fontSize: "9px", fill: "#ffffcc",
           stroke: "#000000", strokeThickness: 2,
           wordWrap: { width: 160 },
-          backgroundColor: "#1a1008",
-          padding: { x: 4, y: 3 },
         }).setOrigin(0.5, 1).setDepth(20);
 
         this.tweens.add({
