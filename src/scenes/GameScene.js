@@ -526,7 +526,13 @@ export default class GameScene extends Phaser.Scene {
   // Inicia a HUDScene em execução paralela
   configurarHUD() {
     this.scene.launch("HUDScene");
-    this.scene.bringToTop("HUDScene"); // Garante que a HUDScene desenha acima da GameScene
+    this.scene.bringToTop("HUDScene");
+
+    // Lança os controlos touch só em dispositivos com ecrã táctil
+    if ("ontouchstart" in window || navigator.maxTouchPoints > 0) {
+      this.scene.launch("TouchScene");
+      this.scene.bringToTop("TouchScene");
+    }
 
     // Texto de ajuda tutorial temporário na base inferior
     const hintText = I18n.t("hud.hint") + "  ·  ESC pausa";

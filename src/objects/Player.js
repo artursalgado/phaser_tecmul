@@ -200,9 +200,12 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     const cooldownEfetivo =
       this.attackCooldown / this.obterMultiplicadorEnergia();
 
+    // Input touch (TouchScene escreve aqui; nulo em desktop)
+    const touch = this.scene.touchInput ?? { dx: 0, dy: 0, sprint: false, justAttack: false };
+
     // Verifica se a tecla de ataque foi premida e o cooldown já passou
     if (
-      Phaser.Input.Keyboard.JustDown(this.attackKey) &&
+      (Phaser.Input.Keyboard.JustDown(this.attackKey) || touch.justAttack) &&
       time > this.lastAttackTime + cooldownEfetivo
     ) {
       this.realizarAtaque(time);
@@ -212,36 +215,26 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Reseta velocidade física antes de aplicar o input do frame atual
     this.body.setVelocity(0);
 
-    // Processa as teclas de movimento (WASD ou setas direcionais)
-    let dx = 0,
-      dy = 0;
-    if (cursors.left.isDown || wasd.left.isDown) {
-      dx = -1;
-    }
-    if (cursors.right.isDown || wasd.right.isDown) {
-      dx = 1;
-    }
-    if (cursors.up.isDown || wasd.up.isDown) {
-      dy = -1;
-    }
-    if (cursors.down.isDown || wasd.down.isDown) {
-      dy = 1;
-    }
+    // Processa as teclas de movimento (teclado ou joystick virtual)
+    let dx = touch.dx;
+    let dy = touch.dy;
+    if (cursors.left.isDown || wasd.left.isDown)  dx = -1;
+    if (cursors.right.isDown || wasd.right.isDown) dx =  1;
+    if (cursors.up.isDown || wasd.up.isDown)       dy = -1;
+    if (cursors.down.isDown || wasd.down.isDown)   dy =  1;
 
-    // Normalização do vetor diagonal.
-    // Se mover para cima e direita simultaneamente, a velocidade seria 1.41x maior (hipotenusa).
-    // Multiplicamos por 0.707 (raiz de 0.5) para manter a velocidade normal de movimento.
-    if (dx !== 0 && dy !== 0) {
+    // Normalização do vetor diagonal (só necessária para input de teclado binário)
+    if (Math.abs(dx) > 0.1 && Math.abs(dy) > 0.1 && (dx === -1 || dx === 1)) {
       dx *= 0.707;
       dy *= 0.707;
     }
 
-    // Verifica se pode correr (precisa de premir Shift, estar a mover-se e ter energia > 10%)
+    // Verifica se pode correr
     const temEnergia = this.scene.stats
       ? this.scene.stats.energy > 0 && this.scene.stats.energyPercentagem >= 0.1
       : true;
     const running =
-      this.shiftKey.isDown && (dx !== 0 || dy !== 0) && temEnergia;
+      (this.shiftKey.isDown || touch.sprint) && (dx !== 0 || dy !== 0) && temEnergia;
 
     // A velocidade de andar é afetada pela exaustão. A de correr é sempre máxima.
     const speed = running

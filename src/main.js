@@ -9,6 +9,7 @@ import InventoryScene from "./scenes/InventoryScene.js";
 import GameOverScene from "./scenes/GameOverScene.js";
 import VictoryScene from "./scenes/VictoryScene.js";
 import PauseScene from "./scenes/PauseScene.js";
+import TouchScene from "./scenes/TouchScene.js";
 
 // Configuração geral do motor Phaser
 const config = {
@@ -42,6 +43,7 @@ const config = {
     GameOverScene,
     VictoryScene,
     PauseScene,
+    TouchScene,
   ],
 };
 
