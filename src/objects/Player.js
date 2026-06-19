@@ -220,9 +220,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         this.scene.events.emit('playerAttack');
 
-        const slot = this.scene.inventory?.getSelectedItem();
-        const anim = (slot && slot.itemId === 'pickaxe') ? 'mining' : 'axe';
-        this.playAnim(anim, true);
+        const slot     = this.scene.inventory?.getSelectedItem();
+        const itemId   = slot?.itemId;
+        const isWeapon = itemId && itemId in WEAPON_STATS && itemId !== 'none';
+        const anim     = itemId === 'pickaxe' ? 'mining' : 'axe';
+        this.playAnim(anim, isWeapon);
 
         const offX = this.flipX ? -this.attackRange : this.attackRange;
         const hitX = this.x + offX;
