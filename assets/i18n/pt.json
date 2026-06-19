@@ -22,7 +22,7 @@
   "inventory": {
     "title": "Inventário",
     "filter_all": "Tudo",
-    "filter_tool": "Ferram.",
+    "filter_tool": "Ferramentas",
     "filter_resource": "Recursos",
     "filter_food": "Comida",
     "filter_quest": "Quest",

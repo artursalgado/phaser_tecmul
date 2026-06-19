@@ -203,9 +203,9 @@ export default class InventoryScene extends Phaser.Scene {
       "filter_food",
       "filter_quest",
     ];
-    const BW = 82,
+    const BW = 96,
       BH = 18,
-      GAP = 5;
+      GAP = 4;
     const total = FILTROS.length * BW + (FILTROS.length - 1) * GAP;
     let bx = CX - total / 2; // Posição X inicial centralizada
 
