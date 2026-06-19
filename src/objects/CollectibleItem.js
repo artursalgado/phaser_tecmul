@@ -1,37 +1,54 @@
 import { ITEM_DB } from "../systems/Inventory.js";
 
-// Representa um item colecionável colocado no mapa (recursos, ferramentas, comida, etc.)
-// O jogador apanha-o ao caminhar por cima dele (colisão overlap na GameScene -> apanharItem).
+// Representa um item colecionável colocado no mapa.
+// Suporta pooling: em vez de destroy() usa deactivar(), e reviver() reinicia o objeto.
 export default class CollectibleItem extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, itemId, quantity = 1) {
-    // Encontra o ícone correto definido na base de dados de itens
     const def = ITEM_DB[itemId];
-    const texture = def ? def.icon : itemId;
-
-    // Inicializa o sprite na posição X/Y
-    super(scene, x, y, texture);
+    super(scene, x, y, def ? def.icon : itemId);
 
     this.itemId = itemId;
     this.quantity = quantity;
+    this._floatTween = null;
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
-
-    // O item não obstrui o jogador, é apenas um gatilho sensor (sensor overlap)
     this.body.setImmovable(true);
-
-    // Configuração de tamanho e profundidade de renderização básica
     this.setScale(1.2);
-    this.setDepth(2); // Renderiza acima do chão mas abaixo de sprites como árvores e monstros
+    this.setDepth(2);
 
-    // Pequena animação de flutuação vertical para dar sensação que o item está a flutuar no ar
-    scene.tweens.add({
+    this._iniciarFloat();
+  }
+
+  _iniciarFloat() {
+    this._floatTween?.stop();
+    this._floatTween = this.scene.tweens.add({
       targets: this,
-      y: y - 3,
+      y: this.y - 3,
       duration: 650,
-      yoyo: true, // Faz a animação andar para a frente e para trás
-      repeat: -1, // Repete infinitamente
+      yoyo: true,
+      repeat: -1,
       ease: "Sine.easeInOut",
     });
+  }
+
+  // Devolve ao pool: esconde e desativa sem destruir o objeto
+  deactivar() {
+    this._floatTween?.stop();
+    this._floatTween = null;
+    this.setActive(false).setVisible(false);
+    if (this.body) this.body.enable = false;
+  }
+
+  // Reutiliza um objeto do pool com novos dados
+  reviver(x, y, itemId, quantity = 1) {
+    const def = ITEM_DB[itemId];
+    this.itemId = itemId;
+    this.quantity = quantity;
+    this.setTexture(def ? def.icon : itemId);
+    this.setPosition(x, y);
+    this.setActive(true).setVisible(true);
+    if (this.body) { this.body.enable = true; this.body.reset(x, y); }
+    this._iniciarFloat();
   }
 }

@@ -298,10 +298,27 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
       scale: 0.7,
     });
 
-    // Espera a animação de morte terminar antes de remover o objeto do jogo
+    // Espera a animação de morte terminar e desativa (pool) em vez de destruir
     this.once("animationcomplete", () => {
       this.scene.events.emit("enemyDied", this.x, this.y);
-      this.destroy();
+      this.setActive(false).setVisible(false);
     });
+  }
+
+  // Reinicia o inimigo para reutilização via pool
+  resetar(x, y) {
+    this.health = this.maxHealth;
+    this.dead = false;
+    this.attacking = false;
+    this.stunUntil = 0;
+    this.lastDamageTime = 0;
+    this.patrolTarget = { x, y };
+    this.patrolTimer = 0;
+    this.setPosition(x, y);
+    this.setActive(true).setVisible(true);
+    this.clearTint();
+    if (this.baseTint) this.setTint(this.baseTint);
+    if (this.body) { this.body.enable = true; this.body.reset(x, y); }
+    this.play(`${this.animPrefix}_idle`, true);
   }
 }

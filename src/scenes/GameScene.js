@@ -499,7 +499,7 @@ export default class GameScene extends Phaser.Scene {
       if (Math.random() < 0.8) {
         const drop =
           dropOptions[Phaser.Math.Between(0, dropOptions.length - 1)];
-        this.pickups.add(new CollectibleItem(this, x, y, drop, 1));
+        this.spawnPickup(x, y, drop, 1);
       }
     });
 
@@ -698,29 +698,39 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
-  // Cria e insere um Goblin físico na cena
+  // Cria e insere um Goblin físico na cena — tenta reutilizar do pool primeiro
   criarGoblin(x, y, tier = 1) {
     let finalTier = tier;
-    // À noite, os goblins sobem de tier (ex: goblins comuns nível 1 passam a nível 2)
-    if (this.isNight) {
-      finalTier = Math.min(3, tier + 1);
+    if (this.isNight) finalTier = Math.min(3, tier + 1);
+
+    // Procura um Goblin inativo do mesmo tier no pool
+    const inativo = this.goblins.getChildren().find(
+      (c) => !c.active && c instanceof Goblin && c.tier === finalTier,
+    );
+    if (inativo) {
+      inativo.resetar(x, y);
+      return inativo;
     }
 
     const g = new Goblin(this, x, y, finalTier);
     this.goblins.add(g);
-    if (this.colisao) {
-      this.physics.add.collider(g, this.colisao);
-    }
+    if (this.colisao) this.physics.add.collider(g, this.colisao);
     return g;
   }
 
-  // Cria e insere um Esqueleto físico na cena
+  // Cria e insere um Esqueleto físico na cena — tenta reutilizar do pool primeiro
   criarEsqueleto(x, y) {
+    const inativo = this.goblins.getChildren().find(
+      (c) => !c.active && c instanceof Skeleton && !(c instanceof BossSkeleton),
+    );
+    if (inativo) {
+      inativo.resetar(x, y);
+      return inativo;
+    }
+
     const s = new Skeleton(this, x, y);
     this.goblins.add(s);
-    if (this.colisao) {
-      this.physics.add.collider(s, this.colisao);
-    }
+    if (this.colisao) this.physics.add.collider(s, this.colisao);
     return s;
   }
 
@@ -775,7 +785,17 @@ export default class GameScene extends Phaser.Scene {
     });
 
     if (adicionou) {
-      item.destroy(); // Apaga o item do chão do mapa
+      item.deactivar(); // Devolve ao pool em vez de destruir
+    }
+  }
+
+  // Tenta reutilizar um CollectibleItem inativo do pool; cria um novo se não houver nenhum disponível
+  spawnPickup(x, y, itemId, qty = 1) {
+    const inativo = this.pickups.getChildren().find((c) => !c.active);
+    if (inativo) {
+      inativo.reviver(x, y, itemId, qty);
+    } else {
+      this.pickups.add(new CollectibleItem(this, x, y, itemId, qty));
     }
   }
 
