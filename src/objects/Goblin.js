@@ -93,7 +93,7 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
         this.hpBar.setVisible(vis);
     }
 
-    update(player, time) {
+    update(player, time, delta) {
         if (this.dead) return;
         this._syncHpBar();
 
@@ -127,7 +127,7 @@ export default class Goblin extends Phaser.Physics.Arcade.Sprite {
             }
         } else {
             // Patrulha aleatória
-            this.patrolTimer -= 16;
+            this.patrolTimer -= delta || 16;
             if (this.patrolTimer <= 0) {
                 this.patrolTimer = Phaser.Math.Between(1500, 3500);
                 const angle = Math.random() * Math.PI * 2;

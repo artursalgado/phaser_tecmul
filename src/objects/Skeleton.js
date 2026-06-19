@@ -81,7 +81,7 @@ export default class Skeleton extends Phaser.Physics.Arcade.Sprite {
         this.hpBar.setVisible(show);
     }
 
-    update(player, time) {
+    update(player, time, delta) {
         if (this.dead) return;
         this._updateHpBar();
 
@@ -113,7 +113,7 @@ export default class Skeleton extends Phaser.Physics.Arcade.Sprite {
                 this.play('skeleton_walk', true);
             }
         } else {
-            this.patrolTimer -= 16;
+            this.patrolTimer -= delta || 16;
             if (this.patrolTimer <= 0) {
                 this.patrolTimer = Phaser.Math.Between(1000, 2500);
                 const angle = Math.random() * Math.PI * 2;

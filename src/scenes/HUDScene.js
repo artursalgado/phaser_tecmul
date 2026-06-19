@@ -12,8 +12,8 @@ export default class HUDScene extends Phaser.Scene {
         this.stats      = this.gameScene.stats;
         this.quest      = this.gameScene.quest;
 
-        const W = 960;
-        const H = 640;
+        const W = this.scale.width;
+        const H = this.scale.height;
 
         //------------------------------------------------------------
         // HOTBAR (inventário inferior)
@@ -722,9 +722,9 @@ export default class HUDScene extends Phaser.Scene {
 
     _updateBookNav() {
         const pages = this._getBookPages();
-        const cx = 960 / 2;
+        const cx = this.scale.width / 2;
         const bookW = 600, bookH = 400;
-        const cy = 640 / 2;
+        const cy = this.scale.height / 2;
         const navY = cy + bookH / 2 - 18;
         const prevX = cx - bookW / 2 + 38;
         const nextX = cx + bookW / 2 - 38;

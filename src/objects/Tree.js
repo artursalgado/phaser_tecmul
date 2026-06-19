@@ -1,4 +1,5 @@
 import { burst } from '../systems/Particles.js';
+import I18n from '../systems/I18n.js';
 
 // Árvore que pode ser cortada com o ataque (ESPAÇO).
 // É bem simples: leva 3 machadadas, depois desaparece e dá madeira ao jogador.
@@ -37,7 +38,7 @@ export default class Tree extends Phaser.Physics.Arcade.Sprite {
         this.scene.inventory.addItem('wood', this.woodGiven);
 
         // Texto "+2 Madeira" a subir, igual ao dos outros itens apanhados
-        const txt = this.scene.add.text(this.x, this.y - 40, `+${this.woodGiven} Madeira`, {
+        const txt = this.scene.add.text(this.x, this.y - 40, `+${this.woodGiven} ${I18n.t('items.wood')}`, {
             fontSize: '10px', fill: '#ffffff', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 2
         }).setOrigin(0.5).setDepth(20);

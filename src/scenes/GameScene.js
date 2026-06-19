@@ -347,7 +347,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.stats.update(delta);
         this.player.update(this.cursors, this.wasd, time, delta);
-        this.goblins.getChildren().forEach(g => g.update(this.player, time));
+        this.goblins.getChildren().forEach(g => g.update(this.player, time, delta));
         this._elapsedSec += delta / 1000;
     }
 

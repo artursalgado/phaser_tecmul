@@ -70,7 +70,7 @@ export default class BossSkeleton extends Skeleton {
         });
     }
 
-    update(player, time) {
+    update(player, time, delta) {
         if (this.dead) return;
         this._updateBossHpBar();
 
@@ -79,7 +79,7 @@ export default class BossSkeleton extends Skeleton {
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < this.detectionRange) this._roar();
 
-        super.update(player, time);
+        super.update(player, time, delta);
     }
 
     takeDamage(amount, fromDir = 'right') {
