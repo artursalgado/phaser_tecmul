@@ -32,9 +32,24 @@
   <script>
     (function () {
       const el = document.getElementById('debug-overlay');
+      const devMode = new URLSearchParams(location.search).has('debug');
+
       function show(msg) { el.style.display = 'block'; el.textContent += msg + '\n'; }
+
+      // Erros sempre visíveis (só aparecem se houver problema)
       window.addEventListener('error', e => show('ERROR: ' + e.message + ' @ ' + e.filename + ':' + e.lineno));
       window.addEventListener('unhandledrejection', e => show('REJECTION: ' + (e.reason && e.reason.stack || e.reason)));
+
+      // F3 alterna o overlay manualmente (útil em dev sem alterar a URL)
+      document.addEventListener('keydown', e => {
+        if (e.key === 'F3') {
+          e.preventDefault();
+          el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+
+      // ?debug=1 na URL mostra o overlay logo ao arrancar
+      if (devMode) el.style.display = 'block';
     })();
   </script>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.min.js"></script>
