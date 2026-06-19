@@ -202,36 +202,24 @@ export default class IntroScene extends Phaser.Scene {
     });
   }
 
-  // Cria as bordas pretas esbatidas da vinheta no ecrã desenhando faixas alfa graduais
+  // Cria a vinheta com um gradiente radial num canvas HTML — uma única draw call em vez de ~900 fillRects
   criarVinheta(W, H) {
-    const g = this.add.graphics();
-    const tamanhoBorda = Math.max(W, H) * 0.35; // Largura do esbatimento
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
 
-    // Borda superior
-    for (let i = 0; i < tamanhoBorda; i++) {
-      const a = (1 - i / tamanhoBorda) * 0.7;
-      g.fillStyle(0x000000, a);
-      g.fillRect(0, i, W, 1);
-    }
-    // Borda inferior
-    for (let i = 0; i < tamanhoBorda; i++) {
-      const a = (1 - i / tamanhoBorda) * 0.7;
-      g.fillStyle(0x000000, a);
-      g.fillRect(0, H - 1 - i, W, 1);
-    }
-    // Borda esquerda
-    for (let i = 0; i < tamanhoBorda; i++) {
-      const a = (1 - i / tamanhoBorda) * 0.5;
-      g.fillStyle(0x000000, a);
-      g.fillRect(i, 0, 1, H);
-    }
-    // Borda direita
-    for (let i = 0; i < tamanhoBorda; i++) {
-      const a = (1 - i / tamanhoBorda) * 0.5;
-      g.fillStyle(0x000000, a);
-      g.fillRect(W - 1 - i, 0, 1, H);
-    }
+    const grd = ctx.createRadialGradient(
+      W / 2, H / 2, Math.min(W, H) * 0.28,
+      W / 2, H / 2, Math.max(W, H) * 0.78,
+    );
+    grd.addColorStop(0, "rgba(0,0,0,0)");
+    grd.addColorStop(1, "rgba(0,0,0,0.82)");
 
-    return g;
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, W, H);
+
+    this.textures.addCanvas("_vinheta_intro", canvas);
+    return this.add.image(W / 2, H / 2, "_vinheta_intro");
   }
 }
