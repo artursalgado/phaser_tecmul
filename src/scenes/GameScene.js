@@ -133,11 +133,12 @@ export default class GameScene extends Phaser.Scene {
             colisao.setCollisionByExclusion([-1, 0]);
             colisao.setVisible(false);
 
-            // ── Remover colisão das pontes e passagens sobre água ────────────
-            // Os tiles de decoração com GIDs 114, 731 e 849 são colocados
-            // por cima de células de água (que têm colisão activa).
-            // Zeramos a colisão nessas células para o jogador poder atravessar.
-            const PASSAGEM_GIDS = new Set([114, 731, 849]);
+            // ── Remover colisão das pontes sobre água ────────────────────────
+            // Apenas os GIDs 731 e 849 (tiles de ponte) sobrepõem água.
+            // GID 114 é decoração genérica espalhada por TODO o mapa
+            // (relva/areia/etc, 4493 células) e NÃO indica passagem —
+            // incluí-lo abria um buraco enorme no meio do oceano.
+            const PASSAGEM_GIDS = new Set([731, 849]);
             const FLIP_MASK = 0xE0000000;
             if (decoracao) {
                 decoracao.layer.data.forEach((row, ty) => {
