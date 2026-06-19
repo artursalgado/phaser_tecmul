@@ -20,7 +20,7 @@ export default class PauseScene extends Phaser.Scene {
 
     // Coordenadas e dimensões do painel central RPG
     const painelW = 300,
-      painelH = 340;
+      painelH = 400;
     const cx = W / 2 - painelW / 2;
     const cy = H / 2 - painelH / 2;
     const HEADER_H = 34; // Altura da barra superior do painel
@@ -107,11 +107,19 @@ export default class PauseScene extends Phaser.Scene {
       btnMute.txt.setText(obterEtiquetaMute());
     });
 
+    // Botão de Definições
+    const textoDefinicoes = I18n.lang === "en" ? "Settings" : "Definições";
+    const btnDefs = makeBtn(this, W / 2, H / 2 + 25, 220, 38, textoDefinicoes, { depth: 2 });
+    btnDefs.zone.on("pointerdown", () => {
+      SoundManager.play("menu_click");
+      this.scene.launch("SettingsScene");
+    });
+
     // Botão para apagar a gravação atual
     const btnClearSave = makeBtn(
       this,
       W / 2,
-      H / 2 + 25,
+      H / 2 + 75,
       220,
       38,
       I18n.t("pause.delete_save"),
@@ -125,7 +133,7 @@ export default class PauseScene extends Phaser.Scene {
 
     // Botão para sair e regressar ao Menu Principal
     const textoMenu = I18n.lang === "en" ? "Main Menu" : "Menu Principal";
-    const btnMenu = makeBtn(this, W / 2, H / 2 + 75, 220, 38, textoMenu, {
+    const btnMenu = makeBtn(this, W / 2, H / 2 + 125, 220, 38, textoMenu, {
       depth: 2,
     });
     btnMenu.zone.on("pointerdown", () => {
@@ -144,7 +152,7 @@ export default class PauseScene extends Phaser.Scene {
     this.add
       .text(
         W / 2,
-        H / 2 + 125,
+        H / 2 + 170,
         I18n.lang === "en" ? "[ESC] to resume" : "[ESC] para continuar",
         {
           fontSize: "11px",
