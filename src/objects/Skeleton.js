@@ -1,206 +1,61 @@
-import { burst } from '../systems/Particles.js';
+import Enemy from './Enemy.js';
 
 /**
- * Skeleton — segundo tipo de inimigo
- * Mais rápido que o goblin mas menos HP.
- * Aparece a partir da vaga 2.
- *
- * Frames (skeleton spritesheets):
- *  idle:   skeleton_idle_strip6   → 6
- *  walk:   skeleton_walk_strip8   → 8
- *  hurt:   skeleton_hurt_strip7   → 7
- *  death:  skeleton_death_strip10 → 10
- *  attack: skeleton_attack_strip7 → 7
+ * Skeleton — mais rápido que goblin, menor HP. Aparece a partir da vaga 2.
+ * Frames: idle 6 | walk 8 | hurt 7 | death 10 | attack 7
  */
-export default class Skeleton extends Phaser.Physics.Arcade.Sprite {
+export default class Skeleton extends Enemy {
     constructor(scene, x, y) {
-        super(scene, x, y, 'skeleton_idle', 0);
-        scene.add.existing(this);
-        scene.physics.add.existing(this);
-
-        this.setScale(0.75);
-        this.setDepth(4);
-        this.setOrigin(0.5, 39 / 64);
-        this.body.setSize(18, 16);
-        this.body.setOffset(39, 23);
-        this.body.setCollideWorldBounds(true);
-
-        // Stats do skeleton
-        this.maxHealth      = 30;
-        this.health         = 30;
-        this.speed          = 90;    // mais rápido que goblin tier 1
-        this.damage         = 8;
-        this.dead           = false;
-        this.damageCooldown = 750;
-        this.lastDamageTime = 0;
-        this.stunUntil      = 0;
-        this.detectionRange = 240;   // maior alcance de detecção
-        this.attackRange    = 22;
-        this.patrolTarget   = { x, y };
-        this.patrolTimer    = 0;
-        this._attacking     = false;
-
-        // Cor azulada para distinguir dos goblins
-        this.setTint(0xaaddff);
-
-        // Barra de vida
-        this.hpBarBg = scene.add.rectangle(0, 0, 22, 4, 0x000033).setDepth(10).setVisible(false);
-        this.hpBar   = scene.add.rectangle(0, 0, 22, 4, 0x4499ff)
-            .setDepth(11).setOrigin(0, 0.5).setVisible(false);
-
+        super(scene, x, y, 'skeleton_idle', {
+            maxHealth:       30,
+            speed:           90,
+            damage:          8,
+            scale:           0.75,
+            tint:            0xaaddff,
+            detectionRange:  240,
+            attackRange:     22,
+            damageCooldown:  750,
+            animPrefix:      'skeleton',
+            bodySize:        [18, 16],
+            bodyOffset:      [39, 23],
+            originY:         39 / 64,
+            hpBarWidth:      22,
+            hpBarHeight:     4,
+            hpBarColor:      0x4499ff,
+            hpBgColor:       0x000033,
+            hpBarYOffset:    -13,
+            deathColor:      0xaaddff,
+            deathYOffset:    -7,
+            damageTextColor: '#4499ff',
+            attackFlashTint: 0xffffff,
+            attackFlashDelay: 160,
+            knockbackX:      250,
+            knockbackY:      -100,
+            stunDuration:    280,
+            patrolSpeedMult: 0.5,
+            patrolTimerMin:  1000,
+            patrolTimerMax:  2500,
+            patrolRangeMin:  50,
+            patrolRangeMax:  120,
+        });
         this._buildAnims(scene);
         this.play('skeleton_idle', true);
     }
 
     _buildAnims(scene) {
         const make = (key, texture, nFrames, rate, repeat = -1) => {
-            if (!scene.anims.exists(key)) {
-                scene.anims.create({
-                    key,
-                    frames: scene.anims.generateFrameNumbers(texture, { start: 0, end: nFrames - 1 }),
-                    frameRate: rate,
-                    repeat
-                });
-            }
+            if (scene.anims.exists(key)) return;
+            scene.anims.create({
+                key,
+                frames: scene.anims.generateFrameNumbers(texture, { start: 0, end: nFrames - 1 }),
+                frameRate: rate,
+                repeat
+            });
         };
         make('skeleton_idle',   'skeleton_idle',    6,  6);
         make('skeleton_walk',   'skeleton_walk',    8, 12);
         make('skeleton_hurt',   'skeleton_hurt',    7, 14, 0);
         make('skeleton_death',  'skeleton_death',  10,  8, 0);
         make('skeleton_attack', 'skeleton_attack',  7, 12, 0);
-    }
-
-    _updateHpBar() {
-        const pct = Math.max(0, this.health / this.maxHealth);
-        const by  = this.y - 17 * this.scaleY;
-        this.hpBarBg.setPosition(this.x, by);
-        this.hpBar.setPosition(this.x - 11, by);
-        this.hpBar.setDisplaySize(22 * pct, 4);
-        const show = pct < 1.0 && !this.dead;
-        this.hpBarBg.setVisible(show);
-        this.hpBar.setVisible(show);
-    }
-
-    update(player, time, delta) {
-        if (this.dead) return;
-        this._updateHpBar();
-
-        const dx   = player.x - this.x;
-        const dy   = player.y - this.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (time < this.stunUntil) {
-            this.body.setVelocity(0);
-            return;
-        }
-
-        if (this._attacking) return;
-
-        if (dist < this.detectionRange) {
-            if (dist < this.attackRange) {
-                this.body.setVelocity(0);
-                if (time > this.lastDamageTime + this.damageCooldown) {
-                    this.lastDamageTime = time;
-                    this._doAttack(player);
-                } else {
-                    this.play('skeleton_idle', true);
-                }
-            } else {
-                const nx = dx / dist, ny = dy / dist;
-                this.body.setVelocityX(nx * this.speed);
-                this.body.setVelocityY(ny * this.speed);
-                this.setFlipX(dx < 0);
-                this.play('skeleton_walk', true);
-            }
-        } else {
-            this.patrolTimer -= delta || 16;
-            if (this.patrolTimer <= 0) {
-                this.patrolTimer = Phaser.Math.Between(1000, 2500);
-                const angle = Math.random() * Math.PI * 2;
-                const range = Phaser.Math.Between(50, 120);
-                this.patrolTarget = {
-                    x: this.x + Math.cos(angle) * range,
-                    y: this.y + Math.sin(angle) * range
-                };
-            }
-            const ptDx   = this.patrolTarget.x - this.x;
-            const ptDy   = this.patrolTarget.y - this.y;
-            const ptDist = Math.sqrt(ptDx * ptDx + ptDy * ptDy);
-            if (ptDist > 8) {
-                const spd = this.speed * 0.5;
-                this.body.setVelocityX((ptDx / ptDist) * spd);
-                this.body.setVelocityY((ptDy / ptDist) * spd);
-                this.setFlipX(ptDx < 0);
-                this.play('skeleton_walk', true);
-            } else {
-                this.body.setVelocity(0);
-                this.play('skeleton_idle', true);
-            }
-        }
-    }
-
-    _doAttack(player) {
-        this._attacking = true;
-        this.body.setVelocity(0);
-        this.play('skeleton_attack', true);
-
-        this.setTint(0xffffff);
-        this.scene.time.delayedCall(160, () => {
-            if (!this.dead) {
-                this.setTint(0xaaddff);
-                this.scene.events.emit('playerDamaged', this.damage);
-            }
-        });
-
-        this.once('animationcomplete', () => {
-            this._attacking = false;
-            if (!this.dead) this.play('skeleton_idle', true);
-        });
-    }
-
-    takeDamage(amount, fromDir = 'right') {
-        if (this.dead) return;
-        this.health -= amount;
-        this._attacking = false;
-
-        const kbX = fromDir === 'right' ? 250 : -250;
-        this.body.setVelocity(kbX, -100);
-        this.stunUntil = this.scene.time.now + 280;
-
-        this.play('skeleton_hurt', true);
-        this.setTint(0xff8888);
-        this.scene.time.delayedCall(280, () => {
-            if (!this.dead) {
-                this.setTint(0xaaddff);
-            }
-        });
-
-        // Texto de dano
-        const txt = this.scene.add.text(this.x, this.y - 15, `-${amount}`, {
-            fontSize: '14px', fill: '#4499ff', fontStyle: 'bold',
-            stroke: '#000000', strokeThickness: 3
-        }).setOrigin(0.5).setDepth(20);
-        this.scene.tweens.add({
-            targets: txt, y: txt.y - 32, alpha: 0,
-            duration: 650, onComplete: () => txt.destroy()
-        });
-
-        this._updateHpBar();
-        if (this.health <= 0) this._die();
-    }
-
-    _die() {
-        this.dead = true;
-        this.hpBar?.destroy();
-        this.hpBarBg?.destroy();
-        this.body.setVelocity(0);
-        this.body.enable = false;
-        this.clearTint();
-        this.play('skeleton_death', true);
-        burst(this.scene, this.x, this.y - 7, { color: 0xaaddff, count: 10, speed: 110, lifespan: 500, scale: 0.7 });
-        this.once('animationcomplete', () => {
-            this.scene.events.emit('enemyDied', this.x, this.y);
-            this.destroy();
-        });
     }
 }

@@ -97,7 +97,7 @@ export default class BossSkeleton extends Skeleton {
     _die() {
         this.dead = true;
         this.hpBar?.destroy();
-        this.hpBarBg?.destroy();
+        this.hpBg?.destroy();
         this.body.setVelocity(0);
         this.body.enable = false;
         this.clearTint();
