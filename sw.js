@@ -1,5 +1,5 @@
 // Service Worker para Stranded — cache dos assets para jogo offline após o primeiro carregamento.
-const CACHE = "stranded-v1";
+const CACHE = "stranded-v2";
 
 // Assets que são cacheados na instalação
 const PRE_CACHE = [
