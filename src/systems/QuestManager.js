@@ -90,10 +90,17 @@ export default class QuestManager extends Phaser.Events.EventEmitter {
     }));
   }
 
-  // Penalidade aplicada ao morrer: perde 90% de todo o progresso de itens já entregues na jangada
+  // Penalidade aplicada ao morrer: perde 40% do progresso entregue na jangada.
+  // Se tinha ≥ 2 de um recurso, fica sempre com pelo menos 1.
+  // Devolve o que foi perdido para mostrar no ecrã de GameOver.
   applyDeathPenalty() {
+    const perdas = {};
     RAFT_PARTS.forEach((p) => {
-      this.state[p.id].have = Math.floor(this.state[p.id].have * 0.1);
+      const antes = this.state[p.id].have;
+      let depois = Math.floor(antes * 0.6);
+      if (antes >= 2 && depois < 1) depois = 1;
+      this.state[p.id].have = depois;
+      perdas[p.id] = antes - depois;
     });
     this.complete = false;
 
@@ -102,6 +109,7 @@ export default class QuestManager extends Phaser.Events.EventEmitter {
       this.bus.emit("quest:penalty", this.progress());
     }
     this.emitUpdated();
+    return perdas;
   }
 
   // Envia uma atualização geral de estado para o barramento de eventos do jogo

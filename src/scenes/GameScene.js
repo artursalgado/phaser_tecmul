@@ -280,8 +280,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Ouve a morte do jogador
     this.stats.on("died", () => {
-      // perde 90% dos recursos
-      this.quest.applyDeathPenalty();
+      const perdas = this.quest.applyDeathPenalty();
 
       // Se o jogador ainda tiver a segunda vida extra ativa
       if (this.hasExtraLife) {
@@ -295,6 +294,7 @@ export default class GameScene extends Phaser.Scene {
           score: this.score,
           kills: this.killCount,
           time: Math.floor(this.elapsedSec),
+          perdas,
         });
       }
     });

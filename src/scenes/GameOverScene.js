@@ -18,6 +18,7 @@ export default class GameOverScene extends Phaser.Scene {
     const score = data?.score ?? 0;
     const kills = data?.kills ?? 0;
     const time = data?.time ?? 0;
+    const perdas = data?.perdas ?? {};
 
     // Para a música de fundo e toca o som de morte
     SoundManager.stopBgMusic();
@@ -117,6 +118,26 @@ export default class GameOverScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setAlpha(0)
       .setDepth(6);
+
+    // Linha de penalidade — só aparece se perdeu algo na jangada
+    const nomes = { wood: I18n.t("items.wood"), rope: I18n.t("items.rope"), sail: I18n.t("items.sail") };
+    const partesPerdidas = Object.entries(perdas)
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => `-${v} ${nomes[k] ?? k}`)
+      .join("   ");
+
+    if (partesPerdidas) {
+      this.add
+        .text(W / 2, H / 2 + 20, `⚓ ${I18n.lang === "en" ? "Lost from raft" : "Perdido da jangada"}: ${partesPerdidas}`, {
+          fontSize: "12px",
+          fill: "#cc6644",
+          fontStyle: "italic",
+          stroke: "#000000",
+          strokeThickness: 2,
+        })
+        .setOrigin(0.5)
+        .setDepth(6);
+    }
 
     // Cria os botões para Tentar de Novo ou ir para o Menu Principal
     const btnRestart = makeBtn(
