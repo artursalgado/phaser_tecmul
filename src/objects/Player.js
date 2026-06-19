@@ -200,12 +200,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     const cooldownEfetivo =
       this.attackCooldown / this.obterMultiplicadorEnergia();
 
-    // Input touch (TouchScene escreve aqui; nulo em desktop)
-    const touch = this.scene.touchInput ?? { dx: 0, dy: 0, sprint: false, justAttack: false };
-
     // Verifica se a tecla de ataque foi premida e o cooldown já passou
     if (
-      (Phaser.Input.Keyboard.JustDown(this.attackKey) || touch.justAttack) &&
+      Phaser.Input.Keyboard.JustDown(this.attackKey) &&
       time > this.lastAttackTime + cooldownEfetivo
     ) {
       this.realizarAtaque(time);
@@ -215,9 +212,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     // Reseta velocidade física antes de aplicar o input do frame atual
     this.body.setVelocity(0);
 
-    // Processa as teclas de movimento (teclado ou joystick virtual)
-    let dx = touch.dx;
-    let dy = touch.dy;
+    // Processa as teclas de movimento
+    let dx = 0;
+    let dy = 0;
     if (cursors.left.isDown || wasd.left.isDown)  dx = -1;
     if (cursors.right.isDown || wasd.right.isDown) dx =  1;
     if (cursors.up.isDown || wasd.up.isDown)       dy = -1;
@@ -234,7 +231,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       ? this.scene.stats.energy > 0 && this.scene.stats.energyPercentagem >= 0.1
       : true;
     const running =
-      (this.shiftKey.isDown || touch.sprint) && (dx !== 0 || dy !== 0) && temEnergia;
+      this.shiftKey.isDown && (dx !== 0 || dy !== 0) && temEnergia;
 
     // A velocidade de andar é afetada pela exaustão. A de correr é sempre máxima.
     const speed = running
