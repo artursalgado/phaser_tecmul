@@ -1,5 +1,7 @@
 import { ITEM_DB } from "../systems/Inventory.js";
 import I18n from "../systems/I18n.js";
+import Hotbar from "../ui/Hotbar.js";
+import StatBars from "../ui/StatBars.js";
 
 // A classe HUDScene gere toda a Interface Gráfica do Utilizador (GUI) que sobrepõe o ecrã do jogo.
 // Funciona em paralelo com a GameScene para desenhar barras de status, hotbar, temporizadores,
@@ -19,9 +21,12 @@ export default class HUDScene extends Phaser.Scene {
     const W = this.scale.width;
     const H = this.scale.height;
 
-    // Inicializa todas as secções da interface de forma modular e limpa
-    this.criarHotbar(W, H);
-    this.criarBarrasStats();
+    // Inicializa os componentes de UI extraídos
+    this.hotbar = new Hotbar(this, this.inventory);
+    this.hotbar.criar(W, H);
+
+    this.statBars = new StatBars(this, this.stats);
+    this.statBars.criar();
     this.criarPainelQuestTimer(W, H);
     this.criarQuestLog(W, H);
     this.criarDiarioNaufrago(W, H);
@@ -29,9 +34,9 @@ export default class HUDScene extends Phaser.Scene {
     this.criarMinimap(W, H);
 
     // Associa os ouvintes de eventos do inventário e status para atualizar a GUI dinamicamente
-    this.inventory.on("changed", this.atualizarHotbar, this);
-    this.inventory.on("selectionChanged", this.atualizarHotbar, this);
-    this.stats.on("changed", this.atualizarBarrasStats, this);
+    this.inventory.on("changed", () => this.hotbar.atualizar());
+    this.inventory.on("selectionChanged", () => this.hotbar.atualizar());
+    this.stats.on("changed", () => this.statBars.atualizar());
 
     if (this.quest) {
       this.quest.on("partDelivered", this.atualizarQuest, this);
@@ -46,195 +51,15 @@ export default class HUDScene extends Phaser.Scene {
     this.gameScene.events.on("waveChanged", this.onMudancaVaga, this);
 
     // Executa a primeira atualização visual inicial de dados
-    this.atualizarHotbar();
-    this.atualizarBarrasStats();
+    this.hotbar.atualizar();
+    this.statBars.atualizar();
     if (this.quest) {
       this.atualizarQuest();
     }
     this.onMudancaVaga(this.gameScene.waveNumber || 0);
   }
 
-  // Cria a barra inferior de atalhos rápidos (Hotbar) de 8 slots
-  criarHotbar(W, H) {
-    this.slotBgs = [];
-    this.slotIcons = [];
-    this.slotTexts = [];
 
-    const tamanhoSlot = 18 * 3; // Escala ampliada dos discos de slot
-    const espacamento = 6;
-    const HOTBAR_TAMANHO = 8;
-    const larguraTotal =
-      HOTBAR_TAMANHO * tamanhoSlot + (HOTBAR_TAMANHO - 1) * espacamento;
-    const hotbarX = (W - larguraTotal) / 2 + tamanhoSlot / 2; // Posição X inicial centralizada
-    const hotbarY = H - 38;
-
-    // Fundo do painel da Hotbar com estilo de caixa de madeira RPG
-    const larguraFundo = larguraTotal + 28;
-    const graficoHotbar = this.add.graphics().setDepth(0);
-
-    // Sombra
-    graficoHotbar.fillStyle(0x000000, 0.3);
-    graficoHotbar.fillRoundedRect(
-      W / 2 - larguraFundo / 2 + 3,
-      hotbarY - 47,
-      larguraFundo,
-      82,
-      8,
-    );
-
-    // Fundo castanho escuro e borda dourada
-    graficoHotbar.fillStyle(0x160a00, 0.92);
-    graficoHotbar.fillRoundedRect(
-      W / 2 - larguraFundo / 2,
-      hotbarY - 50,
-      larguraFundo,
-      82,
-      8,
-    );
-    graficoHotbar.lineStyle(1.5, 0xc8901a, 0.72);
-    graficoHotbar.strokeRoundedRect(
-      W / 2 - larguraFundo / 2,
-      hotbarY - 50,
-      larguraFundo,
-      82,
-      8,
-    );
-
-    graficoHotbar.lineStyle(1, 0x6b3a1a, 0.5);
-    graficoHotbar.lineBetween(
-      W / 2 - larguraFundo / 2 + 12,
-      hotbarY - 30,
-      W / 2 + larguraFundo / 2 - 12,
-      hotbarY - 30,
-    );
-
-    // Desenha dicas rápidas de teclas por cima da Hotbar
-    const textoDica =
-      I18n.lang === "pt"
-        ? "[E] usar   ·   [Q] jangada   ·   [I] inventário   ·   [M] mapa"
-        : "[E] use   ·   [Q] raft   ·   [I] inventory   ·   [M] map";
-
-    this.add
-      .text(W / 2, hotbarY - 40, textoDica, {
-        fontSize: "9px",
-        fill: "#c8a870",
-        stroke: "#000000",
-        strokeThickness: 2,
-      })
-      .setOrigin(0.5)
-      .setDepth(3);
-
-    // Instancia os 8 slots visuais
-    for (let i = 0; i < HOTBAR_TAMANHO; i++) {
-      const x = hotbarX + i * (tamanhoSlot + espacamento);
-
-      // Fundo circular do slot
-      const bg = this.add
-        .image(x, hotbarY, "itemdisc_01")
-        .setScale(3)
-        .setDepth(1);
-      // Ícone do item no slot (inicialmente oculto)
-      const icon = this.add
-        .image(x, hotbarY, "wood")
-        .setScale(2.5)
-        .setVisible(false)
-        .setDepth(2);
-      // Texto de quantidade empilhada
-      const text = this.add
-        .text(x + 18, hotbarY + 18, "", {
-          fontSize: "11px",
-          fill: "#ffffff",
-          fontStyle: "bold",
-        })
-        .setOrigin(1, 1)
-        .setDepth(3);
-
-      // Número correspondente da tecla de atalho (1 a 8) no topo esquerdo do slot
-      this.add
-        .text(x - 20, hotbarY - 22, String(i + 1), {
-          fontSize: "9px",
-          fill: "#c8a870",
-          stroke: "#000000",
-          strokeThickness: 2,
-        })
-        .setOrigin(0, 0)
-        .setDepth(3);
-
-      this.slotBgs.push(bg);
-      this.slotIcons.push(icon);
-      this.slotTexts.push(text);
-    }
-
-    // Texto flutuante que exibe o nome do item selecionado por cima da Hotbar
-    this.labelItemSelecionado = this.add
-      .text(W / 2, hotbarY - 64, "", {
-        fontSize: "11px",
-        fill: "#f5e0b0",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5)
-      .setDepth(3);
-  }
-
-  // Configura o painel superior esquerdo com as 4 barras de status vitais (Vida, Fome, Sede, Energia)
-  criarBarrasStats() {
-    this.layoutStats = {
-      barX: 28,
-      barW: 112,
-      barH: 8,
-      textX: 144,
-      iconX: 16,
-      rows: [16, 35, 54, 73], // Coordenadas Y para cada uma das 4 barras
-    };
-    const LS = this.layoutStats;
-
-    // Fundo do painel de status
-    const painelFundo = this.add.graphics().setDepth(1);
-    painelFundo.fillStyle(0x000000, 0.35);
-    painelFundo.fillRoundedRect(6, 6, 178, 90, 6);
-    painelFundo.fillStyle(0x160a00, 0.92);
-    painelFundo.fillRoundedRect(6, 6, 178, 90, 6);
-    painelFundo.lineStyle(1.5, 0xc8901a, 0.72);
-    painelFundo.strokeRoundedRect(6, 6, 178, 90, 6);
-
-    // Desenha as calhas vazias das barras (fundos escuros)
-    LS.rows.forEach((y) => {
-      painelFundo.fillStyle(0x070300, 0.9);
-      painelFundo.fillRoundedRect(LS.barX, y, LS.barW, LS.barH, 4);
-    });
-
-    this.graficoPreenchimentoStats = this.add.graphics().setDepth(2);
-
-    // Instancia os ícones procedurais gerados no PreloadScene
-    [
-      { key: "status_icon_vida", y: LS.rows[0] },
-      { key: "status_icon_fome", y: LS.rows[1] },
-      { key: "status_icon_sede", y: LS.rows[2] },
-      { key: "status_icon_energia", y: LS.rows[3] },
-    ].forEach(({ key, y }) => {
-      this.add
-        .image(LS.iconX, y + LS.barH / 2, key)
-        .setDisplaySize(12, 12)
-        .setOrigin(0.5)
-        .setDepth(3);
-    });
-
-    // Textos descritivos de percentagem ao lado das barras
-    this.healthTxt = this.add
-      .text(LS.textX, LS.rows[0] - 1, "", { fontSize: "9px", fill: "#ffaaaa" })
-      .setDepth(3);
-    this.hungerTxt = this.add
-      .text(LS.textX, LS.rows[1] - 1, "", { fontSize: "9px", fill: "#ffddaa" })
-      .setDepth(3);
-    this.thirstTxt = this.add
-      .text(LS.textX, LS.rows[2] - 1, "", { fontSize: "9px", fill: "#aaddff" })
-      .setDepth(3);
-    this.energyTxt = this.add
-      .text(LS.textX, LS.rows[3] - 1, "", { fontSize: "9px", fill: "#ccffaa" })
-      .setDepth(3);
-  }
 
   // Configura o painel superior direito com o progresso da jangada, cronómetro de jogo e estatísticas gerais
   criarPainelQuestTimer(W, H) {
@@ -1023,62 +848,6 @@ export default class HUDScene extends Phaser.Scene {
     });
   }
 
-  // Desenha as barras horizontais coloridas de status com base nas percentagens obtidas
-  atualizarBarrasStats() {
-    if (!this.stats) {
-      return;
-    }
-
-    const LS = this.layoutStats;
-    const g = this.graficoPreenchimentoStats;
-    g.clear();
-
-    // 1. Vida (Cor Vermelha: 0xff3b30)
-    g.fillStyle(0xff3b30, 1);
-    g.fillRoundedRect(
-      LS.barX + 1,
-      LS.rows[0] + 1,
-      (LS.barW - 2) * this.stats.healthPercentagem,
-      LS.barH - 2,
-      3,
-    );
-
-    // 2. Fome (Cor Laranja: 0xff9500)
-    g.fillStyle(0xff9500, 1);
-    g.fillRoundedRect(
-      LS.barX + 1,
-      LS.rows[1] + 1,
-      (LS.barW - 2) * this.stats.hungerPercentagem,
-      LS.barH - 2,
-      3,
-    );
-
-    // 3. Sede (Cor Azul: 0x34aadc)
-    g.fillStyle(0x34aadc, 1);
-    g.fillRoundedRect(
-      LS.barX + 1,
-      LS.rows[2] + 1,
-      (LS.barW - 2) * this.stats.thirstPercentagem,
-      LS.barH - 2,
-      3,
-    );
-
-    // 4. Energia (Cor Amarela: 0xffcc00)
-    g.fillStyle(0xffcc00, 1);
-    g.fillRoundedRect(
-      LS.barX + 1,
-      LS.rows[3] + 1,
-      (LS.barW - 2) * this.stats.energyPercentagem,
-      LS.barH - 2,
-      3,
-    );
-
-    // Escreve os valores numéricos de texto formatados em inteiro (0-100)
-    this.healthTxt.setText(`${Math.ceil(this.stats.health)}/100`);
-    this.hungerTxt.setText(`${Math.ceil(this.stats.hunger)}/100`);
-    this.thirstTxt.setText(`${Math.ceil(this.stats.thirst)}/100`);
-    this.energyTxt.setText(`${Math.ceil(this.stats.energy)}/100`);
-  }
 
   // Atualiza os retângulos de progresso da jangada no ecrã principal
   atualizarQuest() {
@@ -1126,51 +895,6 @@ export default class HUDScene extends Phaser.Scene {
     }
   }
 
-  // Desenha as imagens dos itens equipados nos slots da Hotbar no fundo inferior
-  atualizarHotbar() {
-    if (!this.inventory) {
-      return;
-    }
-
-    const HOTBAR_TAMANHO = 8;
-    const slotAtivo = this.inventory.selectedSlot;
-
-    for (let i = 0; i < HOTBAR_TAMANHO; i++) {
-      const slot = this.inventory.slots[i];
-      const icon = this.slotIcons[i];
-      const text = this.slotTexts[i];
-      const bg = this.slotBgs[i];
-
-      if (slot) {
-        const def = ITEM_DB[slot.itemId];
-
-        // Exibe o ícone e a quantidade
-        icon.setTexture(def ? def.icon : slot.itemId).setVisible(true);
-        text.setText(slot.qty > 1 ? String(slot.qty) : "");
-      } else {
-        icon.setVisible(false);
-        text.setText("");
-      }
-
-      // Destaque visual dourado se o slot for o selecionado na hotbar ativa
-      if (i === slotAtivo) {
-        bg.setTexture("itemdisc_02"); // Utiliza disco dourado
-      } else {
-        bg.setTexture("itemdisc_01"); // Utiliza disco de ferro cinzento
-      }
-    }
-
-    // Escreve o nome do item selecionado na etiqueta flutuante
-    const slotAtivoObj = this.inventory.getSelectedItem();
-    if (slotAtivoObj) {
-      const def = ITEM_DB[slotAtivoObj.itemId];
-      this.labelItemSelecionado.setText(
-        def ? def.name.toUpperCase() : slotAtivoObj.itemId.toUpperCase(),
-      );
-    } else {
-      this.labelItemSelecionado.setText("");
-    }
-  }
 
   // Abre ou fecha o Quest Log expandido ao premir 'Q' ou na jangada
   alternarQuestLog() {
