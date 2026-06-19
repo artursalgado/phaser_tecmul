@@ -18,41 +18,31 @@ export default class VictoryScene extends Phaser.Scene {
 
         this.cameras.main.fadeIn(700, 0, 0, 0);
 
-        const overlay = this.add.rectangle(W/2, H/2, W, H, 0x1a1000, 0);
-        this.tweens.add({ targets: overlay, alpha: 0.9, duration: 600 });
+        const bgJangada = this.add.image(W/2, H/2, 'fim_jangada').setDepth(0);
+        const bgHappy = this.add.image(W/2, H/2, 'fim_happy').setDepth(0).setAlpha(0);
 
-        // Estrelas animadas
-        for (let i = 0; i < 30; i++) {
-            const star = this.add.text(
-                Phaser.Math.Between(50, W - 50),
-                Phaser.Math.Between(50, H - 50),
-                '*', { fontSize: Phaser.Math.Between(10, 24) + 'px', fill: '#f0e68c' }
-            ).setAlpha(0);
-            this.tweens.add({
-                targets: star,
-                alpha: { from: 0, to: Phaser.Math.FloatBetween(0.3, 1) },
-                duration: Phaser.Math.Between(500, 1500),
-                delay: Phaser.Math.Between(0, 1000),
-                yoyo: true, repeat: -1
-            });
-        }
+        const overlay = this.add.rectangle(W/2, H/2, W, H, 0x1a1000, 0.35).setDepth(1);
 
-        // Painel RPG (Graphics)
-        const panelW = 480, panelH = 370;
-        const cx = W/2 - panelW/2;
-        const cy = (H/2 - 10) - panelH/2;
+        // Painel central
+        const painelW = 480, painelH = 370;
+        const cx = W/2 - painelW/2;
+        const cy = (H/2 - 10) - painelH/2;
 
-        const panel = this.add.graphics().setAlpha(0).setDepth(5);
+        const painel = this.add.graphics().setAlpha(0).setDepth(5);
+        
         // Sombra
-        panel.fillStyle(0x000000, 0.35);
-        panel.fillRoundedRect(cx + 4, cy + 4, panelW, panelH, 6);
+        painel.fillStyle(0x000000, 0.35);
+        painel.fillRoundedRect(cx + 4, cy + 4, painelW, painelH, 6);
+        
         // Fundo castanho escuro
-        panel.fillStyle(0x160a00, 0.92);
-        panel.fillRoundedRect(cx, cy, panelW, panelH, 6);
+        painel.fillStyle(0x160a00, 0.92);
+        painel.fillRoundedRect(cx, cy, painelW, painelH, 6);
+        
         // Borda dourada
-        panel.lineStyle(1.5, 0xc8901a, 0.72);
-        panel.strokeRoundedRect(cx, cy, panelW, panelH, 6);
+        painel.lineStyle(1.5, 0xc8901a, 0.72);
+        painel.strokeRoundedRect(cx, cy, painelW, painelH, 6);
 
+        // Titulo de vitoria
         const titulo = this.add.text(W/2, H/2 - 130, I18n.t('victory.title'), {
             fontFamily: 'Georgia, serif', fontSize: '44px', fill: '#f0c030', fontStyle: 'bold',
             stroke: '#3a2000', strokeThickness: 4,
@@ -63,20 +53,23 @@ export default class VictoryScene extends Phaser.Scene {
             wordWrap: { width: 420 }, align: 'center',
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
-        // Linha decorativa
-        const divGfx = this.add.graphics().setAlpha(0).setDepth(6);
-        divGfx.lineStyle(1, 0xc8901a, 0.7);
-        divGfx.lineBetween(W/2 - 180, H/2 - 26, W/2 + 180, H/2 - 26);
+        // Linha divisoria
+        const divGrafico = this.add.graphics().setAlpha(0).setDepth(6);
+        divGrafico.lineStyle(1, 0xc8901a, 0.7);
+        divGrafico.lineBetween(W/2 - 180, H/2 - 26, W/2 + 180, H/2 - 26);
 
         const mm = Math.floor(time / 60), ss = String(time % 60).padStart(2,'0');
-        const statsLabel = `⏱  ${mm}:${ss}     ☠  ${kills}     ★  ${score} pts`;
+        const etiquetaEstatisticas = `⏱  ${mm}:${ss}     ☠  ${kills}     ★  ${score} pts`;
 
-        const statsText = this.add.text(W/2, H/2 - 4, statsLabel, {
+        const textoEstatisticas = this.add.text(W/2, H/2 - 4, etiquetaEstatisticas, {
             fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#c8a878', fontStyle: 'bold'
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
-        const btnRestart = makeBtn(this, W/2, H/2 + 55, 260, 46, I18n.t('victory.restart'));
-        const btnMenu    = makeBtn(this, W/2, H/2 + 111, 260, 46, I18n.t('victory.menu'));
+        // Criacao dos botoes
+        const btnRestart = makeBtn(this, W/2, H/2 + 55, 260, 46, I18n.t('victory.restart'), { alpha: 0 });
+        const btnMenu    = makeBtn(this, W/2, H/2 + 111, 260, 46, I18n.t('victory.menu'), { alpha: 0 });
+        btnRestart.zone.disableInteractive();
+        btnMenu.zone.disableInteractive();
 
         btnRestart.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
@@ -94,34 +87,59 @@ export default class VictoryScene extends Phaser.Scene {
             this.scene.start('GameScene');
         });
 
-        const cutsceneText = this.add.text(W/2, H/2 - 20, '', {
+        const textoCutscene = this.add.text(W/2, H/2 - 20, '', {
             fontSize: '24px', fill: '#ffffff', fontStyle: 'italic',
-            align: 'center', wordWrap: { width: 700 }
-        }).setOrigin(0.5);
+            align: 'center', wordWrap: { width: 700 },
+            stroke: '#000000', strokeThickness: 4
+        }).setOrigin(0.5).setDepth(6);
 
-        const i18nData = this.cache.json.get(I18n.lang === 'pt' ? 'i18n_pt' : 'i18n_en');
-        const linhas = i18nData?.victory?.cutscene || [];
+        const dadosIdioma = this.cache.json.get(I18n.lang === 'pt' ? 'i18n_pt' : 'i18n_en');
+        const linhas = dadosIdioma?.victory?.cutscene || [];
 
+        // Mostra as falas da cutscene uma a uma
         const mostrarLinha = (i) => {
             if (i >= linhas.length) {
-                cutsceneText.destroy();
+                textoCutscene.destroy();
                 this.tweens.add({
-                    targets: [
-                        panel, titulo, sub, divGfx, statsText,
-                        btnRestart.gfx, btnRestart.txt,
-                        btnMenu.gfx, btnMenu.txt,
-                    ],
-                    alpha: 1, duration: 600
+                    targets: bgJangada,
+                    alpha: 0,
+                    duration: 800
+                });
+                this.tweens.add({
+                    targets: bgHappy,
+                    alpha: 1,
+                    duration: 800
+                });
+                this.tweens.add({
+                    targets: overlay,
+                    alpha: 0.55,
+                    duration: 800
+                });
+                
+                this.time.delayedCall(2500, () => {
+                    this.tweens.add({
+                        targets: [
+                            painel, titulo, sub, divGrafico, textoEstatisticas,
+                            btnRestart.grafico, btnRestart.txt,
+                            btnMenu.grafico, btnMenu.txt,
+                        ],
+                        alpha: 1,
+                        duration: 600,
+                        onComplete: () => {
+                            btnRestart.zone.setInteractive();
+                            btnMenu.zone.setInteractive();
+                        }
+                    });
                 });
                 return;
             }
-            cutsceneText.setText(linhas[i]).setAlpha(0);
+            textoCutscene.setText(linhas[i]).setAlpha(0);
             this.tweens.add({
-                targets: cutsceneText, alpha: 1, duration: 500,
+                targets: textoCutscene, alpha: 1, duration: 500,
                 onComplete: () => {
                     this.time.delayedCall(1500, () => {
                         this.tweens.add({
-                            targets: cutsceneText, alpha: 0, duration: 400,
+                            targets: textoCutscene, alpha: 0, duration: 400,
                             onComplete: () => mostrarLinha(i + 1)
                         });
                     });

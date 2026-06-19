@@ -1,27 +1,3 @@
-/**
- * QuestManager — tracks the 3 raft objectives (wood, rope, sail).
- *
- * State shape:
- *   { wood: { have: 0, need: 5 },
- *     rope: { have: 0, need: 3 },
- *     sail: { have: 0, need: 1 } }
- *
- * Public API (as specified in issue #3):
- *   add(resource, qty)  — deliver qty units of resource; returns accepted amount
- *   isComplete()        — true when all 3 resources reach their need
- *   progress()          — returns full state snapshot { wood, rope, sail }
- *
- * Events emitted on the Phaser global event bus (scene.game.events):
- *   'quest:updated'   — after every add(); payload: progress snapshot
- *   'quest:complete'  — when isComplete() first becomes true
- *   'quest:penalty'   — after death penalty (90 % loss); payload: progress snapshot
- *
- * Legacy events (kept for HUDScene compatibility):
- *   'partDelivered'   — (id, have, need)
- *   'raftComplete'    — ()
- *   'penaltyApplied'  — ()
- */
-
 export const RAFT_PARTS = [
     { id: 'sail', label: 'Vela',    icon: '⛵', required: 1 },
     { id: 'rope', label: 'Corda',   icon: '🪢', required: 3 },
@@ -32,30 +8,24 @@ export default class QuestManager extends Phaser.Events.EventEmitter {
     constructor() {
         super();
 
-        // Internal state: { wood: { have, need }, rope: { have, need }, sail: { have, need } }
-        this._state = {};
+        // Estado interno com os recursos necessarios para a jangada
+        this.state = {};
         RAFT_PARTS.forEach(p => {
-            this._state[p.id] = { have: 0, need: p.required };
+            this.state[p.id] = { have: 0, need: p.required };
         });
 
-        this._complete = false;
-        // Reference to the Phaser game event bus — set via init(scene) or lazily
-        this._bus = null;
+        this.complete = false;
+        this.bus = null;
     }
 
-    // Call once from GameScene.create() so we can reach the global event bus.
+    // Inicializa o barramento de eventos global do jogo
     init(scene) {
-        this._bus = scene.game.events;
+        this.bus = scene.game.events;
     }
 
-    // ── Public API ────────────────────────────────────────────────────────────
-
-    /**
-     * Deliver qty units of resource.
-     * Returns the number actually accepted (0 if resource unknown or already full).
-     */
+    // Adiciona uma quantidade de recursos entregues
     add(resource, qty) {
-        const entry = this._state[resource];
+        const entry = this.state[resource];
         if (!entry) return 0;
 
         const stillNeed = entry.need - entry.have;
@@ -64,103 +34,87 @@ export default class QuestManager extends Phaser.Events.EventEmitter {
         const accepted = Math.min(qty, stillNeed);
         entry.have += accepted;
 
-        // Legacy event (HUDScene listens to this)
         this.emit('partDelivered', resource, entry.have, entry.need);
+        this.emitUpdated();
 
-        // Global bus event
-        this._emitUpdated();
-
-        if (!this._complete && this.isComplete()) {
-            this._complete = true;
+        if (!this.complete && this.isComplete()) {
+            this.complete = true;
             this.emit('raftComplete');
-            if (this._bus) this._bus.emit('quest:complete');
+            if (this.bus) this.bus.emit('quest:complete');
         }
 
         return accepted;
     }
 
-    /**
-     * Alias kept so GameScene._tryBuildRaft() keeps working with deliver().
-     */
+    // Alias para o metodo add
     deliver(itemId, qty) {
         return this.add(itemId, qty);
     }
 
-    /** Returns true when all 3 resources have reached their need. */
+    // Verifica se todos os recursos foram recolhidos
     isComplete() {
-        return RAFT_PARTS.every(p => this._state[p.id].have >= this._state[p.id].need);
+        return RAFT_PARTS.every(p => this.state[p.id].have >= this.state[p.id].need);
     }
 
-    /**
-     * Returns the full state snapshot:
-     *   { wood: { have, need }, rope: { have, need }, sail: { have, need } }
-     */
+    // Retorna o progresso atual formatado
     progress() {
         const snap = {};
         RAFT_PARTS.forEach(p => {
-            snap[p.id] = { have: this._state[p.id].have, need: this._state[p.id].need };
+            snap[p.id] = { have: this.state[p.id].have, need: this.state[p.id].need };
         });
         return snap;
     }
 
-    /**
-     * Returns progress as an array (used by HUDScene).
-     * Each entry: { id, label, icon, required, current, done }
-     */
+    // Retorna o progresso em formato de array para a HUD
     getProgress() {
         return RAFT_PARTS.map(p => ({
             ...p,
-            current: this._state[p.id].have,
-            done:    this._state[p.id].have >= this._state[p.id].need,
+            current: this.state[p.id].have,
+            done:    this.state[p.id].have >= this.state[p.id].need,
         }));
     }
 
-    /**
-     * Death penalty: lose 90 % of all progress (keep 10 %, floored).
-     * Resets the complete flag so the player must re-earn the win condition.
-     */
+    // Penalidade por morte: perde 90% dos recursos recolhidos
     applyDeathPenalty() {
         RAFT_PARTS.forEach(p => {
-            this._state[p.id].have = Math.floor(this._state[p.id].have * 0.1);
+            this.state[p.id].have = Math.floor(this.state[p.id].have * 0.1);
         });
-        this._complete = false;
+        this.complete = false;
 
-        // Legacy event
         this.emit('penaltyApplied');
-
-        // Global bus event
-        if (this._bus) this._bus.emit('quest:penalty', this.progress());
-        this._emitUpdated();
+        if (this.bus) this.bus.emit('quest:penalty', this.progress());
+        this.emitUpdated();
     }
 
-    // ── Private ───────────────────────────────────────────────────────────────
-
-    _emitUpdated() {
-        if (this._bus) this._bus.emit('quest:updated', this.progress());
+    // Emite evento de atualizacao no barramento global
+    emitUpdated() {
+        if (this.bus) this.bus.emit('quest:updated', this.progress());
     }
 
     toJSON() {
         return {
-            _state: JSON.parse(JSON.stringify(this._state)),
-            _complete: this._complete
+            state: JSON.parse(JSON.stringify(this.state)),
+            complete: this.complete
         };
     }
 
     fromJSON(data) {
         if (!data) return;
-        if (data._state) {
-            for (const key in data._state) {
-                if (this._state[key]) {
-                    this._state[key].have = data._state[key].have;
-                    if (typeof data._state[key].need === 'number') {
-                        this._state[key].need = data._state[key].need;
+        const savedState = data.state || data._state;
+        if (savedState) {
+            for (const key in savedState) {
+                if (this.state[key]) {
+                    this.state[key].have = savedState[key].have;
+                    if (typeof savedState[key].need === 'number') {
+                        this.state[key].need = savedState[key].need;
                     }
                 }
             }
         }
-        if (typeof data._complete === 'boolean') {
-            this._complete = data._complete;
+        const savedComplete = data.complete !== undefined ? data.complete : data._complete;
+        if (typeof savedComplete === 'boolean') {
+            this.complete = savedComplete;
         }
-        this._emitUpdated();
+        this.emitUpdated();
     }
 }

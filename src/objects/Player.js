@@ -1,16 +1,9 @@
-/**
- * Player — Phaser 3 Arcade Sprite (sem Container — evita bugs de physics)
- * Frame: 96×64px, setScale(1) → personagem vísivel com zoom 2.5
- * Camadas hair + tools são sprites separados que copiam a posição
- */
-
-// Tabela de stats por arma/ferramenta equipada
 const WEAPON_STATS = {
-    axe:     { damage: 25, range: 52, cooldown: 700 }, // Machado: forte e lento, bom para madeira
-    pickaxe: { damage: 15, range: 44, cooldown: 500 }, // Picareta: fraca e rápida, para mineração
-    sword:   { damage: 20, range: 60, cooldown: 550 }, // Espada: equilibrada e com maior alcance
-    hammer:  { damage: 35, range: 40, cooldown: 900 }, // Martelo: muito forte e lento
-    none:    { damage: 10, range: 36, cooldown: 600 }  // Sem arma: soco base
+    axe:     { damage: 25, range: 52, cooldown: 700 },
+    pickaxe: { damage: 15, range: 44, cooldown: 500 },
+    sword:   { damage: 20, range: 60, cooldown: 550 },
+    hammer:  { damage: 35, range: 40, cooldown: 900 },
+    none:    { damage: 10, range: 36, cooldown: 600 }
 };
 
 export default class Player extends Phaser.Physics.Arcade.Sprite {
@@ -25,47 +18,45 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.facing      = 'right';
         this.isBusy      = false;
 
-        // Ataque
+        // Atributos de ataque
         this.attackDamage   = 20;
         this.attackRange    = 48;
         this.attackCooldown = 600;
         this.lastAttackTime = 0;
-        this._facingX       = 1;
-        this._facingY       = 0;
+        this.facingX        = 1;
+        this.facingY        = 0;
 
-        // Passo sonoro
-        this._stepTimer = 0;
-        this._stepInterval = 320;
+        // Som de passo
+        this.stepTimer = 0;
+        this.stepInterval = 320;
 
-        // Escala 1 = frame 96×64 no mapa. Com zoom 2.5 fica 240×160px no ecrã
         this.setScale(1);
         this.setDepth(5);
         this.setOrigin(0.5, 38 / 64);
 
-        // Hitbox centrada nos pés: frame 96 wide → offset x=40; frame 64 high → offset y=24
+        // Hitbox nos pes
         this.body.setSize(16, 14);
         this.body.setOffset(40, 24);
         this.body.setCollideWorldBounds(true);
 
-        // ── Sombra ───────────────────────────────────────────────────────────
+        // Sombra
         this.shadow = scene.add.ellipse(x, y + 1, 20, 7, 0x000000, 0.3).setDepth(4);
 
-        // ── Camadas visuais (sem physics — só seguem a posição) ──────────────
+        // Camadas de cabelo e ferramentas
         this.hairSprite = scene.add.sprite(x, y, 'player_hair_idle', 0)
             .setScale(1).setOrigin(0.5, 38 / 64).setDepth(6);
         this.toolSprite = scene.add.sprite(x, y, 'player_tools_idle', 0)
             .setScale(1).setOrigin(0.5, 38 / 64).setDepth(7).setVisible(false);
 
-        // ── Animações ────────────────────────────────────────────────────────
-        this._buildAnimations(scene);
+        this.criarAnimacoes(scene);
         this.playAnim('idle');
 
-        // ── Teclas ───────────────────────────────────────────────────────────
         this.attackKey = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.shiftKey  = scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
     }
 
-    _buildAnimations(scene) {
+    // Cria as animacoes de base, cabelo e ferramentas
+    criarAnimacoes(scene) {
         const make = (key, tex, nFrames, fps, repeat = -1) => {
             if (scene.anims.exists(key)) return;
             scene.anims.create({
@@ -83,7 +74,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         make('player_death',  'player_base_death',  13,  8, 0);
         make('player_axe',    'player_base_axe',    10, 12, 0);
         make('player_mining', 'player_base_mining', 10, 12, 0);
-        // Hair
+        // Cabelo
         make('hair_idle',     'player_hair_idle',    9,  6);
         make('hair_walk',     'player_hair_walk',    8, 10);
         make('hair_run',      'player_hair_run',     8, 14);
@@ -91,7 +82,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         make('hair_death',    'player_hair_death',  13,  8, 0);
         make('hair_axe',      'player_hair_axe',    10, 12, 0);
         make('hair_mining',   'player_hair_mining', 10, 12, 0);
-        // Tools
+        // Ferramentas
         make('tools_idle',    'player_tools_idle',   9,  6);
         make('tools_walk',    'player_tools_walk',   8, 10);
         make('tools_run',     'player_tools_run',    8, 14);
@@ -99,6 +90,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         make('tools_mining',  'player_tools_mining',10, 12, 0);
     }
 
+    // Toca as animacoes sincronizadas de todas as camadas
     playAnim(name, showTool = false) {
         this.play('player_' + name, true);
         this.hairSprite.play('hair_' + name, true);
@@ -108,13 +100,15 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    _setFlipAll(val) {
+    // Inverte a orientacao de todas as camadas
+    atualizarDirecao(val) {
         this.setFlipX(val);
         this.hairSprite.setFlipX(val);
         this.toolSprite.setFlipX(val);
     }
 
-    _syncLayers() {
+    // Garante que todas as camadas visuais seguem a posicao do jogador
+    sincronizarCamadas() {
         this.hairSprite.setPosition(this.x, this.y);
         this.toolSprite.setPosition(this.x, this.y);
         this.shadow.setPosition(this.x, this.y + 1);
@@ -122,14 +116,14 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.toolSprite.setFlipX(this.flipX);
     }
 
-    _energyMult() {
-        // Verifica se o scene tem stats para evitar erros
+    // Retorna o multiplicador de velocidade/dano com base na energia
+    obterMultiplicadorEnergia() {
         if (!this.scene.stats) return 1;
 
-        const pct = this.scene.stats.energyPct;
-        if (pct > 0.30) {
-            return 1.0; // Normal
-        } else if (pct >= 0.10) {
+        const percentagem = this.scene.stats.energyPercentagem;
+        if (percentagem > 0.30) {
+            return 1.0;
+        } else if (percentagem >= 0.10) {
             return 0.70; // Cansado
         } else {
             return 0.50; // Exausto
@@ -137,11 +131,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     update(cursors, wasd, time, delta) {
-        this._syncLayers();
+        this.sincronizarCamadas();
 
         if (this.isBusy) return;
 
-        // Atualizar stats com base no item atualmente selecionado no inventário
+        // Atualiza os atributos com base no item equipado
         const slot = this.scene.inventory?.getSelectedItem();
         const itemId = slot?.itemId;
         const stats = WEAPON_STATS[itemId] || WEAPON_STATS.none;
@@ -149,11 +143,11 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.attackRange = stats.range;
         this.attackCooldown = stats.cooldown;
 
-        // Ataque (cooldown escala ao contrário baseado na energia)
-        const effectiveCooldown = this.attackCooldown / this._energyMult();
+        // Verifica o cooldown de ataque
+        const cooldownEfetivo = this.attackCooldown / this.obterMultiplicadorEnergia();
         if (Phaser.Input.Keyboard.JustDown(this.attackKey) &&
-            time > this.lastAttackTime + effectiveCooldown) {
-            this._doAttack(time);
+            time > this.lastAttackTime + cooldownEfetivo) {
+            this.realizarAtaque(time);
             return;
         }
 
@@ -165,21 +159,21 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         if (cursors.up.isDown    || wasd.up.isDown)    dy = -1;
         if (cursors.down.isDown  || wasd.down.isDown)  dy =  1;
 
-        // Normalizar diagonal
-        if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+        // Normaliza movimento diagonal
+        if (dx !== 0 && dy !== 0) { 
+            dx *= 0.707; 
+            dy *= 0.707; 
+        }
 
-        // Sprint apenas se tiver energia (>0) e não estiver exausto (energia >= 10%)
-        const hasEnergy = this.scene.stats ? (this.scene.stats.energy > 0 && this.scene.stats.energyPct >= 0.10) : true;
-        const running = this.shiftKey.isDown && (dx !== 0 || dy !== 0) && hasEnergy;
+        // Permite correr se tiver energia suficiente
+        const temEnergia = this.scene.stats ? (this.scene.stats.energy > 0 && this.scene.stats.energyPercentagem >= 0.10) : true;
+        const running = this.shiftKey.isDown && (dx !== 0 || dy !== 0) && temEnergia;
         
-        // Velocidade de andar afetada pelo multiplicador de energia
-        const speed   = running ? this.speedRun : this.speedWalk * this._energyMult();
+        const speed = running ? this.speedRun : this.speedWalk * this.obterMultiplicadorEnergia();
 
-        // Consumir energia ao correr
+        // Consome energia ao correr
         if (running && this.scene.stats) {
-            this.scene.stats.energy = Math.max(0,
-                this.scene.stats.energy - 6 * (delta / 1000)
-            );
+            this.scene.stats.energy = Math.max(0, this.scene.stats.energy - 6 * (delta / 1000));
         }
 
         this.body.setVelocityX(dx * speed);
@@ -187,27 +181,28 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
         if (dx !== 0 || dy !== 0) {
             const len = Math.sqrt(dx * dx + dy * dy);
-            this._facingX = dx / len;
-            this._facingY = dy / len;
+            this.facingX = dx / len;
+            this.facingY = dy / len;
 
-            if (dx < 0) this._setFlipAll(true);
-            else if (dx > 0) this._setFlipAll(false);
+            if (dx < 0) this.atualizarDirecao(true);
+            else if (dx > 0) this.atualizarDirecao(false);
+            
             this.playAnim(running ? 'run' : 'walk', running);
 
-            // Som de passo
-            this._stepTimer -= delta || 16;
-            if (this._stepTimer <= 0) {
-                this._stepTimer = running ? this._stepInterval * 0.6 : this._stepInterval;
+            // Som de passos
+            this.stepTimer -= delta || 16;
+            if (this.stepTimer <= 0) {
+                this.stepTimer = running ? this.stepInterval * 0.6 : this.stepInterval;
                 this.scene.events.emit('playerStep');
             }
         } else {
-            this._stepTimer = 0;
+            this.stepTimer = 0;
             this.playAnim('idle');
         }
 
-        // Tint visual com base no cansaço (energia abaixo de 30%)
+        // Altera a cor se estiver cansado
         if (this.scene.stats) {
-            if (this.scene.stats.energyPct < 0.30) {
+            if (this.scene.stats.energyPercentagem < 0.30) {
                 this.setTint(0xaaaacc);
                 this.hairSprite.setTint(0xaaaacc);
                 this.toolSprite.setTint(0xaaaacc);
@@ -219,7 +214,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    _doAttack(time) {
+    // Executa a animacao e logica de ataque
+    realizarAtaque(time) {
         this.lastAttackTime = time;
         this.isBusy = true;
         this.body.setVelocity(0);
@@ -232,36 +228,38 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         const anim     = itemId === 'pickaxe' ? 'mining' : 'axe';
         this.playAnim(anim, isWeapon);
 
-        const reach = this.attackRange * 0.5;
-        const hitX  = this.x + this._facingX * reach;
-        const hitY  = this.y + this._facingY * reach;
+        const alcanceAtaque = this.attackRange * 0.5;
+        const hitX  = this.x + this.facingX * alcanceAtaque;
+        const hitY  = this.y + this.facingY * alcanceAtaque;
 
-        const mult = this._energyMult();
+        const multiplicador = this.obterMultiplicadorEnergia();
 
+        // Causa dano a goblins/esqueletos
         const goblins = this.scene.goblins?.getChildren() ?? [];
         goblins.forEach(g => {
             if (!g.dead) {
                 const d = Phaser.Math.Distance.Between(hitX, hitY, g.x, g.y);
                 if (d < this.attackRange) {
-                    // Dano de ataque reduzido pelo cansaço
-                    g.takeDamage(this.attackDamage * mult, this._facingX < 0 ? 'left' : 'right');
+                    g.takeDamage(this.attackDamage * multiplicador, this.facingX < 0 ? 'left' : 'right');
                     this.scene.events.emit('enemyHurt');
                 }
             }
         });
 
-        // Árvores cortáveis (EPIC da jangada) — mesma deteção de alcance dos goblins
+        // Corta arvores
         const trees = this.scene.trees?.getChildren() ?? [];
         trees.forEach(t => {
             if (!t.dead) {
                 const d = Phaser.Math.Distance.Between(hitX, hitY, t.x, t.y);
                 if (d < this.attackRange) {
-                    if (Math.random() < mult) t.chop();
+                    if (Math.random() < multiplicador) {
+                        t.chop();
+                    }
                 }
             }
         });
 
-        // Efeito visual
+        // Efeito visual do golpe
         const ring = this.scene.add.circle(hitX, hitY, 10, 0xffff88, 0.55).setDepth(10);
         this.scene.tweens.add({
             targets: ring, scaleX: 1.8, scaleY: 1.8, alpha: 0,
@@ -274,6 +272,7 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
+    // Pisca o sprite quando recebe dano
     flashHurt() {
         this.playAnim('hurt');
         const targets = [this, this.hairSprite, this.toolSprite];

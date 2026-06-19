@@ -1,5 +1,4 @@
-// Sistema de estatísticas de sobrevivência do jogador
-// Gere vida, fome, sede e energia — emite eventos para a HUD reagir
+// Estatisticas de sobrevivencia do jogador (vida, fome, sede e energia)
 export default class PlayerStats extends Phaser.Events.EventEmitter {
     constructor() {
         super();
@@ -16,29 +15,27 @@ export default class PlayerStats extends Phaser.Events.EventEmitter {
 
         this.dead = false;
 
-        // Velocidade de decaimento por segundo (ajustável)
-        this.hungerDecay = 0.17;  // zero em ~10 min
-        this.thirstDecay = 0.25;  // zero em ~7 min (mais urgente)
-        this.energyDecay = 0.08;  // zero em ~20 min
+        // Velocidade que os atributos descem por segundo
+        this.hungerDecay = 0.17;
+        this.thirstDecay = 0.25;
+        this.energyDecay = 0.08;
 
-        // Dano por segundo quando fome/sede chega a 0
+        // Dano por segundo quando a fome ou sede chega a zero
         this.starveDamage  = 1.0;
-        this.dehydrateDmg  = 1.5;
+        this.dehydrateDamage  = 1.5;
     }
 
-    // Chamado pelo GameScene a cada frame (delta em ms)
+    // Atualiza os valores a cada frame
     update(delta) {
         if (this.dead) return;
-        const dt = delta / 1000; // converter para segundos
+        const segundos = delta / 1000;
 
-        // Decaimento natural
-        this.hunger = Math.max(0, this.hunger - this.hungerDecay * dt);
-        this.thirst = Math.max(0, this.thirst - this.thirstDecay * dt);
-        this.energy = Math.max(0, this.energy - this.energyDecay * dt);
+        this.hunger = Math.max(0, this.hunger - this.hungerDecay * segundos);
+        this.thirst = Math.max(0, this.thirst - this.thirstDecay * segundos);
+        this.energy = Math.max(0, this.energy - this.energyDecay * segundos);
 
-        // Dano por fome/sede em 0
-        if (this.hunger <= 0) this.takeDamage(this.starveDamage * dt);
-        if (this.thirst <= 0) this.takeDamage(this.dehydrateDmg * dt);
+        if (this.hunger <= 0) this.takeDamage(this.starveDamage * segundos);
+        if (this.thirst <= 0) this.takeDamage(this.dehydrateDamage * segundos);
 
         this.emit('changed', this);
     }
@@ -73,8 +70,7 @@ export default class PlayerStats extends Phaser.Events.EventEmitter {
         this.emit('changed', this);
     }
 
-    // Repõe tudo a 100% e tira o estado de "morto".
-    // Usado no respawn (1 vida extra) — o jogador volta a ter stats cheios.
+    // Reseta todos os atributos para o valor maximo
     reset() {
         this.health = this.maxHealth;
         this.hunger = this.maxHunger;
@@ -84,11 +80,11 @@ export default class PlayerStats extends Phaser.Events.EventEmitter {
         this.emit('changed', this);
     }
 
-    // Percentagem de 0 a 1 de cada stat
-    get healthPct()  { return this.health  / this.maxHealth;  }
-    get hungerPct()  { return this.hunger  / this.maxHunger;  }
-    get thirstPct()  { return this.thirst  / this.maxThirst;  }
-    get energyPct()  { return this.energy  / this.maxEnergy;  }
+    // Retorna a percentagem atual de cada atributo (entre 0 e 1)
+    get healthPercentagem()  { return this.health  / this.maxHealth;  }
+    get hungerPercentagem()  { return this.hunger  / this.maxHunger;  }
+    get thirstPercentagem()  { return this.thirst  / this.maxThirst;  }
+    get energyPercentagem()  { return this.energy  / this.maxEnergy;  }
 
     toJSON() {
         return {

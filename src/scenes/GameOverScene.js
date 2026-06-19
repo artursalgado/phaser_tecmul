@@ -17,20 +17,20 @@ export default class GameOverScene extends Phaser.Scene {
         SoundManager.stopBgMusic();
         SoundManager.play('die');
 
-        // Fundo com fade-in
+        // Overlay com transicao de fade-in
         const overlay = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0);
         this.tweens.add({ targets: overlay, alpha: 0.88, duration: 700 });
 
-        // Partículas de sangue
+        // Particulas de sangue a cair
         for (let i = 0; i < 18; i++) {
-            const drop = this.add.circle(
+            const gota = this.add.circle(
                 Phaser.Math.Between(80, W - 80),
                 Phaser.Math.Between(-40, H / 2),
                 Phaser.Math.Between(3, 9), 0xaa0000, 0.7
             );
             this.tweens.add({
-                targets: drop,
-                y: drop.y + Phaser.Math.Between(200, 500),
+                targets: gota,
+                y: gota.y + Phaser.Math.Between(200, 500),
                 alpha: 0,
                 duration: Phaser.Math.Between(1200, 2400),
                 delay: Phaser.Math.Between(0, 800),
@@ -38,22 +38,26 @@ export default class GameOverScene extends Phaser.Scene {
             });
         }
 
-        // Painel RPG (Graphics)
-        const panelW = 480, panelH = 370;
-        const cx = W/2 - panelW/2;
-        const cy = (H/2 - 10) - panelH/2;
+        // Painel central
+        const painelW = 480, painelH = 370;
+        const cx = W/2 - painelW/2;
+        const cy = (H/2 - 10) - painelH/2;
 
-        const panel = this.add.graphics().setAlpha(0).setDepth(5);
+        const painel = this.add.graphics().setAlpha(0).setDepth(5);
+        
         // Sombra
-        panel.fillStyle(0x000000, 0.35);
-        panel.fillRoundedRect(cx + 4, cy + 4, panelW, panelH, 6);
+        painel.fillStyle(0x000000, 0.35);
+        painel.fillRoundedRect(cx + 4, cy + 4, painelW, painelH, 6);
+        
         // Fundo castanho escuro
-        panel.fillStyle(0x160a00, 0.92);
-        panel.fillRoundedRect(cx, cy, panelW, panelH, 6);
+        painel.fillStyle(0x160a00, 0.92);
+        painel.fillRoundedRect(cx, cy, painelW, painelH, 6);
+        
         // Borda dourada
-        panel.lineStyle(1.5, 0xc8901a, 0.72);
-        panel.strokeRoundedRect(cx, cy, panelW, panelH, 6);
+        painel.lineStyle(1.5, 0xc8901a, 0.72);
+        painel.strokeRoundedRect(cx, cy, painelW, painelH, 6);
 
+        // Titulo de GameOver
         const titulo = this.add.text(W/2, H/2 - 130, I18n.t('gameover.title'), {
             fontFamily: 'Georgia, serif', fontSize: '52px', fill: '#cc2200', fontStyle: 'bold',
             stroke: '#330000', strokeThickness: 4,
@@ -63,18 +67,19 @@ export default class GameOverScene extends Phaser.Scene {
             fontFamily: 'Georgia, serif', fontSize: '17px', fill: '#c8a878', fontStyle: 'italic'
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
-        // Linha decorativa
-        const divGfx = this.add.graphics().setAlpha(0).setDepth(6);
-        divGfx.lineStyle(1, 0x9a6030, 0.7);
-        divGfx.lineBetween(W/2 - 180, H/2 - 34, W/2 + 180, H/2 - 34);
+        // Linha divisoria
+        const divGrafico = this.add.graphics().setAlpha(0).setDepth(6);
+        divGrafico.lineStyle(1, 0x9a6030, 0.7);
+        divGrafico.lineBetween(W/2 - 180, H/2 - 34, W/2 + 180, H/2 - 34);
 
         const mm = Math.floor(time / 60), ss = String(time % 60).padStart(2, '0');
-        const statsLabel = `⏱  ${mm}:${ss}     ☠  ${kills}     ★  ${score} pts`;
+        const etiquetaEstatisticas = `⏱  ${mm}:${ss}     ☠  ${kills}     ★  ${score} pts`;
 
-        const statsText = this.add.text(W/2, H/2 - 14, statsLabel, {
+        const textoEstatisticas = this.add.text(W/2, H/2 - 14, etiquetaEstatisticas, {
             fontFamily: 'Georgia, serif', fontSize: '15px', fill: '#c8a878', fontStyle: 'bold'
         }).setOrigin(0.5).setAlpha(0).setDepth(6);
 
+        // Criacao dos botoes
         const btnRestart = makeBtn(this, W/2, H/2 + 60, 260, 46, I18n.t('gameover.restart'));
         const btnMenu    = makeBtn(this, W/2, H/2 + 116, 260, 46, I18n.t('gameover.menu'));
 
@@ -91,15 +96,17 @@ export default class GameOverScene extends Phaser.Scene {
             this.scene.start('MenuScene');
         });
 
+        // Transicao de fade-in para os elementos do painel
         this.tweens.add({
             targets: [
-                panel, titulo, sub, divGfx, statsText,
-                btnRestart.gfx, btnRestart.txt,
-                btnMenu.gfx, btnMenu.txt,
+                painel, titulo, sub, divGrafico, textoEstatisticas,
+                btnRestart.grafico, btnRestart.txt,
+                btnMenu.grafico, btnMenu.txt,
             ],
             alpha: 1, duration: 900, delay: 400
         });
 
+        // Atalhos de teclado
         this.input.keyboard.once('keydown-R', () => {
             SaveManager.clear();
             this.scene.stop('GameOverScene');

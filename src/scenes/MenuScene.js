@@ -3,36 +3,36 @@ import SoundManager from '../systems/SoundManager.js';
 import makeBtn from '../utils/makeBtn.js';
 import SaveManager from '../systems/SaveManager.js';
 
-const MENU_BTN = { depth: 3, fontSize: '19px', idleFill: '#f5e0b0', border: 0xc8901a, borderIdleAlpha: 0.6, alpha: 1 };
+const CONFIG_BOTAO_MENU = { depth: 3, fontSize: '19px', idleFill: '#f5e0b0', border: 0xc8901a, borderIdleAlpha: 0.6, alpha: 1 };
 
-// ─── Helper: botão de língua pequeno ─────────────────────────────────────────
-function makeLangBtn(scene, x, y, label, depth = 3) {
+// Cria os botoes pequenos de idioma (PT e EN)
+function criarBotaoIdioma(scene, x, y, label, depth = 3) {
     const w = 88, h = 32;
-    const gfx = scene.add.graphics().setDepth(depth);
+    const grafico = scene.add.graphics().setDepth(depth);
     const txt = scene.add.text(x, y, label, {
         fontFamily: 'Georgia, serif', fontSize: '13px',
         fill: '#c8a070', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(depth + 1);
 
-    let _active = false;
+    let ativo = false;
 
-    const draw = () => {
-        gfx.clear();
-        gfx.fillStyle(_active ? 0x6b3810 : 0x2a1505, 1);
-        gfx.fillRoundedRect(x - w/2, y - h/2, w, h, 6);
-        gfx.lineStyle(2, 0xc8901a, _active ? 1 : 0.4);
-        gfx.strokeRoundedRect(x - w/2, y - h/2, w, h, 6);
+    const desenhar = () => {
+        grafico.clear();
+        grafico.fillStyle(ativo ? 0x6b3810 : 0x2a1505, 1);
+        grafico.fillRoundedRect(x - w/2, y - h/2, w, h, 6);
+        grafico.lineStyle(2, 0xc8901a, ativo ? 1 : 0.4);
+        grafico.strokeRoundedRect(x - w/2, y - h/2, w, h, 6);
     };
-    draw();
+    desenhar();
 
     const zone = scene.add.zone(x, y, w, h)
         .setInteractive({ useHandCursor: true }).setDepth(depth + 2);
 
     return {
-        gfx, txt, zone,
+        grafico, txt, zone,
         setActive: (v) => {
-            _active = v;
-            draw();
+            ativo = v;
+            desenhar();
             txt.setStyle({ fill: v ? '#ffffff' : '#c8a070' });
         },
     };
@@ -48,48 +48,47 @@ export default class MenuScene extends Phaser.Scene {
 
         const W = 960, H = 640;
 
-        // ── Imagem de Fundo (intro_praia) ─────────────────────────────────────
+        // Fundo e overlay de contraste
         this.add.image(W/2, H/2, 'intro_praia').setDisplaySize(W, H);
-
-        // Overlay escuro suave para dar contraste ao menu
         this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.45);
 
-        // ── Painel scroll RPG (NineSlice com scroll_rpg 128×176, bordas 16px) ─
+        // Painel central
         const scrollH = 480;
         this.menuBg = this.add.nineslice(W/2, H/2 - 10, 'scroll_rpg', null, 460, scrollH, 18, 18, 24, 24)
             .setDepth(1);
 
-        // ── Título ────────────────────────────────────────────────────────────
+        // Titulo do jogo
         const titulo = this.add.text(W/2, H/2 - 188, I18n.t('menu.title'), {
             fontFamily: 'Georgia, serif', fontSize: '60px', fill: '#3d2008',
             fontStyle: 'bold', align: 'center',
             stroke: '#c8a060', strokeThickness: 1,
         }).setOrigin(0.5).setDepth(2);
 
-        // ── Subtítulo ─────────────────────────────────────────────────────────
+        // Subtitulo do jogo
         const subtitulo = this.add.text(W/2, H/2 - 112, I18n.t('menu.subtitle'), {
             fontFamily: 'Georgia, serif', fontSize: '14px', fill: '#6b4820',
             fontStyle: 'italic', align: 'center',
         }).setOrigin(0.5).setDepth(2);
 
-        // ── Linha ornamental ──────────────────────────────────────────────────
-        const divGfx = this.add.graphics().setDepth(2);
-        const drawDiv = () => {
-            divGfx.clear();
-            divGfx.lineStyle(1, 0x9a6030, 0.5);
-            divGfx.lineBetween(W/2 - 170, H/2 - 86, W/2 + 170, H/2 - 86);
-            divGfx.fillStyle(0x9a6030, 0.6);
-            divGfx.fillTriangle(W/2 - 10, H/2 - 86, W/2, H/2 - 80, W/2 + 10, H/2 - 86);
+        // Linha divisoria
+        const divGrafico = this.add.graphics().setDepth(2);
+        const desenharDivisoria = () => {
+            divGrafico.clear();
+            divGrafico.lineStyle(1, 0x9a6030, 0.5);
+            divGrafico.lineBetween(W/2 - 170, H/2 - 86, W/2 + 170, H/2 - 86);
+            divGrafico.fillStyle(0x9a6030, 0.6);
+            divGrafico.fillTriangle(W/2 - 10, H/2 - 86, W/2, H/2 - 80, W/2 + 10, H/2 - 86);
         };
-        drawDiv();
+        desenharDivisoria();
 
-        // ── Botão Jogar ───────────────────────────────────────────────────────
-        const hasSave = SaveManager.hasSave();
-        const jogarY = hasSave ? H/2 - 54 : H/2 - 24;
-        const continuY = H/2 + 6;
-        const langY = hasSave ? H/2 + 66 : H/2 + 36;
+        // Posicionamento dos botoes
+        const temSave = SaveManager.hasSave();
+        const jogarY = temSave ? H/2 - 54 : H/2 - 24;
+        const continuarY = H/2 + 6;
+        const idiomaY = temSave ? H/2 + 66 : H/2 + 36;
 
-        const btnJogar = makeBtn(this, W/2, jogarY, 260, 52, I18n.t('menu.play'), { ...MENU_BTN, depth: 2 });
+        // Botao Jogar
+        const btnJogar = makeBtn(this, W/2, jogarY, 260, 52, I18n.t('menu.play'), { ...CONFIG_BOTAO_MENU, depth: 2 });
         btnJogar.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
             SoundManager.resume();
@@ -98,10 +97,10 @@ export default class MenuScene extends Phaser.Scene {
             this.time.delayedCall(120, () => this.scene.start('IntroScene'));
         });
 
-        // ── Botão Continuar ───────────────────────────────────────────────────
+        // Botao Continuar
         let btnContinuar = null;
-        if (hasSave) {
-            btnContinuar = makeBtn(this, W/2, continuY, 260, 52, I18n.t('menu.continue'), { ...MENU_BTN, depth: 2 });
+        if (temSave) {
+            btnContinuar = makeBtn(this, W/2, continuarY, 260, 52, I18n.t('menu.continue'), { ...CONFIG_BOTAO_MENU, depth: 2 });
             btnContinuar.zone.on('pointerdown', () => {
                 SoundManager.play('menu_click');
                 SoundManager.resume();
@@ -110,28 +109,29 @@ export default class MenuScene extends Phaser.Scene {
             });
         }
 
-        // ── Seletor de língua ─────────────────────────────────────────────────
-        const langPT = makeLangBtn(this, W/2 - 58, langY, '🇵🇹 PT', 2);
-        const langEN = makeLangBtn(this, W/2 + 58, langY, '🇬🇧 EN', 2);
+        // Botoes de idioma
+        const langPT = criarBotaoIdioma(this, W/2 - 58, idiomaY, '🇵🇹 PT', 2);
+        const langEN = criarBotaoIdioma(this, W/2 + 58, idiomaY, '🇬🇧 EN', 2);
 
-        // ── Dica de controlos ─────────────────────────────────────────────────
+        // Creditos
         const creditos = this.add.text(W/2, H/2 + 182, I18n.t('menu.credits'), {
             fontFamily: 'Georgia, serif', fontSize: '10px', fill: '#6b4820',
             fontStyle: 'italic', align: 'center', wordWrap: { width: 400 },
         }).setOrigin(0.5).setDepth(2);
 
-        // ── Botão Mute ────────────────────────────────────────────────────────
-        const muteBtn = this.add.image(W - 36, 36, SoundManager.muted ? 'sound_off' : 'sound_on')
+        // Botao Mute
+        const imagemMute = this.add.image(W - 36, 36, SoundManager.muted ? 'sound_off' : 'sound_on')
             .setScale(1.5).setDepth(5).setInteractive({ useHandCursor: true });
-        muteBtn.on('pointerdown', () => {
+            
+        imagemMute.on('pointerdown', () => {
             SoundManager.toggleMute();
-            muteBtn.setTexture(SoundManager.muted ? 'sound_off' : 'sound_on');
+            imagemMute.setTexture(SoundManager.muted ? 'sound_off' : 'sound_on');
         });
-        muteBtn.on('pointerover', () => muteBtn.setAlpha(0.7));
-        muteBtn.on('pointerout',  () => muteBtn.setAlpha(1));
+        imagemMute.on('pointerover', () => imagemMute.setAlpha(0.7));
+        imagemMute.on('pointerout',  () => imagemMute.setAlpha(1));
 
-        // ── Refresh de língua ─────────────────────────────────────────────────
-        const refreshLang = () => {
+        // Atualiza textos do menu conforme idioma
+        const atualizarTextos = () => {
             titulo.setText(I18n.t('menu.title'));
             subtitulo.setText(I18n.t('menu.subtitle'));
             btnJogar.setLabel(I18n.t('menu.play'));
@@ -139,20 +139,19 @@ export default class MenuScene extends Phaser.Scene {
                 btnContinuar.setLabel(I18n.t('menu.continue'));
             }
             creditos.setText(I18n.t('menu.credits'));
-            muteBtn.setTexture(SoundManager.muted ? 'sound_off' : 'sound_on');
+            imagemMute.setTexture(SoundManager.muted ? 'sound_off' : 'sound_on');
             langPT.setActive(I18n.lang === 'pt');
             langEN.setActive(I18n.lang === 'en');
         };
 
-        langPT.zone.on('pointerdown', () => { SoundManager.play('menu_click'); I18n.setLang('pt'); refreshLang(); });
-        langEN.zone.on('pointerdown', () => { SoundManager.play('menu_click'); I18n.setLang('en'); refreshLang(); });
+        langPT.zone.on('pointerdown', () => { SoundManager.play('menu_click'); I18n.setLang('pt'); atualizarTextos(); });
+        langEN.zone.on('pointerdown', () => { SoundManager.play('menu_click'); I18n.setLang('en'); atualizarTextos(); });
 
-        refreshLang();
+        atualizarTextos();
 
-        // ── Versão ────────────────────────────────────────────────────────────
         this.add.text(16, H - 16, 'v0.3', { fontSize: '11px', fill: '#2a1a08' }).setDepth(2);
 
-        // ── Pulso no título ───────────────────────────────────────────────────
+        // Animacao de pulso no titulo
         this.tweens.add({
             targets: titulo, alpha: 0.75,
             duration: 2400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'

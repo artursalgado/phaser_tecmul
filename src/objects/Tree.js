@@ -20,24 +20,24 @@ export default class Tree extends Phaser.Physics.Arcade.Sprite {
         if (this.dead) return;
         this.hitsLeft--;
 
-        // Partículas de folhas ao cortar
+        // Particulas de folhas ao bater
         burst(this.scene, this.x, this.y - 20, { color: 0x66cc44, count: 5, speed: 90, lifespan: 400, scale: 0.5 });
 
         this.setTint(0xddaa66);
         this.scene.time.delayedCall(120, () => { if (!this.dead) this.clearTint(); });
 
         if (this.hitsLeft <= 0) {
-            this._fall();
+            this.fall();
         }
     }
 
-    _fall() {
+    fall() {
         this.dead = true;
 
-        // Dar madeira diretamente ao inventário (mais simples que criar um pickup no chão)
+        // Adiciona a madeira diretamente no inventario
         this.scene.inventory.addItem('wood', this.woodGiven);
 
-        // Texto "+2 Madeira" a subir, igual ao dos outros itens apanhados
+        // Cria o texto flutuante
         const txt = this.scene.add.text(this.x, this.y - 40, `+${this.woodGiven} ${I18n.t('items.wood')}`, {
             fontSize: '10px', fill: '#ffffff', fontStyle: 'bold',
             stroke: '#000000', strokeThickness: 2
@@ -48,7 +48,7 @@ export default class Tree extends Phaser.Physics.Arcade.Sprite {
             duration: 900, onComplete: () => txt.destroy()
         });
 
-        // Explosão de madeira/folhas ao cair
+        // Particulas de madeira e folhas
         burst(this.scene, this.x, this.y - 16, { color: 0x88cc44, count: 14, speed: 150, lifespan: 600, scale: 0.8, gravity: 220 });
         burst(this.scene, this.x, this.y - 16, { color: 0xaa7733, count: 6,  speed: 80,  lifespan: 400, scale: 0.5 });
 

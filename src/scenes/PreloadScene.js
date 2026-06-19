@@ -6,106 +6,101 @@ export default class PreloadScene extends Phaser.Scene {
     }
 
     preload() {
-        // ── Barra de progresso ────────────────────────────────────────────────
+        // Barra de progresso do carregamento
         const W = this.scale.width, H = this.scale.height;
         this.add.rectangle(W/2, H/2, W, H, 0x1a1a2e);
-        const barBg = this.add.graphics();
-        const bar   = this.add.graphics();
-        barBg.fillStyle(0x333355).fillRect(W/2-200, H/2-10, 400, 20);
+        const fundoBarra = this.add.graphics();
+        const barra = this.add.graphics();
+        fundoBarra.fillStyle(0x333355).fillRect(W/2-200, H/2-10, 400, 20);
+        
         this.load.on('progress', v => {
-            bar.clear().fillStyle(0x7ec850).fillRect(W/2-200, H/2-10, 400*v, 20);
+            barra.clear().fillStyle(0x7ec850).fillRect(W/2-200, H/2-10, 400*v, 20);
         });
 
         this.add.text(W/2, H/2-40, 'A carregar... / Loading...', {
             fontSize: '22px', fill: '#ffffff', fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // ── I18N ──────────────────────────────────────────────────────────────
+        // Ficheiros de traducao
         this.load.json('i18n_pt', 'assets/i18n/pt.json');
         this.load.json('i18n_en', 'assets/i18n/en.json');
 
-        // ── TILEMAP ───────────────────────────────────────────────────────────
-        // Cache-busting: garante que o browser nunca serve uma versão antiga
-        // do mapa/tileset em cache (resolve o bug de "mudar de mapa" após F5).
-        const _v = Date.now();
-        this.load.tilemapTiledJSON('ilha', `assets/tilemaps/ilha.json?v=${_v}`);
-        this.load.image('punyworld', `assets/tilesets/punyworld-overworld-tileset.png?v=${_v}`);
+        // Carrega o mapa e o tileset (com versao para evitar cache do browser)
+        const versao = Date.now();
+        this.load.tilemapTiledJSON('ilha', `assets/tilemaps/ilha.json?v=${versao}`);
+        this.load.image('punyworld', `assets/tilesets/punyworld-overworld-tileset.png?v=${versao}`);
 
-        // ── PLAYER — todos os frames são 96x64 ───────────────────────────────
+        // Spritesheets do jogador
         const FW = 96, FH = 64;
-        const pH = 'assets/spritesheets/human/';
+        const caminhaHumano = 'assets/spritesheets/human/';
 
-        // Base (corpo)
-        this.load.spritesheet('player_base_idle',   pH+'base_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_base_walk',   pH+'base_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_base_run',    pH+'base_run_strip8.png',     {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_base_hurt',   pH+'base_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_base_death',  pH+'base_death_strip13.png',  {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_base_axe',    pH+'base_axe_strip10.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_base_mining', pH+'base_mining_strip10.png', {frameWidth:FW,frameHeight:FH});
+        // Base do corpo
+        this.load.spritesheet('player_base_idle',   caminhaHumano+'base_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_walk',   caminhaHumano+'base_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_run',    caminhaHumano+'base_run_strip8.png',     {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_hurt',   caminhaHumano+'base_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_death',  caminhaHumano+'base_death_strip13.png',  {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_axe',    caminhaHumano+'base_axe_strip10.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_base_mining', caminhaHumano+'base_mining_strip10.png', {frameWidth:FW,frameHeight:FH});
 
-        // Cabelo (mophair)
-        this.load.spritesheet('player_hair_idle',   pH+'mophair_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_hair_walk',   pH+'mophair_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_hair_run',    pH+'mophair_run_strip8.png',     {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_hair_hurt',   pH+'mophair_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_hair_death',  pH+'mophair_death_strip13.png',  {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_hair_axe',    pH+'mophair_axe_strip10.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_hair_mining', pH+'mophair_mining_strip10.png', {frameWidth:FW,frameHeight:FH});
+        // Cabelo
+        this.load.spritesheet('player_hair_idle',   caminhaHumano+'mophair_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_walk',   caminhaHumano+'mophair_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_run',    caminhaHumano+'mophair_run_strip8.png',     {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_hurt',   caminhaHumano+'mophair_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_death',  caminhaHumano+'mophair_death_strip13.png',  {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_axe',    caminhaHumano+'mophair_axe_strip10.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_hair_mining', caminhaHumano+'mophair_mining_strip10.png', {frameWidth:FW,frameHeight:FH});
 
         // Ferramentas
-        this.load.spritesheet('player_tools_idle',   pH+'tools_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_tools_walk',   pH+'tools_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_tools_run',    pH+'tools_run_strip8.png',     {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_tools_hurt',   pH+'tools_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_tools_axe',    pH+'tools_axe_strip10.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('player_tools_mining', pH+'tools_mining_strip10.png', {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_tools_idle',   caminhaHumano+'tools_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_tools_walk',   caminhaHumano+'tools_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_tools_run',    caminhaHumano+'tools_run_strip8.png',     {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_tools_hurt',   caminhaHumano+'tools_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_tools_axe',    caminhaHumano+'tools_axe_strip10.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('player_tools_mining', caminhaHumano+'tools_mining_strip10.png', {frameWidth:FW,frameHeight:FH});
 
-        // ── GOBLIN ────────────────────────────────────────────────────────────
-        const pG = 'assets/spritesheets/goblin/';
-        this.load.spritesheet('goblin_idle',   pG+'spr_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('goblin_walk',   pG+'spr_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('goblin_hurt',   pG+'spr_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('goblin_death',  pG+'spr_death_strip13.png',  {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('goblin_attack', pG+'spr_attack_strip10.png', {frameWidth:FW,frameHeight:FH});
+        // Inimigo: Goblin
+        const caminhaGoblin = 'assets/spritesheets/goblin/';
+        this.load.spritesheet('goblin_idle',   caminhaGoblin+'spr_idle_strip9.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_walk',   caminhaGoblin+'spr_walk_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_hurt',   caminhaGoblin+'spr_hurt_strip8.png',    {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_death',  caminhaGoblin+'spr_death_strip13.png',  {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('goblin_attack', caminhaGoblin+'spr_attack_strip10.png', {frameWidth:FW,frameHeight:FH});
 
-        // ── SKELETON (segundo tipo de inimigo) ────────────────────────────────
-        const pS = 'assets/spritesheets/skeleton/';
-        this.load.spritesheet('skeleton_idle',   pS+'skeleton_idle_strip6.png',   {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('skeleton_walk',   pS+'skeleton_walk_strip8.png',   {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('skeleton_hurt',   pS+'skeleton_hurt_strip7.png',   {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('skeleton_death',  pS+'skeleton_death_strip10.png', {frameWidth:FW,frameHeight:FH});
-        this.load.spritesheet('skeleton_attack', pS+'skeleton_attack_strip7.png', {frameWidth:FW,frameHeight:FH});
+        // Inimigo: Esqueleto
+        const caminhaEsqueleto = 'assets/spritesheets/skeleton/';
+        this.load.spritesheet('skeleton_idle',   caminhaEsqueleto+'skeleton_idle_strip6.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_walk',   caminhaEsqueleto+'skeleton_walk_strip8.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_hurt',   caminhaEsqueleto+'skeleton_hurt_strip7.png',   {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_death',  caminhaEsqueleto+'skeleton_death_strip10.png', {frameWidth:FW,frameHeight:FH});
+        this.load.spritesheet('skeleton_attack', caminhaEsqueleto+'skeleton_attack_strip7.png', {frameWidth:FW,frameHeight:FH});
 
-        // ── ITENS ─────────────────────────────────────────────────────────────
+        // Itens
         ['wood','rock','fish','egg','milk','water'].forEach(k =>
             this.load.image(k, `assets/images/${k}.png`));
         ['carrot','potato','wheat'].forEach(k =>
             this.load.image(k, `assets/images/${k}_00.png`));
 
-        // ── FERRAMENTAS ───────────────────────────────────────────────────────
+        // Ferramentas do inventario
         ['axe','pickaxe','hammer','shovel','sword'].forEach(k =>
             this.load.image(k, `assets/images/${k}.png`));
 
-        // ── HUD ───────────────────────────────────────────────────────────────
+        // Assets da interface
         ['itemdisc_01','itemdisc_02','indicator'].forEach(k =>
             this.load.image(k, `assets/images/${k}.png`));
         ['greenbar_00','greenbar_06','redbar_00','redbar_06','bluebar_00','bluebar_05'].forEach(k =>
             this.load.image(k, `assets/images/${k}.png`));
 
-        // ── JANGADA (EPIC de fuga) ───────────────────────────────────────────
-        // Árvore para cortar (spritesheet com 4 frames, usamos só o frame 0)
+        // Elementos da jangada e outros placeholders
         this.load.spritesheet('spr_deco_tree_01_strip4', 'assets/images/spr_deco_tree_01_strip4.png', {frameWidth: 32, frameHeight: 34});
-        // Destroços/jangada encalhada (imagem única, sem animação)
         this.load.image('spr_deco_coracle_land', 'assets/images/spr_deco_coracle_land.png');
-        // Ícones placeholder para os itens novos (corda e vela ainda não têm arte própria)
         this.load.image('rope', 'assets/images/basket.png');
         this.load.image('sail', 'assets/images/crate_top.png');
         this.load.image('book', 'assets/images/ui/book_icon.png');
-        // Baú de destroços na praia oposta (usa a mesma imagem do crate normal)
         this.load.image('crate_base', 'assets/images/crate_base.png');
 
-        // ── NOVOS ASSETS UI (RPG UI / Books) ──────────────────────────────────
+        // Assets de UI RPG
         this.load.image('book_bg', 'assets/images/ui/book_bg.png');
         this.load.image('panel_brown', 'assets/images/ui/panel_brown.png');
         this.load.spritesheet('icons', 'assets/images/ui/icons.png', { frameWidth: 16, frameHeight: 16 });
@@ -116,50 +111,52 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.image('panel_win_loose', 'assets/images/ui/panel_win_loose.png');
         this.load.image('sound_on', 'assets/images/ui/sound_on.png');
         this.load.image('sound_off', 'assets/images/ui/sound_off.png');
+        
+        // Slides da introducao
         ['intro_veleiro', 'intro_tempestade', 'intro_explosao', 'intro_deriva', 'intro_praia'].forEach(k =>
             this.load.image(k, `assets/intro/${k}.png`));
+            
+        this.load.image('fim_jangada', 'assets/intro/fim_jangada.jpg');
+        this.load.image('fim_happy',   'assets/intro/fim_happy.png');
     }
 
     create() {
-        // Textura 4×4 branca para o sistema de partículas (tintada em runtime)
+        // Textura base branca para particulas
         const g = this.add.graphics();
         g.fillStyle(0xffffff).fillRect(0, 0, 4, 4);
         g.generateTexture('particle_sq', 4, 4);
         g.destroy();
 
-        // Substituir placeholders rope/sail por pixel-art procedural
-        this._generateRopeTexture();
-        this._generateSailTexture();
-        this._generateStatIcons();
+        // Gera texturas procedurais
+        this.gerarTexturaCorda();
+        this.gerarTexturaVela();
+        this.gerarIconesStatus();
 
         I18n.init(this.cache);
         this.scene.start('MenuScene');
     }
 
-    _generateRopeTexture() {
+    // Desenha uma corda procedural no canvas do browser
+    gerarTexturaCorda() {
         const c = document.createElement('canvas');
         c.width = 24; c.height = 24;
         const ctx = c.getContext('2d');
 
-        // Fundo escuro
         ctx.fillStyle = '#1e0d00';
         ctx.fillRect(0, 0, 24, 24);
 
-        // Anel exterior da corda
         ctx.beginPath();
         ctx.arc(12, 12, 9, 0, Math.PI * 2);
         ctx.strokeStyle = '#6b3a1a';
         ctx.lineWidth = 3;
         ctx.stroke();
 
-        // Anel interior
         ctx.beginPath();
         ctx.arc(12, 12, 5, 0, Math.PI * 2);
         ctx.strokeStyle = '#a05c2a';
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Ponta da corda
         ctx.beginPath();
         ctx.moveTo(12, 3);
         ctx.bezierCurveTo(18, 3, 21, 8, 21, 12);
@@ -167,7 +164,6 @@ export default class PreloadScene extends Phaser.Scene {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Nó central
         ctx.beginPath();
         ctx.arc(12, 12, 2.5, 0, Math.PI * 2);
         ctx.fillStyle = '#8b5e3c';
@@ -177,16 +173,15 @@ export default class PreloadScene extends Phaser.Scene {
         this.textures.addCanvas('rope', c);
     }
 
-    _generateSailTexture() {
+    // Desenha uma vela de barco procedural no canvas
+    gerarTexturaVela() {
         const c = document.createElement('canvas');
         c.width = 24; c.height = 24;
         const ctx = c.getContext('2d');
 
-        // Fundo azul-escuro
         ctx.fillStyle = '#0d1b2a';
         ctx.fillRect(0, 0, 24, 24);
 
-        // Mastro
         ctx.beginPath();
         ctx.moveTo(5, 22);
         ctx.lineTo(5, 2);
@@ -194,7 +189,6 @@ export default class PreloadScene extends Phaser.Scene {
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Vela (triângulo)
         ctx.beginPath();
         ctx.moveTo(5, 3);
         ctx.lineTo(21, 10);
@@ -206,7 +200,6 @@ export default class PreloadScene extends Phaser.Scene {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Linha de tensão da vela
         ctx.beginPath();
         ctx.moveTo(5, 3);
         ctx.lineTo(21, 10);
@@ -218,10 +211,11 @@ export default class PreloadScene extends Phaser.Scene {
         this.textures.addCanvas('sail', c);
     }
 
-    _generateStatIcons() {
+    // Gera os icones do jogador (coracao, maca, gota e raio)
+    gerarIconesStatus() {
         const S = 12;
 
-        // ── Vida — coração vermelho ────────────────────────────────────────
+        // Coracao
         {
             const c = document.createElement('canvas'); c.width = S; c.height = S;
             const x = c.getContext('2d');
@@ -241,7 +235,7 @@ export default class PreloadScene extends Phaser.Scene {
             this.textures.addCanvas('stat_health', c);
         }
 
-        // ── Fome — maçã laranja ───────────────────────────────────────────
+        // Maca
         {
             const c = document.createElement('canvas'); c.width = S; c.height = S;
             const x = c.getContext('2d');
@@ -256,7 +250,7 @@ export default class PreloadScene extends Phaser.Scene {
             this.textures.addCanvas('stat_hunger', c);
         }
 
-        // ── Sede — gota azul ──────────────────────────────────────────────
+        // Gota de agua
         {
             const c = document.createElement('canvas'); c.width = S; c.height = S;
             const x = c.getContext('2d');
@@ -272,7 +266,7 @@ export default class PreloadScene extends Phaser.Scene {
             this.textures.addCanvas('stat_thirst', c);
         }
 
-        // ── Energia — raio amarelo ─────────────────────────────────────────
+        // Raio
         {
             const c = document.createElement('canvas'); c.width = S; c.height = S;
             const x = c.getContext('2d');

@@ -15,21 +15,21 @@ export default class IntroScene extends Phaser.Scene {
         const SLIDE_DURATIONS = [3500, 3000, 3000, 3500, 4000];
         const slides = SLIDE_KEYS.map((key, i) => ({ key, text: slideTexts[i] || '', duration: SLIDE_DURATIONS[i] }));
 
-        // Black background
+        // Fundo preto
         this.add.rectangle(W / 2, H / 2, W, H, 0x000000).setDepth(0);
 
-        // Image layer — slightly oversized for Ken Burns zoom
-        const img = this.add.image(W / 2, H / 2, slides[0].key)
+        // Imagem do slide com zoom inicial de Ken Burns
+        const imagem = this.add.image(W / 2, H / 2, slides[0].key)
             .setDisplaySize(W * 1.15, H * 1.15)
             .setAlpha(0)
             .setDepth(1);
 
-        // Vignette overlay
-        const vignette = this.createVignette(W, H);
-        vignette.setDepth(3);
+        // Efeito de vinheta
+        const vinheta = this.criarVinheta(W, H);
+        vinheta.setDepth(3);
 
-        // Caption text
-        const caption = this.add.text(W / 2, H - 70, '', {
+        // Legenda do slide
+        const legenda = this.add.text(W / 2, H - 70, '', {
             fontFamily: 'Georgia, serif',
             fontSize: '24px',
             color: '#ffffff',
@@ -39,22 +39,22 @@ export default class IntroScene extends Phaser.Scene {
             wordWrap: { width: W - 120 },
         }).setOrigin(0.5).setAlpha(0).setDepth(4);
 
-        // Skip hint
+        // Aviso de saltar intro
         this.add.text(W - 16, H - 16, I18n.t('intro.skip'), {
             fontFamily: 'monospace',
             fontSize: '11px',
             color: '#666688',
         }).setOrigin(1, 1).setDepth(4).setAlpha(0.6);
 
-        // Black overlay for initial fade
+        // Overlay preto para o fade inicial
         const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000)
             .setAlpha(1).setDepth(10);
 
-        let skipped = false;
+        let saltou = false;
 
-        const goToGame = () => {
-            if (skipped) return;
-            skipped = true;
+        const irParaJogo = () => {
+            if (saltou) return;
+            saltou = true;
             this.tweens.killAll();
             this.time.removeAllEvents();
             this.cameras.main.fadeOut(500, 0, 0, 0);
@@ -63,63 +63,63 @@ export default class IntroScene extends Phaser.Scene {
             });
         };
 
-        const showSlide = (index) => {
-            if (skipped) return;
+        const mostrarSlide = (index) => {
+            if (saltou) return;
             if (index >= slides.length) {
-                goToGame();
+                irParaJogo();
                 return;
             }
 
             const slide = slides[index];
-            img.setTexture(slide.key)
+            imagem.setTexture(slide.key)
                 .setDisplaySize(W * 1.15, H * 1.15)
-                .setScale(img.scaleX, img.scaleY)
+                .setScale(imagem.scaleX, imagem.scaleY)
                 .setAlpha(0);
 
-            const startScale = img.scaleX;
-            const endScale = startScale * 1.06;
+            const escalaInicial = imagem.scaleX;
+            const escalaFinal = escalaInicial * 1.06;
 
-            caption.setText(slide.text).setAlpha(0);
+            legenda.setText(slide.text).setAlpha(0);
 
-            // Fade in image
+            // Transicao de fade-in da imagem
             this.tweens.add({
-                targets: img,
+                targets: imagem,
                 alpha: 1,
                 duration: 800,
                 ease: 'Sine.easeOut',
                 onComplete: () => {
-                    if (skipped) return;
+                    if (saltou) return;
 
-                    // Ken Burns slow zoom
+                    // Efeito Ken Burns de zoom lento
                     this.tweens.add({
-                        targets: img,
-                        scaleX: endScale,
-                        scaleY: endScale,
+                        targets: imagem,
+                        scaleX: escalaFinal,
+                        scaleY: escalaFinal,
                         duration: slide.duration + 800,
                         ease: 'Linear',
                     });
 
-                    // Text fade in with slight delay
+                    // Mostra legenda
                     this.time.delayedCall(400, () => {
-                        if (skipped) return;
+                        if (saltou) return;
                         this.tweens.add({
-                            targets: caption,
+                            targets: legenda,
                             alpha: 1,
                             duration: 600,
                             ease: 'Sine.easeOut',
                         });
                     });
 
-                    // Hold, then fade out
+                    // Tempo de duracao antes do fade-out
                     this.time.delayedCall(slide.duration, () => {
-                        if (skipped) return;
+                        if (saltou) return;
                         this.tweens.add({
-                            targets: [img, caption],
+                            targets: [imagem, legenda],
                             alpha: 0,
                             duration: 700,
                             ease: 'Sine.easeIn',
                             onComplete: () => {
-                                this.time.delayedCall(300, () => showSlide(index + 1));
+                                this.time.delayedCall(300, () => mostrarSlide(index + 1));
                             },
                         });
                     });
@@ -127,7 +127,7 @@ export default class IntroScene extends Phaser.Scene {
             });
         };
 
-        // Start: fade overlay out, then begin slideshow
+        // Inicia com o fade-out do overlay preto
         this.tweens.add({
             targets: overlay,
             alpha: 0,
@@ -135,43 +135,44 @@ export default class IntroScene extends Phaser.Scene {
             ease: 'Linear',
             onComplete: () => {
                 overlay.destroy();
-                showSlide(0);
+                mostrarSlide(0);
             },
         });
 
-        // Delay skip inputs so the menu click doesn't propagate
+        // Atraso antes de permitir saltar para evitar cliques propagados do menu
         this.time.delayedCall(500, () => {
-            this.input.keyboard.on('keydown-ESC',   goToGame);
-            this.input.keyboard.on('keydown-SPACE', goToGame);
-            this.input.on('pointerdown', goToGame);
+            this.input.keyboard.on('keydown-ESC',   irParaJogo);
+            this.input.keyboard.on('keydown-SPACE', irParaJogo);
+            this.input.on('pointerdown', irParaJogo);
         });
     }
 
-    createVignette(W, H) {
+    // Cria as bordas escurecidas da vinheta
+    criarVinheta(W, H) {
         const g = this.add.graphics();
-        const edgeSize = Math.max(W, H) * 0.35;
+        const tamanhoBorda = Math.max(W, H) * 0.35;
 
-        // Top edge
-        for (let i = 0; i < edgeSize; i++) {
-            const a = (1 - i / edgeSize) * 0.7;
+        // Borda superior
+        for (let i = 0; i < tamanhoBorda; i++) {
+            const a = (1 - i / tamanhoBorda) * 0.7;
             g.fillStyle(0x000000, a);
             g.fillRect(0, i, W, 1);
         }
-        // Bottom edge
-        for (let i = 0; i < edgeSize; i++) {
-            const a = (1 - i / edgeSize) * 0.7;
+        // Borda inferior
+        for (let i = 0; i < tamanhoBorda; i++) {
+            const a = (1 - i / tamanhoBorda) * 0.7;
             g.fillStyle(0x000000, a);
             g.fillRect(0, H - 1 - i, W, 1);
         }
-        // Left edge
-        for (let i = 0; i < edgeSize; i++) {
-            const a = (1 - i / edgeSize) * 0.5;
+        // Borda esquerda
+        for (let i = 0; i < tamanhoBorda; i++) {
+            const a = (1 - i / tamanhoBorda) * 0.5;
             g.fillStyle(0x000000, a);
             g.fillRect(i, 0, 1, H);
         }
-        // Right edge
-        for (let i = 0; i < edgeSize; i++) {
-            const a = (1 - i / edgeSize) * 0.5;
+        // Borda direita
+        for (let i = 0; i < tamanhoBorda; i++) {
+            const a = (1 - i / tamanhoBorda) * 0.5;
             g.fillStyle(0x000000, a);
             g.fillRect(W - 1 - i, 0, 1, H);
         }
