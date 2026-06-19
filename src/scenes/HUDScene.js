@@ -159,9 +159,13 @@ export default class HUDScene extends Phaser.Scene {
             fontSize: '9px', fill: '#f5c070', fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(3);
 
-        // Timer (secção inferior do painel)
-        this.timerTxt = this.add.text(QPX + QPW / 2, QSEP + 6, '0:00', {
+        // Timer e indicador dia/noite (secção inferior do painel)
+        this.timerTxt = this.add.text(QPX + QPW / 2 + 8, QSEP + 6, '0:00', {
             fontSize: '13px', fill: '#ffffff', fontStyle: 'bold'
+        }).setOrigin(0, 0).setDepth(3);
+
+        this.dayNightIcon = this.add.text(QPX + QPW / 2 - 12, QSEP + 6, '☀️', {
+            fontSize: '13px'
         }).setOrigin(0.5, 0).setDepth(3);
 
         this.scoreTxt = this.add.text(QPX + 10, QSEP + 24, '0 pts', {
@@ -307,6 +311,18 @@ export default class HUDScene extends Phaser.Scene {
         const mm   = Math.floor(sec / 60);
         const ss   = String(sec % 60).padStart(2, '0');
         this.timerTxt.setText(`${mm}:${ss}`);
+
+        // Indicador do ciclo dia/noite
+        const timeInCycle = this.gameScene.elapsedSec % 300;
+        if (timeInCycle < 120) {
+            this.dayNightIcon.setText('☀️');
+        } else if (timeInCycle < 150) {
+            this.dayNightIcon.setText('🌅');
+        } else if (timeInCycle < 270) {
+            this.dayNightIcon.setText('🌙');
+        } else {
+            this.dayNightIcon.setText('🌅');
+        }
 
         // Score e kills
         this.scoreTxt.setText(this.gameScene.score + ' pts');

@@ -109,12 +109,16 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
         }
         if (this._attacking) return;
 
+        const isNight = this.scene.isNight;
+        const currentSpeed = isNight ? this.speed * 1.25 : this.speed;
+        const currentRange = isNight ? this.detectionRange * 1.50 : this.detectionRange;
+
         const dx   = player.x - this.x;
         const dy   = player.y - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const pfx  = this._animPrefix;
 
-        if (dist < this.detectionRange) {
+        if (dist < currentRange) {
             if (dist < this.attackRange) {
                 this.body.setVelocity(0);
                 if (time > this.lastDamageTime + this.damageCooldown) {
@@ -125,8 +129,8 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
                 }
             } else {
                 const nx = dx / dist, ny = dy / dist;
-                this.body.setVelocityX(nx * this.speed);
-                this.body.setVelocityY(ny * this.speed);
+                this.body.setVelocityX(nx * currentSpeed);
+                this.body.setVelocityY(ny * currentSpeed);
                 this.setFlipX(dx < 0);
                 this.play(`${pfx}_walk`, true);
             }
@@ -145,8 +149,8 @@ export default class Enemy extends Phaser.Physics.Arcade.Sprite {
             const pdy = this.patrolTarget.y - this.y;
             const pd  = Math.sqrt(pdx * pdx + pdy * pdy);
             if (pd > 8) {
-                this.body.setVelocityX((pdx / pd) * this.speed * this._patrolSpeedMult);
-                this.body.setVelocityY((pdy / pd) * this.speed * this._patrolSpeedMult);
+                this.body.setVelocityX((pdx / pd) * currentSpeed * this._patrolSpeedMult);
+                this.body.setVelocityY((pdy / pd) * currentSpeed * this._patrolSpeedMult);
                 this.setFlipX(pdx < 0);
                 this.play(`${pfx}_walk`, true);
             } else {

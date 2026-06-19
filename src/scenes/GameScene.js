@@ -318,6 +318,14 @@ export default class GameScene extends Phaser.Scene {
             this.raftZone.x, this.raftZone.y - this.raftZone.radius - 8, 'JANGADA [F]',
             { fontSize: '10px', fill: '#ffdd66', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }
         ).setOrigin(0.5).setDepth(9);
+
+        //------------------------------------------------------------
+        // CICLO DIA/NOITE
+        //------------------------------------------------------------
+        this._prevPhase = null;
+        this.lightOverlay = this.add.rectangle(
+            0, 0, this.scale.width, this.scale.height, 0x1a1a44, 0
+        ).setOrigin(0, 0).setScrollFactor(0).setDepth(50);
     }
 
     _setupEvents() {
@@ -411,6 +419,8 @@ export default class GameScene extends Phaser.Scene {
         this.goblins.getChildren().forEach(g => g.update(this.player, time, delta));
         this._elapsedSec += delta / 1000;
 
+        this._updateLightOverlay();
+
         this._autosaveTimer += delta / 1000;
         if (this._autosaveTimer >= 30) {
             this._autosaveTimer = 0;
@@ -460,7 +470,11 @@ export default class GameScene extends Phaser.Scene {
 
     // ── Spawn goblin ──────────────────────────────────────────────────────
     _spawnGoblin(x, y, tier = 1) {
-        const g = new Goblin(this, x, y, tier);
+        let finalTier = tier;
+        if (this.isNight) {
+            finalTier = Math.min(3, tier + 1);
+        }
+        const g = new Goblin(this, x, y, finalTier);
         this.goblins.add(g);
         if (this._colisao) this.physics.add.collider(g, this._colisao);
         return g;
@@ -674,6 +688,66 @@ export default class GameScene extends Phaser.Scene {
     get elapsedSec()  { return this._elapsedSec; }
     get score()       { return this._score; }
     get killCount()   { return this._killCount; }
+    get isNight()     { const timeInCycle = this._elapsedSec % 300; return timeInCycle >= 150; }
+
+    _updateLightOverlay() {
+        const timeInCycle = this._elapsedSec % 300;
+        let phase = 'day';
+        if (timeInCycle >= 120 && timeInCycle < 150) phase = 'sunset';
+        else if (timeInCycle >= 150 && timeInCycle < 270) phase = 'night';
+        else if (timeInCycle >= 270) phase = 'sunrise';
+
+        if (this._prevPhase !== phase) {
+            this._prevPhase = phase;
+            this._transitionPhase(phase, timeInCycle);
+        }
+    }
+
+    _transitionPhase(phase, timeInCycle) {
+        if (!this.lightOverlay) return;
+
+        // Parar tweens ativos no overlay
+        this.tweens.killTweensOf(this.lightOverlay);
+
+        if (phase === 'day') {
+            this.lightOverlay.setAlpha(0);
+        } else if (phase === 'sunset') {
+            this.lightOverlay.setFillStyle(0xff8844, 1);
+            const remainingTime = Math.max(1, (150 - timeInCycle) * 1000);
+            this.tweens.add({
+                targets: this.lightOverlay,
+                alpha: 0.25,
+                duration: remainingTime,
+                ease: 'Linear'
+            });
+        } else if (phase === 'night') {
+            this.lightOverlay.setFillStyle(0x1a1a44, 1);
+            
+            // Transição suave de entardecer para noite de 15 segundos
+            const transitionDuration = 15;
+            const transitionEnd = 150 + transitionDuration;
+            if (timeInCycle < transitionEnd) {
+                const remainingTime = Math.max(1, (transitionEnd - timeInCycle) * 1000);
+                this.tweens.add({
+                    targets: this.lightOverlay,
+                    alpha: 0.45,
+                    duration: remainingTime,
+                    ease: 'Linear'
+                });
+            } else {
+                this.lightOverlay.setAlpha(0.45);
+            }
+        } else if (phase === 'sunrise') {
+            this.lightOverlay.setFillStyle(0x1a1a44, 1);
+            const remainingTime = Math.max(1, (300 - timeInCycle) * 1000);
+            this.tweens.add({
+                targets: this.lightOverlay,
+                alpha: 0,
+                duration: remainingTime,
+                ease: 'Linear'
+            });
+        }
+    }
 
     _showWaveWarning() {
         const W = this.scale.width, H = this.scale.height;
