@@ -1,4 +1,6 @@
 .DS_Store
+node_modules/
+dist/
 .claude/
 inspect_*.png
 generate_map.py
