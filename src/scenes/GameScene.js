@@ -703,13 +703,13 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(D + 2);
       grupo.add(label);
 
-      // Botão "Tomar"
+      // Botão "Pegar"
       const btnX = px + PW - 30;
       const btnBg = this.add.rectangle(btnX, iy + itemH / 2, 40, 20, 0x3a6a1a)
         .setScrollFactor(0).setDepth(D + 2)
         .setStrokeStyle(1, 0x88cc44)
         .setInteractive({ useHandCursor: true });
-      const btnTxt = this.add.text(btnX, iy + itemH / 2, "Tomar", {
+      const btnTxt = this.add.text(btnX, iy + itemH / 2, "Pegar", {
         fontSize: "8px", fill: "#c8ff88",
       }).setOrigin(0.5).setScrollFactor(0).setDepth(D + 3);
       grupo.add(btnBg);
