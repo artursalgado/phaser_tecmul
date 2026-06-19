@@ -283,7 +283,7 @@ export default class GameScene extends Phaser.Scene {
             this.pickups.add(new CollectibleItem(this, s.x, s.y, s.itemId, s.qty))
         );
         ROPE_CRATE_SPAWNS.forEach(s =>
-            this.pickups.add(new CollectibleItem(this, s.x, s.y, 'rope', 2))
+            this.pickups.add(new CollectibleItem(this, s.x, s.y, 'rope', 1))
         );
         this.physics.add.overlap(this.player, this.pickups, this._pickupItem, null, this);
 
