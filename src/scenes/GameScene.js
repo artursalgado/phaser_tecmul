@@ -9,6 +9,7 @@ import QuestManager, { RAFT_PARTS } from '../systems/QuestManager.js';
 import BossSkeleton from '../objects/BossSkeleton.js';
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
+import SaveManager from '../systems/SaveManager.js';
 
 // Fallback (usado só se o mapa não tiver object layer "spawns").
 // Offsets relativos ao centro do mapa, em pixels.
@@ -77,7 +78,7 @@ export default class GameScene extends Phaser.Scene {
         this._pendingEnemySpawns = []; // spawns guardados até ao desbloqueio
     }
 
-    create() {
+    create(data) {
         SoundManager.resume();
         SoundManager.startBgMusic();
 
@@ -87,6 +88,8 @@ export default class GameScene extends Phaser.Scene {
         this._paused       = false;
         this._hasExtraLife = true;
         this._raftReady    = false;
+        this._autosaveTimer = 0;
+        this._loadedPlayerPos = null;
 
         const { mapW, mapH } = this._setupTilemap();
         if (!mapW) return;
@@ -96,15 +99,59 @@ export default class GameScene extends Phaser.Scene {
 
         this._setupSystems();
 
-        this.player = new Player(this, spawns.player.x, spawns.player.y);
+        const shouldLoad = data && data.loadSave;
+        if (shouldLoad && SaveManager.hasSave()) {
+            const saveData = SaveManager.load();
+            if (saveData) {
+                this._score = saveData.score ?? 0;
+                this._killCount = saveData.killCount ?? 0;
+                this._elapsedSec = saveData.elapsedSec ?? 0;
+                this._hasExtraLife = saveData.hasExtraLife !== false;
+                this._enemiesUnlocked = !!saveData.enemiesUnlocked;
+
+                if (saveData.inventory) this.inventory.fromJSON(saveData.inventory);
+                if (saveData.stats) this.stats.fromJSON(saveData.stats);
+                if (saveData.quest) this.quest.fromJSON(saveData.quest);
+
+                if (saveData.playerPosition) {
+                    this._loadedPlayerPos = saveData.playerPosition;
+                }
+            }
+        }
+
+        const startX = this._loadedPlayerPos ? this._loadedPlayerPos.x : spawns.player.x;
+        const startY = this._loadedPlayerPos ? this._loadedPlayerPos.y : spawns.player.y;
+
+        this.player = new Player(this, startX, startY);
         if (this._colisao) this.physics.add.collider(this.player, this._colisao);
-        this.inventory.addItem('book', 1);
+
+        if (!this._loadedPlayerPos) {
+            this.inventory.addItem('book', 1);
+        }
 
         this._setupCamera(mapW, mapH);
         this._setupControls();
         this._setupWorld(spawns);
         this._setupEvents();
         this._setupHUD();
+
+        if (this.quest.isComplete()) {
+            this._raftReady = true;
+            if (this.raftLabel) {
+                this.raftLabel.setText(I18n.lang === 'en' ? 'ESCAPE [E]' : 'FUGIR [E]');
+                this.raftLabel.setColor('#88ff88');
+            }
+        }
+
+        if (this.stats.dead) {
+            this.scene.stop('HUDScene');
+            this.scene.start('GameOverScene', {
+                score: this._score,
+                kills: this._killCount,
+                time:  Math.floor(this._elapsedSec)
+            });
+            return;
+        }
     }
 
     _setupTilemap() {
@@ -176,6 +223,7 @@ export default class GameScene extends Phaser.Scene {
                 this._hasExtraLife = false;
                 this._respawnPlayer();
             } else {
+                SaveManager.save(this);
                 this.scene.stop('HUDScene');
                 this.scene.start('GameOverScene', {
                     score: this._score,
@@ -239,6 +287,15 @@ export default class GameScene extends Phaser.Scene {
         this._pendingEnemySpawns = spawns.enemies.slice();
         if (this._colisao) this.physics.add.collider(this.goblins, this._colisao);
         this.physics.add.collider(this.goblins, this.goblins);
+
+        if (this._enemiesUnlocked) {
+            this._pendingEnemySpawns.forEach(s => {
+                if (s.kind === 'boss')         this._spawnBoss(s.x, s.y);
+                else if (s.kind === 'skeleton') this._spawnSkeleton(s.x, s.y);
+                else                            this._spawnGoblin(s.x, s.y, s.tier);
+            });
+            this._pendingEnemySpawns = [];
+        }
 
         this.trees = this.add.group();
         const treeBase = spawns.poi.ruina || { x: this._mapW / 2, y: this._mapH / 2 };
@@ -349,6 +406,12 @@ export default class GameScene extends Phaser.Scene {
         this.player.update(this.cursors, this.wasd, time, delta);
         this.goblins.getChildren().forEach(g => g.update(this.player, time, delta));
         this._elapsedSec += delta / 1000;
+
+        this._autosaveTimer += delta / 1000;
+        if (this._autosaveTimer >= 30) {
+            this._autosaveTimer = 0;
+            SaveManager.save(this);
+        }
     }
 
     // ── Pausa ─────────────────────────────────────────────────────────────
@@ -356,6 +419,7 @@ export default class GameScene extends Phaser.Scene {
         if (this._paused) return;
         this._paused = true;
         SoundManager.play('pause');
+        SaveManager.save(this);
         this.scene.pause('GameScene');
         this.scene.launch('PauseScene');
         this.scene.get('PauseScene').events.once('shutdown', () => {

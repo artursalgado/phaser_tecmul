@@ -101,4 +101,23 @@ export default class Inventory extends Phaser.Events.EventEmitter {
     getSelectedItem() {
         return this.slots[this.selectedSlot];
     }
+
+    toJSON() {
+        return {
+            size: this.size,
+            slots: this.slots.map(s => s ? { itemId: s.itemId, qty: s.qty } : null),
+            selectedSlot: this.selectedSlot
+        };
+    }
+
+    fromJSON(data) {
+        if (!data) return;
+        if (typeof data.size === 'number') this.size = data.size;
+        if (Array.isArray(data.slots)) {
+            this.slots = data.slots.map(s => s ? { itemId: s.itemId, qty: s.qty } : null);
+        }
+        if (typeof data.selectedSlot === 'number') this.selectedSlot = data.selectedSlot;
+        this.emit('changed', this.slots);
+        this.emit('selectionChanged', this.selectedSlot);
+    }
 }

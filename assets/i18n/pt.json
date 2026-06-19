@@ -3,7 +3,12 @@
     "title": "STRANDED",
     "subtitle": "Uma ilha. Sem saída. Encontra um caminho.",
     "play": "▶  JOGAR",
+    "continue": "▶  CONTINUAR",
     "credits": "Controlos: WASD/Setas · SHIFT correr · ESPAÇO atacar · E usar · I inventário · 1-8 hotbar"
+  },
+  "pause": {
+    "delete_save": "Apagar Save",
+    "save_deleted": "Save Apagado"
   },
   "hud": {
     "use_item": "[E] usar item",

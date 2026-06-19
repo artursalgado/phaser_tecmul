@@ -1,6 +1,7 @@
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
 import makeBtn from '../utils/makeBtn.js';
+import SaveManager from '../systems/SaveManager.js';
 
 export default class GameOverScene extends Phaser.Scene {
     constructor() {
@@ -79,11 +80,13 @@ export default class GameOverScene extends Phaser.Scene {
 
         btnRestart.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
+            SaveManager.clear();
             this.scene.stop('GameOverScene');
             this.scene.start('GameScene');
         });
         btnMenu.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
+            SaveManager.clear();
             this.scene.stop('GameOverScene');
             this.scene.start('MenuScene');
         });
@@ -98,10 +101,12 @@ export default class GameOverScene extends Phaser.Scene {
         });
 
         this.input.keyboard.once('keydown-R', () => {
+            SaveManager.clear();
             this.scene.stop('GameOverScene');
             this.scene.start('GameScene');
         });
         this.input.keyboard.once('keydown-M', () => {
+            SaveManager.clear();
             this.scene.stop('GameOverScene');
             this.scene.start('MenuScene');
         });

@@ -138,4 +138,29 @@ export default class QuestManager extends Phaser.Events.EventEmitter {
     _emitUpdated() {
         if (this._bus) this._bus.emit('quest:updated', this.progress());
     }
+
+    toJSON() {
+        return {
+            _state: JSON.parse(JSON.stringify(this._state)),
+            _complete: this._complete
+        };
+    }
+
+    fromJSON(data) {
+        if (!data) return;
+        if (data._state) {
+            for (const key in data._state) {
+                if (this._state[key]) {
+                    this._state[key].have = data._state[key].have;
+                    if (typeof data._state[key].need === 'number') {
+                        this._state[key].need = data._state[key].need;
+                    }
+                }
+            }
+        }
+        if (typeof data._complete === 'boolean') {
+            this._complete = data._complete;
+        }
+        this._emitUpdated();
+    }
 }

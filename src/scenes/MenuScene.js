@@ -1,6 +1,7 @@
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
 import makeBtn from '../utils/makeBtn.js';
+import SaveManager from '../systems/SaveManager.js';
 
 const MENU_BTN = { depth: 3, fontSize: '19px', idleFill: '#f5e0b0', border: 0xc8901a, borderIdleAlpha: 0.6, alpha: 1 };
 
@@ -83,17 +84,35 @@ export default class MenuScene extends Phaser.Scene {
         drawDiv();
 
         // ── Botão Jogar ───────────────────────────────────────────────────────
-        const btnJogar = makeBtn(this, W/2, H/2 - 34, 260, 52, I18n.t('menu.play'), { ...MENU_BTN, depth: 2 });
+        const hasSave = SaveManager.hasSave();
+        const jogarY = hasSave ? H/2 - 54 : H/2 - 24;
+        const continuY = H/2 + 6;
+        const langY = hasSave ? H/2 + 66 : H/2 + 36;
+
+        const btnJogar = makeBtn(this, W/2, jogarY, 260, 52, I18n.t('menu.play'), { ...MENU_BTN, depth: 2 });
         btnJogar.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
             SoundManager.resume();
             SoundManager.stopBgMusic();
+            SaveManager.clear();
             this.time.delayedCall(120, () => this.scene.start('IntroScene'));
         });
 
+        // ── Botão Continuar ───────────────────────────────────────────────────
+        let btnContinuar = null;
+        if (hasSave) {
+            btnContinuar = makeBtn(this, W/2, continuY, 260, 52, I18n.t('menu.continue'), { ...MENU_BTN, depth: 2 });
+            btnContinuar.zone.on('pointerdown', () => {
+                SoundManager.play('menu_click');
+                SoundManager.resume();
+                SoundManager.stopBgMusic();
+                this.time.delayedCall(120, () => this.scene.start('GameScene', { loadSave: true }));
+            });
+        }
+
         // ── Seletor de língua ─────────────────────────────────────────────────
-        const langPT = makeLangBtn(this, W/2 - 58, H/2 + 56, '🇵🇹 PT', 2);
-        const langEN = makeLangBtn(this, W/2 + 58, H/2 + 56, '🇬🇧 EN', 2);
+        const langPT = makeLangBtn(this, W/2 - 58, langY, '🇵🇹 PT', 2);
+        const langEN = makeLangBtn(this, W/2 + 58, langY, '🇬🇧 EN', 2);
 
         // ── Dica de controlos ─────────────────────────────────────────────────
         const creditos = this.add.text(W/2, H/2 + 182, I18n.t('menu.credits'), {
@@ -116,6 +135,9 @@ export default class MenuScene extends Phaser.Scene {
             titulo.setText(I18n.t('menu.title'));
             subtitulo.setText(I18n.t('menu.subtitle'));
             btnJogar.setLabel(I18n.t('menu.play'));
+            if (btnContinuar) {
+                btnContinuar.setLabel(I18n.t('menu.continue'));
+            }
             creditos.setText(I18n.t('menu.credits'));
             muteBtn.setTexture(SoundManager.muted ? 'sound_off' : 'sound_on');
             langPT.setActive(I18n.lang === 'pt');

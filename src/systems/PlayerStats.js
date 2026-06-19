@@ -89,4 +89,24 @@ export default class PlayerStats extends Phaser.Events.EventEmitter {
     get hungerPct()  { return this.hunger  / this.maxHunger;  }
     get thirstPct()  { return this.thirst  / this.maxThirst;  }
     get energyPct()  { return this.energy  / this.maxEnergy;  }
+
+    toJSON() {
+        return {
+            health: this.health,
+            hunger: this.hunger,
+            thirst: this.thirst,
+            energy: this.energy,
+            dead: this.dead
+        };
+    }
+
+    fromJSON(data) {
+        if (!data) return;
+        if (typeof data.health === 'number') this.health = data.health;
+        if (typeof data.hunger === 'number') this.hunger = data.hunger;
+        if (typeof data.thirst === 'number') this.thirst = data.thirst;
+        if (typeof data.energy === 'number') this.energy = data.energy;
+        if (typeof data.dead === 'boolean') this.dead = data.dead;
+        this.emit('changed', this);
+    }
 }

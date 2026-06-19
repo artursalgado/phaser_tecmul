@@ -3,7 +3,12 @@
     "title": "STRANDED",
     "subtitle": "One island. No way out. Find a path.",
     "play": "▶  PLAY",
+    "continue": "▶  CONTINUE",
     "credits": "Controls: WASD/Arrows · SHIFT sprint · SPACE attack · E use · I inventory · 1-8 hotbar"
+  },
+  "pause": {
+    "delete_save": "Delete Save",
+    "save_deleted": "Save Deleted"
   },
   "hud": {
     "use_item": "[E] use item",

@@ -1,6 +1,7 @@
 import I18n from '../systems/I18n.js';
 import SoundManager from '../systems/SoundManager.js';
 import makeBtn from '../utils/makeBtn.js';
+import SaveManager from '../systems/SaveManager.js';
 
 export default class PauseScene extends Phaser.Scene {
     constructor() {
@@ -15,7 +16,7 @@ export default class PauseScene extends Phaser.Scene {
         this.tweens.add({ targets: overlay, alpha: 0.72, duration: 200 });
 
         // Painel central RPG
-        const panelW = 300, panelH = 280;
+        const panelW = 300, panelH = 340;
         const cx = W / 2 - panelW / 2;
         const cy = H / 2 - panelH / 2;
         const HEADER_H = 34;
@@ -44,7 +45,7 @@ export default class PauseScene extends Phaser.Scene {
 
         // Botão Continuar
         const btnContinueText = I18n.lang === 'en' ? 'Continue' : 'Continuar';
-        const btnContinue = makeBtn(this, W/2, H/2 - 45, 220, 38, btnContinueText, { depth: 2 });
+        const btnContinue = makeBtn(this, W/2, H/2 - 75, 220, 38, btnContinueText, { depth: 2 });
         btnContinue.zone.on('pointerdown', () => this._resume());
 
         // Botão Mute
@@ -52,15 +53,23 @@ export default class PauseScene extends Phaser.Scene {
             ? (I18n.lang === 'en' ? '🔇 Unmute' : '🔇 Ativar som')
             : (I18n.lang === 'en' ? '🔊 Mute'   : '🔊 Silenciar');
 
-        const btnMute = makeBtn(this, W/2, H/2 + 10, 220, 38, muteLabel(), { depth: 2 });
+        const btnMute = makeBtn(this, W/2, H/2 - 25, 220, 38, muteLabel(), { depth: 2 });
         btnMute.zone.on('pointerdown', () => {
             SoundManager.toggleMute();
             btnMute.txt.setText(muteLabel());
         });
 
+        // Botão Apagar Save
+        const btnClearSave = makeBtn(this, W/2, H/2 + 25, 220, 38, I18n.t('pause.delete_save'), { depth: 2 });
+        btnClearSave.zone.on('pointerdown', () => {
+            SoundManager.play('menu_click');
+            SaveManager.clear();
+            btnClearSave.txt.setText(I18n.t('pause.save_deleted'));
+        });
+
         // Botão Menu
         const btnMenuText = I18n.lang === 'en' ? 'Main Menu' : 'Menu Principal';
-        const btnMenu = makeBtn(this, W/2, H/2 + 65, 220, 38, btnMenuText, { depth: 2 });
+        const btnMenu = makeBtn(this, W/2, H/2 + 75, 220, 38, btnMenuText, { depth: 2 });
         btnMenu.zone.on('pointerdown', () => {
             SoundManager.play('menu_click');
             this.scene.stop('PauseScene');
@@ -70,7 +79,7 @@ export default class PauseScene extends Phaser.Scene {
         });
 
         // Dica
-        this.add.text(W/2, H/2 + 115,
+        this.add.text(W/2, H/2 + 125,
             I18n.lang === 'en' ? '[ESC] to resume' : '[ESC] para continuar',
             { fontSize: '11px', fill: '#c8a870', stroke: '#000000', strokeThickness: 2 }
         ).setOrigin(0.5).setDepth(2);
