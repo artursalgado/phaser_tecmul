@@ -25,8 +25,11 @@ export default class PreloadScene extends Phaser.Scene {
         this.load.json('i18n_en', 'assets/i18n/en.json');
 
         // ── TILEMAP ───────────────────────────────────────────────────────────
-        this.load.tilemapTiledJSON('ilha', 'assets/tilemaps/ilha.json');
-        this.load.image('sunnyside', 'assets/tilesets/spr_tileset_sunnysideworld_16px.png');
+        // Cache-busting: garante que o browser nunca serve uma versão antiga
+        // do mapa/tileset em cache (resolve o bug de "mudar de mapa" após F5).
+        const _v = Date.now();
+        this.load.tilemapTiledJSON('ilha', `assets/tilemaps/ilha.json?v=${_v}`);
+        this.load.image('punyworld', `assets/tilesets/punyworld-overworld-tileset.png?v=${_v}`);
 
         // ── PLAYER — todos os frames são 96x64 ───────────────────────────────
         const FW = 96, FH = 64;

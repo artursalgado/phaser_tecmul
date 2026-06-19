@@ -110,10 +110,10 @@ export default class GameScene extends Phaser.Scene {
     _setupTilemap() {
         const mapa    = this.make.tilemap({ key: 'ilha' });
         this._mapa    = mapa;
-        const tileset = mapa.addTilesetImage('sunnyside', 'sunnyside');
+        const tileset = mapa.addTilesetImage('punyworld-overworld', 'punyworld');
 
         if (!tileset) {
-            console.error('[GameScene] ERRO: tileset "sunnyside" nao encontrado no JSON!');
+            console.error('[GameScene] ERRO: tileset "punyworld-overworld" nao encontrado no JSON!');
             return { mapW: 0, mapH: 0 };
         }
 
@@ -132,6 +132,25 @@ export default class GameScene extends Phaser.Scene {
             colisao.setDepth(2);
             colisao.setCollisionByExclusion([-1, 0]);
             colisao.setVisible(false);
+
+            // ── Remover colisão das pontes e passagens sobre água ────────────
+            // Os tiles de decoração com GIDs 114, 731 e 849 são colocados
+            // por cima de células de água (que têm colisão activa).
+            // Zeramos a colisão nessas células para o jogador poder atravessar.
+            const PASSAGEM_GIDS = new Set([114, 731, 849]);
+            const FLIP_MASK = 0xE0000000;
+            if (decoracao) {
+                decoracao.layer.data.forEach((row, ty) => {
+                    row.forEach((decTile, tx) => {
+                        if (!decTile || decTile.index <= 0) return;
+                        const gid = decTile.index & ~FLIP_MASK;
+                        if (PASSAGEM_GIDS.has(gid)) {
+                            const colTile = colisao.getTileAt(tx, ty);
+                            if (colTile) colTile.setCollision(false, false, false, false);
+                        }
+                    });
+                });
+            }
         }
 
         const mapW = mapa.widthInPixels;
