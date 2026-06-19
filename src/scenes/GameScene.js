@@ -507,13 +507,7 @@ export default class GameScene extends Phaser.Scene {
     ];
 
     defNPCs.forEach((def) => {
-      // Tenta usar o sprite definido; se não existir usa um marcador simples
-      let sprite;
-      try {
-        sprite = this.add.image(def.x, def.y, def.sprite).setDepth(3).setScale(1.2);
-      } catch {
-        sprite = this.add.circle(def.x, def.y, 12, 0x88aaff).setDepth(3);
-      }
+      const sprite = this.add.image(def.x, def.y, def.sprite).setDepth(3).setScale(1.5);
 
       // Balão de indicação de interação
       const balao = this.add.text(def.x, def.y - 28, "[ E ]", {

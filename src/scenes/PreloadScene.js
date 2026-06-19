@@ -283,6 +283,10 @@ export default class PreloadScene extends Phaser.Scene {
     // Imagens finais da cutscene de vitória
     this.load.image("fim_jangada", "assets/intro/fim_jangada.jpg");
     this.load.image("fim_happy", "assets/intro/fim_happy.png");
+
+    // Sprites dos NPCs
+    this.load.image("spr_npc_fisher", "assets/images/spr_npc_fisher.png");
+    this.load.image("spr_npc_old",    "assets/images/spr_npc_old.png");
   }
 
   create() {
