@@ -334,12 +334,14 @@ export default class GameScene extends Phaser.Scene {
         this.inventory.selectSlot(n - 1);
       }
 
-      // Tecla E: usar comida consumível equipada ou escapar na jangada
+      // Tecla E: interagir (NPC/baú) > escapar na jangada > usar item
       if (e.key === "e" || e.key === "E") {
         if (this.raftReady && this.estaNaZonaJangada()) {
           this.iniciarCutsceneFuga();
         } else {
-          this.usarItemSelecionado();
+          // Tenta interagir com NPC ou baú perto; se não houver, usa item
+          const interagiu = this._tentarInteragirMundo();
+          if (!interagiu) this.usarItemSelecionado();
         }
       }
 
@@ -471,6 +473,167 @@ export default class GameScene extends Phaser.Scene {
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(50);
+
+    // Conteúdo de exploração extra
+    this.criarNPCs(spawns);
+    this.criarBaulsEscondidos(spawns);
+  }
+
+  criarNPCs(spawns) {
+    this.npcs = [];
+
+    const ruinaPos = spawns.poi.ruina || { x: this.mapW / 2, y: this.mapH / 2 };
+    const docaPos  = spawns.poi.doca  || { x: this.mapW / 2 + 80, y: this.mapH / 2 + 40 };
+
+    const defNPCs = [
+      {
+        x: docaPos.x + 60, y: docaPos.y - 40,
+        sprite: "spr_npc_fisher",
+        falas: [
+          "Vi uma vela a flutuar para norte...",
+          "Cuidado com os goblins à noite.",
+          "Eu construí uma jangada uma vez. Precisa de 5 madeiras, 3 cordas e uma vela.",
+        ],
+      },
+      {
+        x: ruinaPos.x - 80, y: ruinaPos.y + 100,
+        sprite: "spr_npc_old",
+        falas: [
+          "Esta ilha guarda segredos nos baús...",
+          "O boss aparece quando estás mais fraco. Fica em guarda.",
+          "Eu fiquei preso aqui há anos. Tu não fiques.",
+        ],
+      },
+    ];
+
+    defNPCs.forEach((def) => {
+      // Tenta usar o sprite definido; se não existir usa um marcador simples
+      let sprite;
+      try {
+        sprite = this.add.image(def.x, def.y, def.sprite).setDepth(3).setScale(1.2);
+      } catch {
+        sprite = this.add.circle(def.x, def.y, 12, 0x88aaff).setDepth(3);
+      }
+
+      // Balão de indicação de interação
+      const balao = this.add.text(def.x, def.y - 28, "[ E ]", {
+        fontSize: "9px", fill: "#ffffff", stroke: "#000000", strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(4).setAlpha(0);
+
+      this.npcs.push({ ...def, sprite, balao, falaIdx: 0, dialogoAberto: false });
+    });
+  }
+
+  criarBaulsEscondidos(spawns) {
+    this.baus = [];
+
+    // Posições relativas a pontos de interesse conhecidos
+    const ruinaPos = spawns.poi.ruina || { x: this.mapW / 2, y: this.mapH / 2 };
+
+    const posBaus = [
+      { x: ruinaPos.x + 120, y: ruinaPos.y - 60,  itens: [{ id: "rope",  qty: 1 }] },
+      { x: ruinaPos.x - 180, y: ruinaPos.y + 80,  itens: [{ id: "sword", qty: 1 }] },
+      { x: 620,               y: 320,              itens: [{ id: "fish",  qty: 2 }] },
+      { x: 280,               y: 680,              itens: [{ id: "rock",  qty: 3 }] },
+      { x: 800,               y: 500,              itens: [{ id: "water", qty: 2 }] },
+    ];
+
+    posBaus.forEach((def) => {
+      const baul = this.add
+        .rectangle(def.x, def.y, 18, 14, 0x8b5e2a)
+        .setStrokeStyle(2, 0xd4a030)
+        .setDepth(3);
+
+      const icone = this.add.text(def.x, def.y - 20, "📦", { fontSize: "11px" })
+        .setOrigin(0.5).setDepth(4).setAlpha(0.7);
+
+      this.baus.push({ ...def, baul, icone, aberto: false });
+    });
+  }
+
+  // Lógica de interação com NPCs e baús — chamada no update() da GameScene quando o jogador carrega E
+  interagirComMundo() {
+    const RAIO = 55;
+    const px = this.player.x, py = this.player.y;
+
+    // NPCs
+    this.npcs?.forEach((npc) => {
+      const d = Phaser.Math.Distance.Between(px, py, npc.x, npc.y);
+      npc.balao.setAlpha(d < RAIO ? 1 : 0);
+    });
+
+    // Baús
+    this.baus?.forEach((b) => {
+      if (b.aberto) return;
+      const d = Phaser.Math.Distance.Between(px, py, b.x, b.y);
+      b.icone.setAlpha(d < RAIO ? 1 : 0.4);
+    });
+  }
+
+  // Devolve true se interagiu com algo (NPC ou baú), false se não havia nada perto
+  _tentarInteragirMundo() {
+    const RAIO = 55;
+    const px = this.player?.x ?? 0, py = this.player?.y ?? 0;
+
+    for (const b of this.baus ?? []) {
+      if (!b.aberto && Phaser.Math.Distance.Between(px, py, b.x, b.y) < RAIO) {
+        this.abrirBauOuFalarNPC();
+        return true;
+      }
+    }
+    for (const npc of this.npcs ?? []) {
+      if (Phaser.Math.Distance.Between(px, py, npc.x, npc.y) < RAIO) {
+        this.abrirBauOuFalarNPC();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  abrirBauOuFalarNPC() {
+    const RAIO = 55;
+    const px = this.player.x, py = this.player.y;
+
+    // Baús primeiro
+    for (const b of this.baus ?? []) {
+      if (b.aberto) continue;
+      if (Phaser.Math.Distance.Between(px, py, b.x, b.y) < RAIO) {
+        b.aberto = true;
+        b.baul.setFillStyle(0x4a2e0a);
+        b.icone.setText("🔓").setAlpha(0.4);
+        b.itens.forEach(({ id, qty }) => {
+          this.inventory.addItem(id, qty);
+          this.spawnPickup(b.x + Phaser.Math.Between(-16, 16), b.y - 10, id, qty);
+        });
+        SoundManager.play("pickup");
+        return;
+      }
+    }
+
+    // NPCs
+    for (const npc of this.npcs ?? []) {
+      if (Phaser.Math.Distance.Between(px, py, npc.x, npc.y) < RAIO) {
+        const fala = npc.falas[npc.falaIdx % npc.falas.length];
+        npc.falaIdx++;
+
+        const balaoFala = this.add.text(npc.x, npc.y - 44, `"${fala}"`, {
+          fontSize: "9px", fill: "#ffffcc",
+          stroke: "#000000", strokeThickness: 2,
+          wordWrap: { width: 160 },
+          backgroundColor: "#1a1008",
+          padding: { x: 4, y: 3 },
+        }).setOrigin(0.5, 1).setDepth(20);
+
+        this.tweens.add({
+          targets: balaoFala,
+          alpha: 0,
+          delay: 3000,
+          duration: 600,
+          onComplete: () => balaoFala.destroy(),
+        });
+        return;
+      }
+    }
   }
 
   // Associa eventos de combate, som e pontuação
@@ -636,6 +799,9 @@ export default class GameScene extends Phaser.Scene {
 
     // 2. Atualiza a transparência e cor do overlay para o Ciclo Dia/Noite
     this.atualizarLuzDiaNoite();
+
+    // Atualiza indicadores de proximidade de NPCs e baús
+    this.interagirComMundo();
 
     // 3. Sistema de Auto-Save Automático: grava o progresso a cada 30 segundos
     this.autosaveTimer += delta / 1000;
