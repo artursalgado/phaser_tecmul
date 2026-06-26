@@ -5,7 +5,7 @@
 | Nome | Número |
 |------|--------|
 | Artur Salgado | EI 33385 |
-| Tiago Silva | *(preencher)* |
+| Tiago Silva   | EI 33379 |
 
 ---
 
@@ -189,13 +189,3 @@ phaser_tecmul/
     └── systems/                # I18n, Inventory, PlayerStats, QuestManager, SoundManager, Particles
 ```
 
----
-
-## Lacunas conhecidas / Roadmap
-
-| Item | Estado | Notas |
-|------|--------|-------|
-| GIF de demonstração | ❌ não incluído | Requer captura com ferramenta externa |
-| Capturas de ecrã em `docs/` | ❌ não incluídas | Adicionar antes da entrega final |
-| GitHub Pages | ❌ não configurado | Opcional (bónus) |
-| Número de aluno do 2º elemento | ⚠️ preencher | Ver tabela no topo do README |
